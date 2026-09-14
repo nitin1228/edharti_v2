@@ -1,0 +1,18 @@
+<!-- Edit Permission Modal -->
+<div class="modal fade modal-lg" id="oldDemandSubheadsModal" tabindex="-1" aria-labelledby="oldDemandSubheadsModal"
+aria-hidden="true">
+<div class="modal-dialog">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h5 class="modal-title"><p>Subhead-wise breakup of demand id:<span id="demandId"></span></p></h5>
+            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">    
+            
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+        </div>
+    </div>
+</div>
+</div>

@@ -1,0 +1,109 @@
+server{
+    listen 80  default_server;
+    listen [::]:80 default_server;
+    server_name _;
+    return 403;
+}
+
+server {
+    listen 80;
+    server_name ldo.mohua.gov.in;
+    client_max_body_size 100M;
+    add_header X-XSS-Protection "1; mode=block" always;
+    add_header X-Frame-Options "DENY";
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+   client_max_body_size 180M;     
+ 
+    # Proxy requests to Next.js frontend running on port 4000
+    
+    location / {
+        proxy_pass http://localhost:3000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+    # Proxy requests to Laravel backend running on port 8000
+    location /ad {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+   
+     location /jq/ {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+  location /th/ {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+  location /va/ {
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+   location /assets/ {
+        proxy_pass http://127.0.0.1:7000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+
+         
+  
+ location administrator/storage {
+        
+        proxy_pass http://127.0.0.1:8000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+    # location ^~ /admin/storage/ {
+   #     proxy_pass http://127.0.0.1:8000;
+  #      proxy_set_header Host $host;
+ #       proxy_set_header X-Real-IP $remote_addr;
+#    }
+    
+   
+  location /admin/api/ {
+        rewrite ^/admin/api/(.*)$ /api/$1 break;
+        proxy_pass http://127.0.0.1:8000;
+         proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+}
+
+  location /edharti/api/ {
+        rewrite ^/edharti/api/(.*)$ /api/$1 break;
+        proxy_pass http://127.0.0.1:7000;
+         proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+
+}
+  
+
+
+    # Logging
+    access_log /var/log/nginx/ldo.mohua.gov.in.access.log;
+    error_log /var/log/nginx/ldo.mohua.gov.in.error.log;
+}

@@ -1,0 +1,2000 @@
+systemctl start nginx
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+source ~/.bashrc
+nvm --version
+curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.39.7/install.sh | bash
+nvm --version
+source ~/.bashrc
+nvm --version
+nvm install 22
+df -Th
+rm -rf /tmp/*
+df -Th
+nvm install 22
+nvm use 22
+nvm alias default 22
+node -v
+npm -v
+cd /var/www/
+ls
+git clone https://github.com/tomaradarsh0001/server.git
+mv server/ testingnext/
+l
+chmod -R +777 testingnext/
+chown -R www-data:www-data testingnext/
+cd testingnext/
+npm install
+cd /etc/nginx/sites-enabled/
+ls
+rm default 
+ls
+cd ..
+cd sites-available/
+ls
+rm default 
+nano demo
+nginx -t
+systemctl restart nginx
+cd /var/www/testingnext/
+npm install -g pm2
+npm run build
+PORT=4000 pm2 start npm --name "nextapp" -- start 
+systemctl restart nginx
+pm2 status all
+npm run dev
+pm2 delete all
+npm run dev
+PORT=4000 pm2 start npm --name "nextapp" -- start 
+cd /etc/nginx/sites-enabled/
+cd ..
+cd sites-available/
+ln -s /etc/nginx/sites-available/demo /etc/nginx/sites-enabled/
+nginx -t
+systemctl restart nginx
+pm2 status all
+pm2 restart all
+pm2 status all
+pm2 delete all
+PORT=4000 pm2 start npm --name "nextapp" -- start 
+cd /var/www/testingnext/
+ls
+ls -la
+nano package.json 
+pm2 delete all
+pm2 start ecosystem.config.js 
+systemctl reload nginx
+pm2 status all
+pm2 logs
+rm -rf .next/
+npm run build
+pm2 status
+pm2 restart all
+pm2 status all
+systemctl stop nginx
+ssh edhartiAdmin@10.192.152.211
+cd /var/www/
+ls
+systemctl status nginx
+systemctl status nginx
+systemctl stop nginx
+curl -vv http://127.0.0.1:4000/
+curl -vv http://127.0.0.1:7000/
+curl -vv http://127.0.0.1:8000/
+curl -vv http://127.0.0.1:8000/admin
+curl -vv http://127.0.0.1:8000/
+curl -vv http://10.192.152.210:8000/
+curl -vv http://127.0.0.1:7000/
+supervisorctl status all
+curl -vv http://127.0.0.1:8000/
+supervisorctl status all
+nano /etc/supervisor/conf.d/backend.conf 
+nano /var/log/backendapp.log 
+supervisorctl restart backendapp
+curl -vv http://127.0.0.1:8000/
+strace
+curl -vv http://127.0.0.1:8000/
+nano /etc/nginx/sites-available/demo 
+curl -vv http://127.0.0.1:8000/
+curl -vv http://localhost:80/admin
+curl -vv http://localhost/admin
+curl -vv http://127.0.0.1:8000/
+curl -vv http://127.0.0.1/
+curl -vv http://127.0.0.1/admin
+nano /etc/nginx/sites-available/demo 
+cp /etc/nginx/sites-available/demo_old
+cp /etc/nginx/sites-available/demo /etc/nginx/sites-available/demo_old
+nano /etc/nginx/sites-available/demo 
+rm /etc/nginx/sites-enabled/demo 
+ln -s /etc/nginx/sites-available/demo /etc/nginx/sites-enabled/
+nginx -t
+systemctl restart nginx
+curl -vv http://127.0.0.1/
+curl -vv http://127.0.0.1/admin
+clear
+nano /etc/nginx/sites-available/demo 
+supervisorctl status all
+nano /etc/nginx/sites-available/demo 
+rm /etc/nginx/sites-enabled/demo 
+ln -s /etc/nginx/sites-available/demo /etc/nginx/sites-enabled/
+nginx -t
+systemctl restart nginx
+systemctl status nginx
+systemctl restart nginx
+nano /etc/nginx/sites-available/demo 
+
+ln -s /etc/nginx/sites-available/demo /etc/nginx/sites-enabled/
+nginx -t
+nano /etc/nginx/sites-available/demo 
+rm /etc/nginx/sites-enabled/demo 
+ln -s /etc/nginx/sites-available/demo /etc/nginx/sites-enabled/
+nginx -t
+systemctl restart nginx
+systemctl status nginx
+rm /etc/nginx/sites-enabled/demo 
+nano /etc/nginx/sites-available/demo 
+ln -s /etc/nginx/sites-available/demo /etc/nginx/sites-enabled/
+nginx -t
+systemctl restart nginx
+systemctl status nginx
+nano /var/log/nginx/ldo.mohua.gov.in.access.log
+nano /etc/nginx/sites-available/dem
+tail -f /var/log/nginx/laravel.access.log 
+tail -f /var/log/nginx/laravel.access.log | grep 'admin'
+tail -f /tmp/php-fpm.strace.3835879
+tail -f /tmp/php-fpm.strace
+sudo strace -ff -tt -T -s 256 \   -p 1532 \   -o /tmp/php-fpm.strace
+ps -ef | grep php-fpm
+sudo strace -ff -tt -T -s 256 \   -p 3835879 \   -o /tmp/php-fpm.strace
+touch /tmp/php-fpm.strace
+sudo strace -ff -tt -T -s 256 \   -p 3835879 \   -o /tmp/php-fpm.strace
+strace -ff -tt -T -s 256 \   -p 3835879 \   -o /tmp/php-fpm.strace
+strace -s 200 -p 38353879 -e trace=file,network
+strace -ff -tt -T -s 256 -p 3835879 -o /tmp/php-fpm.strace
+ps -ef | grep php-fpm
+strace -ff -tt -T -s 256 -p 3835882 -o /tmp/php-fpm.strace
+strace -ff -tt -T -s 256 -p 3835883 -o /tmp/php-fpm.strace
+strace -ff -tt -T -s 256 -p 3835883
+strace -tt -T -s 256 -p 3835883
+strace -tt -T -s 256 -p 3835882
+strace -tt -T -s 256 -p 3835879
+strace -tt -T -s 256 -p 3835879 -o /tmp/php-fpm.strace
+systemctl status nginx
+supervisorctl restart all
+cd /var/www/lnd_backend/
+php artisan optimize
+php artisan optimize:clear
+php artisan config:clear
+php artisan cache:clear
+cd ..
+chmod -R +777 lnd_backend/
+cd lnd_backend/storage/framework/
+ls
+mkdir sessions
+cd ../../..
+chmod -R +777 lnd_backend/
+cd /lnd_backend/storage/framework
+cd lnd_backend/storage/framework
+ls
+mkdir views
+cd ../../..
+chmod -R +777 lnd_backend/
+vi /var/log/nginx/laravel.access.log
+vi /var/log/nginx/laravel.error.log 
+nano /etc/nginx/sites-available/demo
+nano /etc/nginx/nginx.conf 
+strace -tt -T -s 256 -p 3835879 -o /tmp/php-fpm.strace
+nano /tmp/php-fpm.strace
+wget http://127.0.0.1:8000
+nano /tmp/php-fpm.strace
+vi /var/log/nginx/ldo.mohua.gov.in.access.log
+vi /var/log/nginx/ldo.mohua.gov.in.error.log
+curl -vvv http://127.0.0.1/
+curl -vvv http://127.0.0.1/admin
+curl -vvv http://127.0.0.1/admin/loginUser
+curl -vvv http://127.0.0.1/admin
+rm /etc/nginx/sites-enabled/demo 
+ln -s /etc/nginx/sites-available/demo /etc/nginx/sites-enabled/
+nginx -t
+systemctl restart nginx
+curl -vvv http://127.0.0.1/admin
+curl -vvv http://127.0.0.1/
+curl -vvv http://127.0.0.1/admin/loginUser
+curl -vvv http://127.0.0.1/
+nano /var/log/nginx/laravel.error.log
+ping 10.192.152.206
+telnet 10.192.152.206 3306
+apt install telnet
+telnet 10.192.152.206 3306
+mysql -h 10.192.152.206 -u edhartiAdmin -p Prodserverweb@2025
+apt install mysql-client-core-8.0
+mysql -h 10.192.152.206 -u edhartiAdmin -p Prodserverweb@2025
+ssh edhartiAdmin@10.192.152.206
+ssh edhartiAdmin@10.192.152.211
+sudo su
+pm2 status
+rm /etc/nginx/sites-enabled/demo 
+rm /etc/nginx/sites-available/demo
+nano /etc/nginx/sites-available/demo
+ln -s /etc/nginx/sites-available/demo /etc/nginx/sites-enabled/
+nginx -t 
+systemctl restart nginx
+supervisorctl status all
+nano /etc/supervisor/conf.d/backend.conf 
+nano /etc/supervisor/conf.d/edharti.conf
+nano /etc/supervisor/conf.d/supervisor.conf
+supervisorctl reread
+nano /var/www/edhartiMain/storage/logs/scheduler.log
+sudo su
+/var/www/edhartiMain/storage/logs/scheduler.log
+nano /etc/supervisor/conf.d/supervisor.conf
+supervisorctl reread
+supervisorctl update
+supervisorctl status all
+supervisorctl restart edhartiapp
+nano /etc/supervisor/conf.d/edharti.conf 
+nano /var/log/laravel.err.log
+nano /etc/supervisor/conf.d/edharti.conf 
+supervisorctl reread
+supervisorctl update
+supervisorctl status all
+supervisorctl restart all
+supervisorctl status all
+reboot
+clear
+cat /proc/cpuinfo 
+lscpu
+systemctl status nginx
+supervisorctl status all
+supervisorctl restart edharti
+supervisorctl remove edharti
+rm /etc/supervisor/conf.d/edharti.conf 
+supervisorctl status all
+supervisorctl restart all
+supervisorctl status all
+nano /etc/supervisor/conf.d/edhartiapp.conf
+supervisorctl status all
+supervisorctl reread
+supervisorctl update
+supervisorctl status all
+nano /etc/supervisor/conf.d/edhartiapp.conf
+nano /var/log/laravel.err.log 
+cd /var/www/
+ls
+cd /var/www/edhartiMain/app/Console/
+ls
+cd Commands/
+ls -la
+cp ImportPropertyDemands.php ImportPropertyDemands_bkp.php
+rm ImportPropertyDemands.php
+nano ImportPropertyDemands.php
+chmod -R +777 ImportPropertyDemands.php
+cd ../..
+cd ..
+nano config/constants.php 
+php artisan app:import-property-demands
+cd app/Console/Commands/
+nano ImportPropertyDemands.php
+cd ../..
+cd ..
+php artisan app:import-property-demands
+php artisan app:import-property-documents
+cd app/Console/Commands/
+ls
+ls -la
+cd ImportPropertyDocuments.php 
+cat ImportPropertyDocuments.php 
+nano ImportPropertyDocuments.php 
+rm ImportPropertyDocuments.php
+nano ImportPropertyDocuments.php 
+chmod -R +777 ImportPropertyDocuments.php
+cd ../../..
+php artisan app:import-property-documents
+nano /var/www/edhartiMain/storage/logs/laravel.log 
+mv /var/www/edhartiMain/app/Console/Commands/ImportPropertyDemands_bkp.php /var/www/edhartiMain/app/Console/
+> /var/www/edhartiMain/storage/logs/laravel.log
+cd /var/www/edhartiMain/
+df -Th
+cd /var/www/edhartiMain/app/Http/Controllers/Admin/ApplicationController.php 
+nano /var/www/edhartiMain/app/Http/Controllers/Admin/ApplicationController.php 
+nano /var/www/edhartiMain/app/Http/Controllers/OfficialController.php 
+nano /var/www/edhartiMain/app/Console/Commands/ImportPropertyDocuments.php 
+ssh edhartiAdmin@10.192.152.211
+cd /var/www/edhartiMain/
+ifconfig
+sudo mkdir -p /nas_storage
+cd /
+sudo mkdir -p /nas_storage
+sudo apt update && sudo apt install -y nfs-common
+sudo mount -t nfs 10.192.75.165:/eDharti_Storage /nas_storage
+df -Th
+showmount -e 10.192.75.165
+sudo apt install -y nfs-common
+mount | grep -i nfs
+ping 10.192.75.165 -c 4
+ls
+sudo mount -t nfs 10.192.75.165:/eDharti_Storage /nas_storage
+sudo mount -t nfs 10.192.75.165:/eDharti2_Storage /nas_storage
+df -Th
+df -h | grep nas_storage
+php artisan storage:link
+cd /var/www/edhartiMain/
+php artisan storage:link
+sudo ln -s /nas_storage /var/www/edhartiMain/public/storage 
+sudo rm -rf /var/www/edhartiMain/public/storage
+sudo ln -s /nas_storage /var/www/edhartiMain/public/storage
+ls -l /var/www/edhartiMain/public | grep storage
+sudo chown -R www-data:www-data /nas_storage
+sudo chmod -R 775 /nas_storage
+cd storage/
+ls
+ssh edhartiAdmin@10.192.152.211
+cd /var/www/edhartiMain/
+cd public/
+ls
+cd storage
+l
+ls
+cd nas 
+ls
+ls -la
+cd nas 
+ls -l /var/www/edhartiMain/public | grep storage
+cd ..
+ls
+ls -la
+ssh edhartiAdmin@10.192.152.211
+cd /var/www/edhartiMain/
+sudo rm -f /var/www/edhartiMain/public/storage
+sudo ln -s /nas_storage/app/public /var/www/edhartiMain/public/storage
+ls -l /var/www/edhartiMain/public | grep storage
+nano app/Console/
+cd app/
+cd Console/
+ls
+cd Commands/
+mv ImportPropertyDemands.php /var/www/edhartiMain/app/Console/ImportPropertyDemands_bkp2.php 
+nano ImportPropertyDemands.php
+chmod -R +777 ImportPropertyDemands.php
+cd ../..
+cd ..
+cd resources/views/modals/
+ls
+cd ../..
+cd ..
+cd app/Models/
+ls
+ls -la
+nano TempScannedFilesPropertyId.php
+chmod -R +755 TempScannedFilesPropertyId.php
+df -Th
+df -Th 
+cd /nas_storage/
+cd app/public/documents/
+ls
+ls -la
+cd JANPATH ROAD
+cd /
+cd /nas_storage/
+cd app/public/
+cd documents/
+ls
+cd "JANPATH ROAD"/
+ls
+rm -rf 35025/
+cd ..
+cd TEHAR-I
+cd ..
+cd tehar_i/
+rm -rf 70526/
+rm -rf 43396/
+cd ..
+cd FACTORY\ ROAD/
+rm -rf 35915 35916/
+cd ..
+cd "RAMESH NAGAR"/
+cd ..
+cd ramesh_nagar/
+rm -rf 28515/
+cd ../..
+cd ...
+cd /var/www/edhartiMain/
+history
+history | grep php artisan
+history | grep "php artisan"
+php artisan app:import-property-documents
+cd /var/www/edhartiMain/
+php artisan app:import-property-documents
+cd /var/www/edhartiMain/
+php artisan app:import-property-demands
+nano app/Console/Commands/ImportPropertyDemands.php 
+cd app/Console/Commands/
+ls -la
+nano ImportPropertyDemands.php
+nano ImportPropertyDocuments.php
+nano /var/www/edhartiMain/config/applicationDocumentType.php 
+cd /var/www/edhartiMain/
+nano app/Models/
+telnet 164.100.13.55
+curl -vvv 164.100.13.55
+cd /var/www/edhartiMain/
+nano app/Console/Commands/
+cd app/Console/Commands/
+ls
+rm ImportPropertyDemands.php 
+nano ImportPropertyDemands.php
+chmod -R +777 ImportPropertyDemands.php
+cd ../../..
+php artisan app:import-property-demands
+nano storage/logs/laravel.log 
+> storage/logs/laravel.log
+nano storage/logs/laravel.log 
+php artisan app:import-property-documents
+nano storage/logs/laravel.log 
+php artisan app:import-property-documents
+nano storage/logs/laravel.log 
+cd /var/www/edhartiMain/
+nano app/Http/Controllers/Auth/
+nano app/Http/Controllers/Auth/RegisteredUserController.php 
+cd resources/views/admin_public_grievances/
+ls
+ls -la
+mv indexDataTable.blade.php indexDatatable.blade.php
+nano app/Http/Controllers/Auth/RegisteredUserController.php 
+cd ../../..
+nano app/Http/Controllers/Auth/RegisteredUserController.php 
+cd /var/www/edhartiMain/
+nano storage/logs/laravel.log 
+cd /var/www/edhartiMain/
+nano app/Models/GrievanceRemark.php 
+nano resources/views/admin_public_grievances/viewMoreRemarks.blade.php 
+nano app/Http/Controllers/AdminPublicGrievanceController.php 
+cd /var/www/edhartiMain/
+nano app/Http/Controllers/
+nano app/Http/Controllers/Auth/RegisteredUserController.php 
+cd /var/www/edhartiMain/
+ls
+ls -la
+nano resources/views/layouts/app.blade.php 
+nano /var/www/edhartiMain/app/Http/Controllers/DashboardController.php 
+nano /var/www/edhartiMain/app/Http/Controllers/DashboardController.php 
+telnet 164.100.13.55
+curl -vvv164.100.13.55
+curl -vvv 164.100.13.55
+telnet 164.100.13.55
+cd /var/www/edhartiMain/
+ping 164.100.13.55
+telnet 164.100.13.55
+cd /var/www/testingnext/
+ls
+ls -la
+cd src/app/
+ls
+nano layout.js 
+cd ../..
+rm -rf .next/
+npm run build
+pm2 status all
+pm2 restart all
+cd ..
+cd edhartiMain/
+ls
+cd resources/views/layouts/public/
+nano app.blade.php 
+cd ..
+nano app/Http/Controllers/Auth/RegisteredUserController.php 
+telnet 164.100.13.55
+sudo su
+cd /var/www/edhartiMain/
+nano app/Http/Controllers/DeedOfApartmentController.php 
+nano app/Http/Controllers/Admin/ApplicationController.php 
+nano app/Services/ApplicationForwardService.php 
+nano app/Http/Controllers/Admin/ApplicationController.php 
+nano app/Services/ApplicationForwardService.php 
+cd /var/www/edhartiMain/
+sd
+telnet 164.100.13.55
+tulnp 
+tulnp ?
+tulnp -a
+tulnp ?
+ss -tulpn
+sudo ufw allow 465
+cd /var/www/edhartiMain/
+php artisan db:seed --class=GropItemSeeder
+php artisan db:seed --class=GroupItemSeeder
+php artisan db:seed --class=DemandFormulaSeeder
+cd /var/www/testingnext/
+rm -rf .next/
+npm run build
+pm2 restart all
+rm -rf .next/
+npm run build
+rm -rf .next/
+chmod -R +777 src/
+npm run build
+rm -rf .next/
+npm run build
+pm2 restart all
+rm -rf .next/
+npm run build
+pm2 restart all
+rm -rf .next/
+npm run build
+pm2 restart all
+rm -rf .next/
+npm run build
+pm2 restart all
+rm -rf .next/
+npm run build
+pm2 restart all
+grep -E "upload_max_filesize|post_max_size|memory_limit|max_execution_time" /etc/php/8.3/fpm/php.ini
+sudo nano /etc/php/8.3/fpm/php.ini
+grep -E "upload_max_filesize|post_max_size|memory_limit|max_execution_time" /etc/php/8.3/fpm/php.ini
+sudo systemctl restart php8.3-fpm
+sudo systemctl restart nginx
+php -i | grep upload_max_filesize
+php -i | grep memory_limit
+reboot
+supervisorctl status all
+df -Th
+systemctl restart nginx
+systemctl restart php8.3-fpm
+cd /var/www/
+ls
+cd html/
+ls
+cd /var/www/edhartiMain/
+cd /var/www/
+ls
+cd /var/www/
+sudo su
+supervisorctl status all
+supervisorctl restart edhartiapp
+sudo su
+ls
+git clone https://github.com/tomaradarsh0001/server.git
+mv server/ edhartiMain/
+cd edhartiMain/
+composer install --ignore-platform-reqs
+php artisan key:generate
+php artisan optimize
+supervisorctl status all
+supervisorctl restart all
+supervisorctl status all
+cd ..
+chmod -R +777 edhartiMain/
+chown -R www-data:www-data edhartiMain/
+supervisorctl restart all
+supervisorctl status all
+pm2 status all
+cd testingnext/
+pm2 start ecosystem.config.js 
+cd testingnext/
+pm2 status all
+cd ..
+cd edhartiMain/
+cd storage/framework/
+ls
+mkdir sessions
+cd ..
+chmod -R +777 framework/
+cd .
+.cd ..
+cd ..
+php artisan config:clear
+php artisan cache:clear
+cd storage/framework/
+mkdir views
+ls
+cd ..
+chmod -R +777 framework/
+chown -R www-data:www-data framework/
+php -i | grep upload_max_filesize
+php -i | grep memory_limit
+nano /etc/php/8.3/fpm/php.ini 
+nano /etc/php/8.3/cli/php.ini 
+post_max_size
+nano /etc/php/8.3/cli/php.ini 
+Y
+pm2 status all
+cd ..
+cd /var/www/testingnext/
+pm2 start ecosystem.config.js 
+cd ..
+cd edhartiMain/
+ls
+df -Th
+lsblk
+reboot
+cd /var/www/
+ls
+cd backups/
+ls
+rm backup-2026-01-08-12-36-48.zip 
+cd .
+cd ..
+nano script.sh 
+ls
+cd backups/
+ls
+cd ..
+./script.sh 
+nano script.sh 
+cd backups/
+ls
+rm backup-2026-01-09-16-34-32.zip 
+cd ..
+./script.sh 
+cd backups/
+ls
+rm backup-2026-01-09-16-37-21.zip 
+cd ..
+cd /var/www/edhartiMain/
+php artisan migrate --path=database/migrations/2026_01_11_080021_add_new_column_land_type_user_registrations_table.php
+cd ..
+cd lnd_backend/
+php artisan config:clear
+php artisan optimize:clear
+chown -R public/administrator/storage/captcha/
+sudo chown -R www-data:www-data public/administrator/storage/captcha/
+php artisan optimize:clear
+cd /
+chmod -R +777 /nas_storage/
+ls
+cd var/www/
+ls
+cd edhartiMain/
+php artisan config:clear
+cd /var/www/lnd_backend/
+ls
+php artisan storage:link
+crontab -l
+crontab -e
+cd /var/www/edhartiMain/
+ls
+chmod -R +777 storage/
+php artisan app:check-pending-payment-status
+cd ..
+cd backups/
+ls 
+rm backup-2026-04-13-17-44-35.zip 
+cd ..
+./script.sh 
+cd /var/www/edhartiMain/
+php artisan migrate
+php artisan make:migration add_new_column_to_property_contact_details_table
+chmod -R +777 database/
+php artisan migrate --path=database/migrations/2026_03_19_113051_add_new_column_to_property_contact_details_table.php
+cd /nas_storage/
+cd app/
+ls
+cd public/
+ls
+cd documents/
+cd lajpat_nagar_dayanand_colony_lpn_iv_ct/10312/
+cd scannedFiles/
+ls
+ls -la
+rm test.pdf 
+cd ..
+cd .
+cd ..
+cd .
+.
+cd ..
+cd var/
+cd www/
+;s
+cd edhartiMain/
+ls
+crontab -l
+cd /var/www/testingnext/
+ls
+rm -rf .next/
+npm run build
+pm2 restart all
+cd ..
+cd backups/
+ls
+rm backup-2026-02-05-10-47-30.zip 
+cd ..
+./script.sh 
+cd ..
+cd /var/www/lnd_backend/
+chmod -R +777 storage/
+df -Th
+cd /etc/nginx/sites-enabled/
+ls
+nano demo 
+cd /var/www/backups/
+rm backup-2026-01-23-17-29-33.zip 
+cd ..
+./script.sh 
+chmod -R +777 backups/
+nano script.sh 
+./script.sh 
+cd backups/
+ls
+cd ..
+nano script.sh 
+./script.sh 
+chmod -R +777 backups/
+nano script.sh 
+cd backups/
+rm backup-2026-01-27-15-07-39.zip 
+ls
+cd ..
+./script.sh 
+nano script.sh 
+chmod -R +777 backups/
+./script.sh 
+nano script.sh 
+./script.sh 
+nano script.sh 
+cd /var/www/
+cd backups/
+ls
+rm backup-2026-02-18-17-33-30.zip 
+cd ..
+./script.sh 
+chmod -R +777 backups/
+chmod -R +777 /nas_storage/
+cd $signedLetter = 'storage/' . $application->Signed_letter;
+cd /nas_storage/app/public/documents/malviya_nagar/
+ls
+rm -rf 33715/
+cd /var/www/backups/
+rm backup-2026-02-25-12-09-48.zip 
+cd ..
+./script.sh 
+chmod -R +777 backups/
+cd /var/www/
+ls
+cd backups/
+ls
+rm backup-2026-02-19-13-53-39.zip 
+cd ..
+nano script.sh 
+./script.sh 
+chmod -R +777 backups/
+cd /var/www/edhartiMain/
+php artisan app:import-property-demands
+crontab -l
+crontab -2
+crontab -e
+cd /var/www/edhartiMain/
+php artisan migrate ==path=/database/migrations/2026_02_20_112351_add_deleted_at_to_user_registrations_table.php
+php artisan migrate --path=/database/migrations/2026_02_20_112351_add_deleted_at_to_user_registrations_table.php
+cd /var/www/backups/
+rm backup-2026-02-23-10-00-54.zip 
+cd ..
+./script.sh 
+ls
+cd edhartiMain/
+php artisan migrate --path=database/migrations/2026_02_20_112351_add_deleted_at_to_user_registrations_table.php
+php artisan migrate --path=/database/migrations/2026_02_25_115259_add_correct_property_id_in_user_registrations_table.php
+php artisan app:import-property-demands
+php artisan migrate --path=/database/migrations/2026_02_24_140954_create_it_cell_reg_transfer_histories_table.php
+cd /\
+cd /
+cd nas_storage/app/public/documents/ratendon_road/21097/scannedFiles/21097_RATENDON_ROAD_VOL_2.pdf 
+sudo rm  nas_storage/app/public/documents/ratendon_road/21097/scannedFiles/21097_RATENDON_ROAD_VOL_2.pdf 
+ls
+cd /var/www/edhartiMain/
+ls
+php artisan make:export ScanningRequestsExport 
+chmod -R +777 app/
+cd /var/www/
+chmod -R +777 edhartiMain/
+cd edhartiMain/
+php artisan migrate
+cd /var/www/edharti
+cd ..
+cd edhartiMain/
+php artisan migrate --path=/database/migrations/2026_02_26_113953_add_new_column_correct_property_id_in_newly_added_pro
+perties_table.php
+php artisan migrate --path=/database/migrations/2026_02_26_113953_add_new_column_correct_property_id_in_newly_added_properties_table.php
+cd ..
+cd backups/
+ls
+rm backup-2026-02-26-17-45-52.zip 
+cd .
+cd ..
+./script.sh 
+chmod -R +777 backups/
+cd backups/
+rm backup-2026-03-02-10-43-10.zip 
+cd ..
+cd /var/www/testingnext/
+rm -rf .next/
+npm run build
+pm2 restart all
+supervisorctl restart edhartiapp
+rm -rf .next/
+npm run build
+pm2 restart all
+supervisorctl restart edhartiapp
+cd /var/www/testingnext/
+cd ..
+cd backups/
+ls
+rm backup-2026-02-16-11-15-38.zip 
+CD ..
+cd ..
+./script.sh 
+chmod -R +777 backups/
+cd /var/www/
+cd backups/
+ls
+rm backup-2026-02-13-12-18-26.zip 
+cd ..
+./script.sh 
+supervisorctl restart edhartiapp
+supervisorctl status all
+chmod -R +777 backups/
+df -Th
+crontab -l
+cd edhartiMain/
+cd app/Jobs/
+ls
+ls -la
+cd ..
+ls
+cd ..
+chmod -R +777 /var/www/edhartiMain/storage/logs
+cd /nas_storage/app/public/APL0000304/HNMR/registration
+rm -rf *
+cd /
+cd var/www/edhartiMain/
+cd /nas_storage/app/public/APL0000305/HNMR/NOC/APP0000095/coapplicant/1
+rm -rf *
+php artisan migrate --path='database/migrations/2026_02_12_151713_add_new_column_is_applicant_can_delete_applicant_user_details_table.php'
+cd /var/www/edhartiMain/
+php artisan migrate --path='database/migrations/2026_02_12_151713_add_new_column_is_applicant_can_delete_applicant_user_details_table.php'
+cd /var/www/edhartiMain/
+php artisan app:import-property-demands
+cd /var/www/backups/
+cd /var/www/backups/
+ls
+rm backup-2026-01-29-12-17-56.zip 
+cd ..
+./script.sh 
+chmod -R +777 backups/
+cd /var/www/edharti
+nano routes/web.php
+php artisan optimize
+nano routes/web.php
+cd ..
+cd testingnext/
+rm -rf .next/
+npm run build
+pm2 restart all
+cd ..
+cd edhartiMain/
+php artisan rrf:backfill-property-ids --only-null
+cd /var/www/backups/
+ls
+rm backup-2026-02-06-17-52-19.zip 
+cd ..
+./script.sh 
+chmod -
+chmod -R +777 backups/
+cd backups/
+rm backup-2026-02-10-10-23-32.zip 
+cd ..
+nano script.sh 
+./script.sh 
+chmod -R +777 backups/
+crontab -e
+crontab -l
+crontab -e
+crontab -l
+crontab -e
+crontab -l
+nano storage/logs/laravel.log 
+nano app/Console/Commands/ClearOtpsTable.php
+nano storage/logs/laravel.log 
+[A
+nano storage/logs/laravel.log 
+crontab -l
+nano storage/logs/laravel.log 
+cd ..
+cd testingnext/
+rm -rf .next/
+npm run build
+pm2 restart all
+cd ..
+cd edhartiMain/
+php artisan config:clear
+cd /var/www/edhartiMain/
+nano app/Console/Commands/ClearOtpsTable.php 
+nano app/Console/Kernel.php 
+nano app/Console/Commands/ClearOtpsTable.php 
+nano app/Console/Kernel.php 
+nano app/Console/Commands/ClearOtpsTable.php 
+crontab -e
+crontab -l
+nano crontab -e
+crontab -e
+sudo su
+cd /var/www/
+nano script.sh
+chmod -R +777 script.sh 
+mkdir backups
+chmod -R +777 backups/
+nano script.sh 
+./script.sh 
+nano script.sh 
+cd backups/
+ls
+cd ..
+./script.sh 
+sudo apt install zip
+./script.sh 
+chmod -R +777 backups/
+nano ./script.sh 
+./script.sh 
+chmod -R +777 backups/
+cd /nas_storage/app/public/public/APL0000155/NRDN/NOC/APP0000033/official
+ls
+mv APP0000033_NOC_letter.pdf  APP0000033_NOC_letter_old.pdf 
+chmod -R +777 /nas_storage/app/public/public/APL0000155/NRDN/NOC/APP0000033/official
+chmod -R +777 /nas_storage/app/public/public/APL0000133/LPNT/NOC/APP0000027/official
+cd /var/www/edhartiMain/
+php artisan migrate --path=/databases/migration/2026_01_08_145748_create_property_section_transfer_table.php
+php artisan migrate --path=databases/migration/2026_01_08_145748_create_property_section_transfer_table.php
+php artisan migrate --path=/database/migration/2026_01_08_145748_create_property_section_transfer_table.php
+php artisan migrate --path=/database/migrations/2026_01_08_145748_create_property_section_transfer_table.php
+cd ..
+cd ../..
+cd /var/www/backups/
+ls
+cd ..
+./script.sh 
+chmod -R +777 backups/
+cd /var/www/edhartiMain/
+php artisan migrate --path=database/migrations/2026_01_11_080021_add_new_column_land_type_user_registrations_table.php
+php artisan migrate --path=database/migrations/2026_01_12_125826_add_new_column_land_type_newly_added_properties_table.php
+php artisan config:clear
+cd /var/www/testingnext/
+rm -rf .next/
+npm run build
+pm2 restart all
+rm -rf .next/
+npm run build
+pm2 restart all
+cd ..
+cd edhartiMain/
+php artisan app:import-property-demands
+php artisan migrate --path=database\migrations\2026_01_05_114347_add_new_column_splitted_id_in_documents_table.php
+php artisan migrate --path=/database/migrations/2026_01_05_114347_add_new_column_splitted_id_in_documents_table.php
+cd /var/www/backups/
+rm backup-2026-03-16-11-16-15.zip 
+cd ..
+./script.sh 
+cd /var/www/edhartiMain/
+php artisan     protected $signature = 'app:import-property-demands';
+php artisan app:import-property-demands
+cd /var/www/edhartiMain/
+ls
+php artisan migrate --path=/database/migrations/2026_02_19_160743_add_demand_path_to_demands_table.php
+cd /var/www/backups/
+ls
+rm backup-2026-04-01-10-49-41.zip 
+cd ..
+./script.sh 
+cd /var/www/testingnext/
+rm -rf .next/
+npm run build
+pm2 restart all
+cd ..
+cd backups/
+ls
+cd ..
+./script.sh 
+chmod -R +777 backups/
+cd /var/www/backups/
+ls
+rm ziutGefM 
+rm backup-2026-03-27-12-08-34.zip 
+cd ..
+./script.sh 
+cd /var/www/edhartiMain/
+clear
+php artisan app:import-property-documents
+cd /var/www/backups/
+rm backup-2026-04-17-17-30-25.zip 
+cd ..
+./script.sh 
+cd /var/www/backups/
+ls
+cd ..
+./script.sh 
+df -Th
+cd /var/log
+ls
+rm -rf dpkg.log.*
+df -Th
+rm -rf laravel.*
+df -Th
+rm -rf php8.3-fpm.log.*
+df -Th
+ls
+ls -la
+> syslog.*
+> syslog
+> syslog.2.gz 
+> syslog.3.gz 
+df -Th
+ls
+> mail.err.2.gz 
+> mail.err.3.gz 
+> mail.err.4.gz 
+> mail.err.gz 
+df -Th
+rm -rf syslog.*
+ls
+df-Tg
+df-Th
+df -Th
+cd /var/www/edhartiMain/
+ls
+chmod -R +777 database/
+cd /var/www/backups/
+ls
+rm backup-2026-03-25-10-50-28.zip 
+cd ..
+./script.sh 
+chmod -R +777 /nas_storage/app/public/public/Demand
+cd /var/www/edhartiMain/
+cd storage/logs/
+? laravel.log 
+> laravel.log 
+ls
+ifconfig
+systemctl status nginx
+cd ../..
+php artisan app:import-property-demands
+cd /var/www/lnd_backend/
+ls
+cd storage/app/public/officedocs_
+ls
+ls la
+ls -la
+cd storage/app/public/officedocs_eng/
+ls -la
+cd ../../..
+chmod -R +777 app/
+cd ..
+chmod -R +777 public/administrator/
+cd /var/www/edhartiMain/
+php artisan rrf:backfill-property-ids --only-null
+cd ..
+cd testingnext/
+rm -rf .next/
+npm run build
+pm2 restart all
+cd /var/www/backups/
+rm backup-2026-02-17-12-06-20.zip 
+cd ..
+nano ./script.sh 
+cd /nas_storage/app/public/APL0000421/LPNO/registration
+chmod -R +777 leaseDeed_20260226173407. 
+mv leaseDeed_20260226173407. leaseDeed_20260226173407.pdf
+cd /var/www/backups/
+ls
+rm backup-2026-01-15-14-02-31.zip 
+ls
+cd ..
+nano script.sh 
+./script.sh 
+cd /var/www/ba
+cd /var/www/backups/
+ls 
+rm backup-2026-03-05-11-04-18.zip 
+cd ..
+./
+./script.sh 
+chmod -R +777 backups/
+cd /var/www/backups/
+ls
+rm backup-2026-01-20-11-25-20.zip 
+cd ..
+./script.sh 
+chmod -R +777 backups/
+chmod -R +777 backups/
+cd /var/www/
+ls
+cd backups/
+ls
+cd ..
+ls
+nano script.sh 
+./script.sh 
+sudo sudo su
+cd /var/www/
+ls
+cd /var/www/edhartiMain/
+supervisorctl status all
+systemctl restart all
+systemctl restart nginx
+supervisorctl status all
+supervisorctl restart edhartiapp
+supervisorctl status all
+cd /var/www/testingnext/
+rm -rf .next/
+npm run build
+pm2 restart all
+rm -rf .next/
+npm run build
+pm2 restart all
+rm -rf .next/
+npm run build
+pm2 restart all
+cd /var/www/testingnext/
+rm -rf .next/
+npm run build
+pm2 restart all
+rm -rf .next/
+npm run build
+rm -rf .next/
+npm run build
+pm2 restart all
+rm -rf .next/
+pm2 restart all
+npm run build
+pm2 restart all
+rm -rf .next/
+npm run build
+pm2 restart all
+cd /var/www/edhartiMain/
+pm2 status all
+cd ..
+cd testingnext/
+pm2 start ecosystem.config.js 
+cd ..
+cd edhartiMain/
+sudo apt install nfs-common -y
+cd /
+sudo mkdir -p /nas_storage
+sudo mount -t nfs 10.192.75.165:/eDharti2_Storage /nas_storage
+df -Th
+cd /var/www/backups/
+ls
+rm backup-2026-03-13-17-27-25.zip 
+cd ..
+./script.sh 
+cd /var/www/testingnext/
+rm -rf .next/
+npm run build
+pm2 restart all
+rm -rf .next/
+npm run build
+pm2 restart all
+cd /var/www/
+./script.sh 
+chmod -R +777 backups/
+chmod -R +777 /nas_storage/app/public/APL0000384/CRPK/noc/APP0000141/additional_document
+cd /nas_storage/app/public/APL0000384/CRPK/noc/APP0000141/additional_document
+l
+ls
+cp "conveyance\ deed\ +\ death\ certificate\ of\ Arunava\ Das\ Gupta_20260303164132.pdf" "co.pdf"
+cp "conveyance deed + death certificate of Arunava Das Gupta_20260303164132.pdf" co2.pdf
+chmod -R +777 /nas_storage/app/public/APL0000384/CRPK/noc/APP0000141/additional_document
+cd /var/www/lnd_backend/
+cd /var/www/backups/
+ls
+rm backup-2026-04-15-17-36-01.zip 
+cd ..
+./script.sh 
+php artisan cache:clear
+cd ..
+chmod -R +777 edharti
+cd edharti
+php artisan cache:clear
+cd storage/
+ls
+mkdir framework
+cd framework/
+mkdir cache
+mkdir sessions
+mkdir views
+cd ..
+chmod -R +777 storage/
+chmod -R +777 storage/framework/
+l
+php artisan optimize:clear
+supervisorctl status all
+supervisorctl restart edharti_staging
+cd /var/www/
+ls
+cd backups/
+ls
+em backup-2026-02-04-11-09-59.zip 
+cd ..
+./script.sh 
+chmod -R +777 backups/
+cd testingnext/
+cd ..
+cd edhartiMain/
+php 
+cd ..
+cd testingnext/
+rm -rf .next/
+npm run build
+pm2 restart all
+cd ..
+cd edhartiMain/
+php artisan app:import-property-demands
+cd ..
+cd /etc/nginx/sites-enabled/
+ls
+rm demo 
+ln -s /etc/nginx/sites-available/demo /etc/nginx/sites-enabled/
+systemctl restart nginx
+supervisorctl status all
+pm2 status all
+nano demo 
+cd ..
+cd sites-available/
+nano demo
+cd ..
+cd sites-enabled/
+ls
+rm demo 
+ln -s /etc/nginx/sites-available/demo /etc/nginx/sites-enabled/
+systemctl restart nginx
+pm2 status all
+systemctl restart nginx
+pm2 restart all
+supervisorctl status all
+cd /var/www/edharti
+ls
+php artisan optimzie:clear
+php artisan config:cache
+php artisan cache:clear
+sudo su
+cd /var/www/edharti
+sudo ssh edhartiAdmin@10.192.152.206
+cd /var/www/edhartiMain/
+supervisorctl status all
+supervisorctl restart edhartiapp
+cd /nas_storage/app/public/public/APL0000253/KLKJ/NOC/APP0000079/official
+ls
+mv APP0000079_NOC_letter.pdf  APP0000079_NOC_letter_old.pdf 
+chmod -R +777 *
+chmod -R +777 /nas_storage/app/public/public/APL0000253/KLKJ/NOC/APP0000079/official
+cd ../..
+cd ../../..
+chmod -R +777 *
+cd /var/www/edhartiMain/
+supervisorctl restart edhartiapp
+c
+cd ..
+cd ba
+cd backups/
+ls
+rm backup-2026-02-11-17-53-25.zip 
+cd ..
+./script.sh 
+chmod -R +777 backups/
+cd /var/www/backups/
+ls
+rm backup-2026-02-03-12-27-35.zip 
+cd ..
+./script.sh 
+cd /nas_storage/app/public/public/APL0000081/MLVN/noc/APP0000010/official
+ls
+rm APP0000010_noc_letter.pdf 
+cd ../../..
+cd ../..
+cd public/APL0000081/MLVN/noc/APP0000010/official/
+cd ..
+cd public/APL0000081/MLVN/noc/APP0000010/official/
+cd public/APL0000081/MLVN/noc/APP0000010/
+ls
+ls -la
+cd public/APL0000081/MLVN/noc/APP0000010/official/
+cd ../../..
+cd ..
+cd public/
+cd APL0000081/MLVN/noc/APP0000010/official/
+ls
+cd ../../../../..
+cd ..
+cd ../..
+cd ..
+cd /var/www/edhartiMain/
+ls -la
+cat README.md 
+supervisorctl restart edhartiapp
+cd /var/www/
+chmod -R +777 /nas_storage/app/public/public/Demand/
+crontab -l
+crontab -e
+crontab -l
+cd /var/www/testingnext/
+ls
+rm -rf .next/
+npm run build
+pm2 restart all
+rm -rf .next/
+npm run build
+pm2 restart all
+rm -rf .next/
+npm run build
+pm2 restart all
+cd /var/www/testingnext/
+rm -rf .next/
+npm run build
+pm2 restart all
+cd /var/www/edhartiMain/
+cd ..
+cd testingnext/
+rm -rf .next/
+npm run build
+pm2 restart all
+cd /var/www/edhartiMain/
+php artisan migrate --path=/databases/migration/2026_01_20_170456_add_coloumn_share_in_coapplicants_table.php
+php artisan migrate --path=/database/migrations/2026_01_20_170456_add_coloumn_share_in_coapplicants_table.php
+php artisan migrate --path=/database/migrations/2026_01_20_163026_create_applicant_shares_table.php
+cd /var/www/edhartiMain/
+cd /nas_storage/app/public/public/APL0000033/KLKJ/noc/APP0000003/official
+rm APP0000003_noc_letter.pdf 
+mv noc_letter.pdf APP0000003_noc_letter.pdf
+cd /nas_storage/app/public/public/APL0000081/MLVN/noc/APP0000010/official
+rm APP0000010_noc_letter.pdf 
+mv noc_letter.pdf APP0000010_noc_letter.pdf
+cd /nas_storage/app/public/public/APL0000026/VJNG/noc/APP0000004/official
+rm APP0000004_noc_letter.pdf 
+mv noc_letter.pdf APP0000004_noc_letter.pdf
+cd /var/www/
+cd backups/
+cd ..
+cd backups/
+ls
+rm backup-2026-03-12-10-46-57.zip 
+ls
+cd ..
+./script.sh 
+crontab -l
+crontab -e
+crontab -l
+crontab -e
+crontab -l
+cd /var/
+cd www/
+ls
+cd backups/
+ls
+rm backup-2026-02-12-17-51-14.zip 
+cd ..
+nano script.sh 
+./script.sh 
+chmod -R +777 backups/
+cd /var/log/
+nano php8.3-fpm.log
+sudo su
+cd /var/www/
+nano .s
+nano script.sh 
+./script.sh 
+ls
+df -Th
+./script.sh 
+nano script.sh 
+./script.sh 
+nano script.sh 
+./script.sh 
+nano script.sh 
+./script.sh 
+chmod -R +777 backups/
+cd /var/www/lnd_backend/
+php artisan config:clear
+php artisan optimize:clear
+cd ..
+cd edhartiMain/
+php artisan config:clear
+php artisan cache:clear
+df -Th
+cd /var/
+ls
+lscd backups/
+l
+sls
+ls
+cd backups/
+ls
+rm apt.extended_states.*
+df -Th
+rm -rf apt.extended_states.*
+df -Th
+rm -rf apt.*
+ls
+rm -rf dpkg.*
+ls
+df -Th
+cd ..
+ls
+cd log
+ls
+< auth.log
+ls
+df -Th
+ls -la
+< sudo.log 
+df -Th
+ls -la
+> sudo.log 
+l
+ls -la
+df -Th
+> mail
+ls -la
+df -Th
+cd ..
+ls
+cd www/
+ls
+cd backups/
+ls
+rm backup-2026-01-27-15-16-35.zip 
+df -Th
+cd /var/log/audit
+ls
+rm -rf audit.log.*
+df -Th
+lsblk
+lvextend -L +5G /dev/mapper/vg_os-lv_var
+resize2fs /dev/mapper/vg_os-lv_var
+df -Th
+df -h /var/
+lvdisplay
+vgdisplay
+cd ..
+lvextend -L +5G /dev/mapper/vg_os-lv_var
+resize2fs /dev/mapper/vg_os-lv_var
+xfs_growfs /var
+df -Th
+cd /nas_storage/app/public/documents/malviya_nagar/33715/scannedFiles
+ls
+rm app0000003.pdf 
+cd /var/www/
+ls
+df -Th
+systemctl reload nginx
+supervisorctl status all
+supervisorctl restart edhartiapp
+cd /nas_storage/app/public/documents/malviya_nagar/33715/
+ls
+cd scannedFiles/
+ls
+ls -la
+cd /var/www/lnd_backend/storage/app/public/officedocs_eng
+chmod +777 Hiring_of_Legal_Consultants_0001.pdf 
+chmod -R +777 0001.pdf 
+cd ..
+chmod -R +777 officedocs_hin/
+chmod -R +777 officedocs_eng/
+cd../../..
+cd ../..
+cd ..
+chmod -R +777 public/administrator/
+cd /var/www/backups/
+ls
+rm backup-2026-04-16-17-37-21.zip 
+cd ..
+./script.sh 
+cd /var/www/backups/
+ls
+rm backup-2026-04-06-12-16-38.zip 
+cd ..
+./script.sh 
+cd /var/www/edhartiMain/
+php artisan migrate
+cd ..
+cd testingnext/
+rm -rf .next/
+npm run build
+pm2 restart all
+cd ..
+cd lnd_backend/
+chmod -R +777 public/ storage/
+cd ..
+cd testingnext/
+rm -rf .next/
+npm run build
+pm2 restart all
+ls
+cd ..
+cd edhartiMain/
+php artisan migrate --path=database/migrations/2026_01_15_132917_create_application_document_details_table.php
+crontab -l
+nano storage/logs/laravel.log 
+> storage/logs/laravel.log
+nano storage/logs/laravel.log 
+> storage/logs/laravel.log
+nano crontab -e
+nano crontab -l
+crontab -l
+crontab -l 
+crontab -e
+crontab -l
+> storage/logs/laravel.log
+nano storage/logs/laravel.log 
+crontab -e
+crontab -l
+nano storage/logs/laravel.log 
+ls -la storage/logs/laravel.log
+crontab -l
+nano storage/logs/laravel.log 
+> storage/logs/laravel.log
+nano storage/logs/laravel.log 
+cd /var/www/backups/
+rm backup-2026-03-20-17-46-31.zip 
+cd ..
+./script.sh 
+cd /var/www/edharti
+php artisan config:clear
+php artisan cache:clear
+supervisorctl status all
+nano /etc/nginx/sites-enabled/demo 
+supervisorctl restart edharti_staging
+nano /etc/nginx/sites-available/demo
+cd /etc/nginx/sites-enabled/
+ls
+rm demo 
+ln -s /etc/nginx/sites-available/demo /etc/nginx/sites-enabled/
+systemctl restart nginx
+supervisorctl restart edharti_staging
+supervisorctl status all
+nano /etc/nginx/sites-enabled/demo 
+cd /var/www/edharti
+ls
+ls -la
+supervisorctl stop edharti_staging
+supervisorctl start edharti_staging
+nano routes/web.php
+php artisan route:clear
+chmod -R +777 /nas_storage/app/public/ 
+cd /var/www/backups/
+ls
+rm backup-2026-04-09-17-46-09.zip 
+cd ..
+./script.sh 
+clear
+grep "sshd" /var/log/auth.log
+grep "Failed password" /var/log/auth.log | awk '{print $11}' | sort | uniq -c | sort -nr
+grep "Accepted" /var/log/auth.log
+grep "Accepted" /var/log/auth.log | tail -20
+cat ~/.bash_history
+grep "Accepted" /var/log/auth.log
+cd /var/www/
+chmod -R +777 backups/
+cd backups/
+cd /var/www/backups/
+ls
+rm backup-2026-01-09-18-05-12.zip 
+cd ..
+nano script.sh 
+./script.sh 
+chmod -R +777 backups/
+nano script.sh 
+cd backups/
+rm backup-2026-01-15-13-54-54.zip 
+cd ..
+./script.sh 
+chmod -R +777 backups/
+nano ./script.sh 
+chmod -R +777 backups/
+./script.sh 
+cd backups/
+cd ..
+./script.sh 
+ls
+nano script.sh 
+ls
+./script.sh 
+cd backups/
+chmod -R +777 backups/
+cd ..
+chmod -R +777 backups/
+cd /var/www/edhartiMain/
+php artisan app:check-pending-payment-status
+df -Th
+cd /var/log/
+ls
+rm -rf cloud-init.*
+rm -rf dmesg.*
+rm -rf laravel.*
+df -Th
+rm -rf localmessages.*
+> auth.log
+df -Th
+ls -la
+> messages
+rm -rf messages.*
+df -Th
+> syslog
+rm -rf syslog.*
+df -Th
+rm -rf laravel.*
+df -Th
+cd /var/www/edhartiMain/
+php artisan migrate --path=/database/migrations/2026_04_07_110753_add_status_and_remarks_to_it_cell_reg_transfer_histories_table.php
+cd /var/www/
+cd testingnext/
+ls
+rm -rf .next/
+npm run build
+rm -rf .next/
+npm run build
+pm2 restart all
+rm -rf .next/
+npm run build
+pm2 restart all
+cd /var/www/testingnext/
+nano src/app/notice-modal/noticeModal.js 
+rm -rf .next/
+npm run build
+pm2 restart all
+cd /var/www/testingnext/
+rm -rf .next/
+npm run build
+pm2 restart all
+cd /var/www/backups/
+rm backup-2026-03-24-10-47-50.zip 
+ls
+cd ..
+./script.sh 
+git clone https://github.com/tomaradarsh0001/edharti.git
+cd /var/www/
+ls
+sudo su
+cd /var/www/backups/
+ls
+rm backup-2026-03-10-14-46-30.zip 
+cd ..
+./script.sh 
+cd /
+ls
+chmod -R +777 /nas_storage/
+cd /var/www/edhartiMain/
+php artisan config:clear
+php artisan config:cache
+supervisorctl restart edhartiapp
+supervisorctl start edhartiapp
+php artisan config:clear
+php artisan config:cache
+supervisorctl start edhartiapp
+supervisorctl status all
+nano /etc/supervisor/conf.d/edhartiapp.conf 
+nano /var/log/laravel.err.log
+cd ..
+chmod -R +777 edhartiMain/
+supervisorctl start edhartiapp
+php artisan config:clear
+cd edhartiM
+cd edhartiMain/
+php artisan config:clear
+php artisan config:cache
+cd ..
+chmod -R +777 /var/www/edhartiMain/
+supervisorctl restart edhartiapp
+cd edhartiM
+cd edhartiMain/
+sudo chown -R www-data:www-data storage
+cd /var/www/
+ls
+cd backups/
+ls
+rm backup-2026-02-02-11-06-21.zip 
+cd ..
+./script.sh 
+chmod -R +777 backups/
+ls
+cd /var/www/
+./script.sh 
+cd edhartiMain/
+php artisan migrate --path=/databases/migrations/2026_01_05_143425_add_splitted_id_column_in_applications_table.php
+php artisan migrate --path=/databases/migration/2026_01_05_143425_add_splitted_id_column_in_applications_table.php
+php artisan migrate --path=/database/migrations/2026_01_05_143425_add_splitted_id_column_in_applications_table.php
+cd /var/www/edhartiMain/
+nano .env 
+ssh edhartiAdmin@10.192.152.216
+ssh edhartiAdmin@10.192.152.206
+cd /var/www/
+ls
+rm -rf edharti
+git clone https://github.com/tomaradarsh0001/edharti.git
+cd edharti
+ls
+composer install --ignore-platform-reqs
+ls -la
+cd ..
+chmod -R +777 edharti
+chown -R www-data:www-data
+chown -R www-data:www-data edharti
+ls
+cd edharti
+ls
+nano /etc/nginx/sites-available/demo
+chmod -R +755 /etc/nginx/sites-available/demo
+cd /etc/supervisor/
+ls
+cd 
+cd /etc/supervisor/conf.d/
+ls
+nano edhartiapp.conf 
+nano staging.conf
+supervisorctl reread
+supervisorctl update
+supervisorctl status all
+cd /var/www/
+cd backups/
+rm backup-2026-02-10-10-55-24.zip 
+ls
+cd ..
+nano script.sh 
+./script.sh 
+cd /var/www/edhartiMain/
+ls
+supervisorctl status all
+cd storage/logs/
+ls
+ls -la
+cd ../..
+php artisan payment-status-check
+cd ..
+cd backups/
+ls
+rm backup-2026-03-06-12-27-49.zip 
+cd ..
+./script.sh 
+nano script.sh 
+cd /var/www/edhartiMain/
+cd ..
+cd backups/
+ls
+rm backup-2026-02-17-14-08-24.zip 
+cd ..
+nano script.sh 
+./script.sh 
+cd backups/
+cd ..
+chmod -R +777 backups/
+cd backups/
+ls
+cd /var/www/backups/
+ls
+rm backup-2026-03-30-11-32-54.zip 
+ls
+cd ..
+./s
+./script.sh 
+df -Th
+systemctl status mginx
+systemctl status nginx
+chmod -R +777 edhartiMain/database/migrations/
+cd edhartiMain/
+php artisan migtrate --path=/database/migrations/2026_03_25_115201_add_deleted_at_to_newly_added_properties_table.php
+php artisan migrate --path=/database/migrations/2026_03_25_115201_add_deleted_at_to_newly_added_properties_table.php
+supervisrctl status all
+supervisorctl status all
+supervisorctl restart laravel-scheduler
+php artisan config:clear
+php artisan cache:clear
+supervisorctl restart laravel-scheduler
+php artisan config:clear
+php artisan cache:clear
+php artisan config:clear
+php artisan cache:clear
+supervisorctl restart laravel-scheduler
+php artisan cache:clear
+php artisan config:clear
+php artisan cache:clear
+php artisan config:clear
+php artisan cache:clear
+supervisorctl restart laravel-scheduler
+php artisan cache:clear
+php artisan config:clear
+supervisorctl restart laravel-scheduler
+php artisan cache:clear
+php artisan config:clear
+supervisorctl restart laravel-scheduler
+php artisan config:clear
+php artisan cache:clear
+supervisorctl restart laravel-scheduler
+php artisan cache:clear
+php artisan config:clear
+supervisorctl restart laravel-scheduler
+php artisan config:clear
+php artisan cache:clear
+supervisorctl restart laravel-scheduler
+php artisan cache:clear
+php artisan config:clear
+supervisorctl restart laravel-scheduler
+supervisorctl stop laravel-scheduler
+php artisan schedule:run
+php artisan config:clear
+php artisan cache:clear
+php artisan config:clear
+php artisan schedule:run
+supervisorctl start laravel-scheduler
+php artisan config:clear
+php artisan cache:clear
+supervisorctl restart laravel-scheduler
+supervisorctl status all
+supervisorctl restart edharti-queue:edharti-queue_00
+php artisan cache:clear
+php artisan config:clear
+supervisorctl restart edharti-queue:edharti-queue_00
+supervisorctl restart laravel-scheduler
+supervisorctl restart edharti-queue:edharti-queue_00
+php artisan config:clear
+php artisan cache:clear
+supervisorctl restart laravel-scheduler
+supervisorctl restart edharti-queue:edharti-queue_00
+php artisan cache:clear
+php artisan config:clear
+supervisorctl restart laravel-scheduler
+supervisorctl restart edharti-queue:edharti-queue_00
+php artisan config:clear
+php artisan cache:clear
+supervisorctl restart laravel-scheduler
+supervisorctl restart edharti-queue:edharti-queue_00
+php artisan cache:clear
+php artisan config:clear
+supervisorctl restart laravel-scheduler
+supervisorctl restart edharti-queue:edharti-queue_00
+php artisan config:clear
+php artisan cache:clear
+supervisorctl restart laravel-scheduler
+supervisorctl restart edharti-queue:edharti-queue_00
+php artisan cache:clear
+php artisan config:clear
+supervisorctl restart laravel-scheduler
+supervisorctl restart edharti-queue:edharti-queue_00
+php artisan config:clear
+php artisan cache:clear
+supervisorctl restart laravel-scheduler
+supervisorctl restart edharti-queue:edharti-queue_00
+php artisan config:clear
+php artisan cache:clear
+supervisorctl restart laravel-scheduler
+supervisorctl restart edharti-queue:edharti-queue_00
+php artisan cache:clear
+php artisan config:clear
+supervisorctl restart laravel-scheduler
+supervisorctl restart edharti-queue:edharti-queue_00
+supervisorctl stop edharti-queue:edharti-queue_00
+supervisorctl stop laravel-scheduler
+php artisan config:clear
+php artisan cache:clear
+supervisorctl start edharti-queue:edharti-queue_00
+supervisorctl start laravel-scheduler
+php artisan config:clear
+supervisorctl start edharti-queue:edharti-queue_00
+php artisan cache:clear
+supervisorctl restart laravel-scheduler
+supervisorctl restart edharti-queue:edharti-queue_00
+supervisorctl start edharti-queue:edharti-queue_00
+php artisan config:clear
+php artisan cache:clear
+supervisorctl restart laravel-scheduler
+supervisorctl restart edharti-queue:edharti-queue_00
+php artisan config:clear
+php artisan cache:clear
+supervisorctl restart laravel-scheduler
+supervisorctl restart edharti-queue:edharti-queue_00
+php artisan config:clear
+php artisan cache:clear
+supervisorctl restart laravel-scheduler
+supervisorctl restart edharti-queue:edharti-queue_00
+cd /var/www/edharti
+ls
+php artisan config:clear
+chmod -R +777 /var/www/edhartiMain/storage/logs/
+php artisan app:check-pending-payment-status
+cd ..
+cd backups/
+ls
+rm backup-2026-04-20-11-42-51.zip 
+cd ..
+./script.sh
+supervisorctl status all
+supervisorctl restart edhartiapp
+cd /var/www/edhartiMain/
+php artisan config:clear
+df -Th
+supervisorctl restart edhartiapp
+df -Th
+cd /var/www/edhartiMain/
+ls -la
+cd /var/log/
+ls
+nano syslog
+nano nginx/
+nano nginx/error.log
+cd /var/www/
+cd edhartiMain/
+chmod -R +777 storage/
+chmod -R +777 /var/www/edhartiMain/storage/logs
+ls
+nano /etc/php/8.3/cli/php.ini 
+php -i | grep upload_max_filesize
+supervisorctl restart edhartiapp
+df -Th
+supervisorctl restart edhartiapp
+df -Th
+ls
+cd /var/www/edhartiMain/
+ls
+ls -la
+df -Th
+supervisorctl status all
+supervisorctl start edharti-queue:edharti-queue_00
+supervisorctl status all
+supervisorctl stop edharti_staging
+supervisorctl status all
+supervisorctl restart edhartiapp
+cd /var/log
+ls
+rm -rf syslog.*
+df -Th
+rm -rf laravel.*
+ls
+df -Th
+rm -rf auth.log.*
+df -Th
+supervisorctl restart edhartiapp
+htop
+systemctl restart php8.3-fpm
+nano /var/log/supervisor/supervisord.log
+free -m
+systemctl restart nginx
+pm2 status all
+supervisorctl restart edhartiapp
+free -m
+htop
+supervisorctl status all
+supervisorctl start edhartiapp
+mtop
+htop
+systemctl status php8.3-fpm
+nano /var/log/php8.3-fpm.log
+upervisorctl status all
+ping 127.0.0.1"5000
+ping 127.0.0.1:5000
+supervisorctl status all
+supervisorctl stop backendapp
+supervisorctl restart backendapp
+supervisorctl stop backendapp
+supervisorctl restart edhartiapp
+supervisorctl start backendapp
+supervisorctl restart edhartiapp
+htop
+curl -v 127.0.0.1:7000
+root@edharti-env21:/home/edhartiAdmin# curl -v 127.0.0.1:7000
+*   Trying 127.0.0.1:7000...
+* Connected to 127.0.0.1 (127.0.0.1) port 7000 (#0)
+> GET / HTTP/1.1
+> Host: 127.0.0.1:7000
+> User-Agent: curl/7.81.0
+> Accept: */*
+>
+* Mark bundle as not supporting multiuse
+< HTTP/1.1 302 Found
+< Host: 127.0.0.1:7000
+< Connection: close
+< X-Powered-By: PHP/8.3.29
+< Cache-Control: no-cache, private
+< Date: Wed, 29 Apr 2026 10:05:24 GMT
+< Location: https://127.0.0.1:7000/edharti
+< Content-Type: text/html; charset=utf-8
+< X-Frame-Options: DENY
+< Set-Cookie: XSRF-TOKEN=eyJpdiI6InpUQmR5eCsvdUFKV09iU3FSOWw2ZFE9PSIsInZhbHVlIjoiWFl3NTR6YytSOC9rOVFTQ3dpanZUZWVicnE3NHA4U3Facm5rVGM5a2EvQUJCR3NEaUQ1Y3JpTDc3SVY5YzFidEpjOUd1MVJ4eGlFeGFUSC9FbnJ2eTMyaE5TV0RiSTVBT2E4ZG5ETjdtRktrNlMzeGpReFcxL0x0TndiSk00QUEiLCJtYWMiOiI3N2E3NzllZGJmZmYwNWI3MWU0MmI5NjYzMjE0MTk1N2JhYTc2OWViZGRlYzg0MTc4YzZjODgyN2YwZTdhOWNjIiwidGFnIjoiIn0%3D; expires=Wed, 29 Apr 2026 11:05:24 GMT; Max-Age=3600; path=/edharti; secure; samesite=lax
+< Set-Cookie: edharti_session=eyJpdiI6Ikg4T04rN3o4cGgyWVRMNjJtbUhoamc9PSIsInZhbHVlIjoieW9zak0xbmFPbE52a1B4ZkJCTExkTTU3M2dzR0x1TTlLRTZhMzFzVVppSmttSEtWNXprWnRRWElwUGdYSnVFNC9GNXNZMmcrUUFYVzZlSVM4NTVLenFHbFBPcUlSR1Rsc1NTZGpsRXBuNFliVE9KTDkvWUtSdmxBbm96eXhOeUciLCJtYWMiOiJkNjc0MjRhYTM3ODYyMjg5Zjg1ZDNhZDg2YTFlM2VhNmM1NzY0ZGQyYTFjNDgxMzg0ZjVmM2Y5Y2U5ZjE5ZDk2IiwidGFnIjoiIn0%3D; expires=Wed, 29 Apr 2026 11:05:24 GMT; Max-Age=3600; path=/edharti; secure; httponly; samesite=lax
+<
+<html>
+* Closing connection 0
