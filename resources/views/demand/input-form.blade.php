@@ -1986,7 +1986,22 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
       }
     }
 
-    $(document).on('focusout', '.demand-item-container #user-inputs :input:not(:button)', function() {
+    $(document).on('focusout', '.demand-item-container #user-inputs :input:not(:button)', function(){
+      const container = $(this).closest('.demand-item-container');
+      markAmountNotIncluded(container);
+    });
+
+    function markAmountNotIncluded(container){
+      console.log(container);
+      const calculateBtn = container.find('.btn-calculate');
+      if (!calculateBtn.is(':visible')) {
+        container.find('.btn-calculate').show();
+        container.find('.calculation_details').empty().hide();
+        addInputPending++;
+      }
+      $('#btn-submit').attr('disabled', true);
+    }
+    /* $(document).on('focusout', '.demand-item-container #user-inputs :input:not(:button)', function() {
       const container = $(this).closest('.demand-item-container');
       const calculateBtn = container.find('.btn-calculate');
       if (!calculateBtn.is(':visible')) {
@@ -1996,7 +2011,7 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
       }
 
       $('#btn-submit').attr('disabled', true);
-    });
+    }); */
 
 
 
@@ -2637,12 +2652,13 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
                 </label>
 
                 <input
-                    class="form-control bg-light"
+                    class="form-control bg-light ench_amount"
                     type="number"
                     name="ench_amount[]"
                     placeholder="Auto calculated"
                     readonly
                 >
+                <span class="error"></span>
 
             </div>
 
@@ -2679,8 +2695,10 @@ $(document).on('click', '.add-encroachment', function () {
     let container = $(this)
         .closest('.encroachment-row')
         .parent();
-
+    const demandContainer = $(this).closest('.demand-item-container');
     appendEnchroachmentInput(container);
+    console.log(demandContainer);
+    markAmountNotIncluded(demandContainer);
 });
 
 
@@ -2689,7 +2707,7 @@ $(document).on('click', '.remove-encroachment', function () {
     let container = $(this)
         .closest('.encroachment-row')
         .parent();
-
+    const demandContainer = $(this).closest('.demand-item-container');
     $(this)
         .closest('.encroachment-row')
         .remove();
@@ -2709,6 +2727,7 @@ $(document).on('click', '.remove-encroachment', function () {
             </button>
         `);
     }
+    markAmountNotIncluded(demandContainer);
 });
 
 
@@ -3462,8 +3481,47 @@ function calculateEncroachment(row) {
       displayDemandCalculationResult(inputElements, result)
       fillDemandAmount(inputElements, totalSublettingCharges);
     }
-    function calculateEncroachmentCharges(inputElements){
-      
+    function calculateEncroachmentCharges(inputElements) {
+
+        let addedEncroachmentCharges = 0;
+        let hasInvalidAmount = false;
+
+        inputElements.find('.encroachment-row').each(function () {
+
+            const amountInput = $(this).find('.ench_amount');
+            const error = amountInput.siblings('.error');
+            const amount = parseFloat(amountInput.val());
+
+            // Clear previous error
+            error.text('');
+
+            if (!amountInput.val() || isNaN(amount) || amount <= 0) {
+                error.text('Amount is required.');
+                hasInvalidAmount = true;
+                return;
+            }
+
+            addedEncroachmentCharges += amount;
+        });
+
+        if (hasInvalidAmount) {
+            return false;
+        }
+
+        const displayStatement =
+            `Total ${customNumFormat(addedEncroachmentCharges)} added to demand`;
+
+        displayDemandCalculationResult(
+            inputElements,
+            displayStatement
+        );
+
+        fillDemandAmount(
+            inputElements,
+            addedEncroachmentCharges
+        );
+
+        return true;
     }
 
     function calculateStandardPenalty(inputElements) {
