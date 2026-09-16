@@ -613,6 +613,7 @@ public function getPropertyResults(Request $request, ReportService $reportServic
             ->leftJoin('items', 'property_masters.land_type', '=', 'items.id')
             ->leftJoin('old_colonies', 'property_masters.new_colony_name', '=', 'old_colonies.id')
             ->leftJoin('departments', 'unallotted_property_details.transferred_to', '=', 'departments.id')
+            ->leftJoin('survey_details', 'property_masters.id', '=', 'survey_details.property_id')
             ->select(
                 'unallotted_property_details.old_property_id',
                 'unallotted_property_details.plot_area_in_sqm',
@@ -631,6 +632,8 @@ public function getPropertyResults(Request $request, ReportService $reportServic
                 'items.item_name as landType',
                 'old_colonies.name as colonyName',
                 'departments.name as departmentName',
+                'survey_details.latitude',
+                'survey_details.longitude',
             );
 
         // Define the searchable columns

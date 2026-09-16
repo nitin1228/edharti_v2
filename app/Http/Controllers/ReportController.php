@@ -1345,6 +1345,7 @@ class ReportController extends Controller
             ->leftJoin('items', 'property_masters.land_type', '=', 'items.id')
             ->leftJoin('old_colonies', 'property_masters.new_colony_name', '=', 'old_colonies.id')
             ->leftJoin('departments', 'unallotted_property_details.transferred_to', '=', 'departments.id')
+            ->leftJoin('survey_details', 'property_masters.old_propert_id', '=', 'survey_details.property_id')
             ->select(
                 'unallotted_property_details.old_property_id',
                 'unallotted_property_details.plot_area_in_sqm',
@@ -1363,6 +1364,8 @@ class ReportController extends Controller
                 'items.item_name as landType',
                 'old_colonies.name as colonyName',
                 'departments.name as departmentName',
+                'survey_details.latitude as survey_latitude',
+                'survey_details.longitude as survey_longitude'
             );
 
         if ($request->has('locality_record') && $request->locality_record != '') {
@@ -1405,6 +1408,8 @@ class ReportController extends Controller
             ->orderBy($searchableColumns[$orderColumnIndex] ?? 'unallotted_property_details.created_at', $dir)
             ->get();
 
+            // dd($getUnallotedPropertyData);
+
         // Calculate starting counter based on current page
         $counter = $start + 1; // This ensures continuous numbering across pages
 
@@ -1440,6 +1445,8 @@ class ReportController extends Controller
             $nestedData['is_encrached'] = $property->is_encrached ? 'Yes' : 'No';
             $nestedData['is_litigation'] = $property->is_litigation ? 'Yes' : 'No';
             $nestedData['old_property_id_raw'] = $property->old_property_id;
+            $nestedData['survey_latitude'] = $property->survey_latitude ?? '';
+            $nestedData['survey_longitude'] =$property->survey_longitude ?? '';
             $data[] = $nestedData;
         }
 

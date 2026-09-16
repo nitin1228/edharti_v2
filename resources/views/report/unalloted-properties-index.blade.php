@@ -129,6 +129,8 @@
 							<th>Is it under the custodianship <br>of any other department?</th>
 							<th>Encroachment?</th>
 							<th>Litigation?</th>
+							<th>Latitude</th>
+							<th>Longitude</th>
                                                      <!-- added by Swati Mishra on 23052025 to integrate Survey Details-->
                                                        <th>Survey Details</th> 
 						</tr>
@@ -233,6 +235,13 @@
                 serverSide: true,
                 scrollX: true,
                 responsive: false,
+                // ✅ Custom pagination options
+    lengthMenu: [
+        [10, 25, 50, 100, 500],
+        [10, 25, 50, 100, 500]
+    ],
+    pageLength: 10,                 // default rows per page
+
                 ajax: {
                     url: "{{ route('getUnallotedProperties') }}",
                     data: function(d) {
@@ -304,6 +313,14 @@
                     {
                         data: 'is_litigation',
                         name: 'is_litigation'
+                    },
+                    {
+                        data: 'survey_latitude',
+                        name: 'survey_latitude'
+                    },
+                    {
+                        data: 'survey_longitude',
+                        name: 'survey_longitude'
                     },
                     {
                         data: null,
