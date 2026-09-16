@@ -78,6 +78,15 @@ class DemandFormulaSeeder extends Seeder
                 'parent_head_code' => null,
             ],
             [
+                'head_code' => 'DEM_ENCH_CHG',
+                'date_from' => date('Y-m-d', strtotime('2025-01-01')),
+                'date_to' => null,
+                'formula' => 'EC = 10% of (EA x LR)',
+                'description' => 'EC = Encroachment Charges, EA = Encroached Area, LR = Land Rate',
+                'for_allotment_type' => 0,
+                'parent_head_code' => null,
+            ],
+            [
                 'head_code' => 'DEM_PENAL_STANDARD',
                 'date_from' => date('Y-m-d', strtotime('2025-01-01')),
                 'date_to' => null,
