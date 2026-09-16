@@ -5,12 +5,13 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class DemandDetail extends Model
 {
     use HasFactory;
     protected $guarded = [];
-    protected $appends = ['subhead_name', 'subhead_keys','property_known_as'];
+    protected $appends = ['subhead_name', 'subhead_keys', 'property_known_as'];
     public function demand(): BelongsTo
     {
         return $this->belongsTo(Demand::class, 'demand_id', 'id');
@@ -32,7 +33,7 @@ class DemandDetail extends Model
                 return null;
             }
         }
-    } 
+    }
     public function getSubheadNameAttribute()
     {
         return getServiceNameById($this->subhead_id);
@@ -45,5 +46,10 @@ class DemandDetail extends Model
     {
         $headKeys = DemandHeadKey::where('head_id', $this->id)->pluck('value', 'key')->toArray();
         return $headKeys;
+    }
+
+    public function formula(): HasOne
+    {
+        return $this->hasOne(DemandFormula::class, 'id', 'formula_id');
     }
 }

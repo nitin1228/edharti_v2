@@ -249,8 +249,8 @@
             </tr>
         </thead>
         <tbody>
+            
             @forEach($demandDetails as $dd)
-            {{-- @dd($dd->subhead_keys) --}}
                 <tr>
                     <td><strong>{{$loop->iteration}}</strong></td>
                     <td> @if(getServiceCodeById($dd->subhead_id) == "DEM_MANUAL")
@@ -272,6 +272,8 @@
                         {{$dd->subhead_keys['manual_description']}}
                         @elseif(getServiceCodeById($dd->subhead_id) == "DEM_SETTLED_AMOUNT")
                         {{$dd->subhead_keys['settled_title']}}
+                        @elseif(getServiceCodeById($dd->subhead_id) == "DEM_PREV_EXTRA_AMT")
+                        {{'-'}}
                         @else
                         {{$dd->formula->formula ?? ''}}
                         <br>where<br>
