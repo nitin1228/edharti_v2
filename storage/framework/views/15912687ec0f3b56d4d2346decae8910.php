@@ -1,6 +1,6 @@
-@extends('layouts.app')
-@section('title', 'Dashboard')
-@section('content')
+
+<?php $__env->startSection('title', 'Dashboard'); ?>
+<?php $__env->startSection('content'); ?>
 <style>
     .subtypes {
         display: flex;
@@ -61,7 +61,7 @@
                 <div class="ps-3">
                     <nav aria-label="breadcrumb">
                         <ol class="breadcrumb mb-0 p-0">
-                            <li class="breadcrumb-item"><a href="{{route('dashboard')}}"><i class="bx bx-home-alt"></i></a>
+                            <li class="breadcrumb-item"><a href="<?php echo e(route('dashboard')); ?>"><i class="bx bx-home-alt"></i></a>
                             </li>
                             <li class="breadcrumb-item">Dashboard</li>
                             <!-- <li class="breadcrumb-item active" aria-current="page">My Dashboard</li> -->
@@ -73,26 +73,26 @@
     </div>
     <div class="container-fluid dashboardcards">
         <div class="row row-flex mb-3">
-            {{-- properties --}}
+            
             <div class="col-md-4 mb-3">
-                <a href="{{ route('applicant.properties') }}" style="color: inherit; text-decoration: none;">
+                <a href="<?php echo e(route('applicant.properties')); ?>" style="color: inherit; text-decoration: none;">
                     <div class="card bg-light-green dash-cards">
                         <div class="card-body">
-                            <!-- <h4>My Propert{{$userProperties->count() == 1 ? 'y':'ies'}}</h4> -->
+                            <!-- <h4>My Propert<?php echo e($userProperties->count() == 1 ? 'y':'ies'); ?></h4> -->
                              <div class="d-flex justify-content-between align-items-center mb-2">
-                                <h4 class="mb-0" style="font-size:22px;">My Propert{{ $userProperties->count() == 1 ? 'y' : 'ies' }}</h4>
-                                <!-- <span class="badge text-light">{{ $userProperties->count() }}</span> -->
+                                <h4 class="mb-0" style="font-size:22px;">My Propert<?php echo e($userProperties->count() == 1 ? 'y' : 'ies'); ?></h4>
+                                <!-- <span class="badge text-light"><?php echo e($userProperties->count()); ?></span> -->
                             </div>
                             <div class="dash-widgets">                            
                                 <div class="widget-media-body">
-                                    <div class="widget-count">{{ $userProperties->count() }}</div>
+                                    <div class="widget-count"><?php echo e($userProperties->count()); ?></div>
                                     <!-- <div class="property-list">
                                         <div class="row">
-                                            @foreach($userProperties as $up)
+                                            <?php $__currentLoopData = $userProperties; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $up): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                                             <div class="col-sm-12 col-xxl-6">
-                                                <p style="font-size:16px;">{{$up->known_as}}</p>
+                                                <p style="font-size:16px;"><?php echo e($up->known_as); ?></p>
                                             </div>
-                                            @endforeach
+                                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                                         </div>
                                     </div>                                                                 -->
                                 </div>
@@ -105,19 +105,19 @@
                 </a>
                 
             </div>
-            {{-- Applications --}}
+            
             <div class="col-md-4 mb-3">
-                <a href="{{ route('applications.all.details') }}" style="color: inherit; text-decoration: none;">
+                <a href="<?php echo e(route('applications.all.details')); ?>" style="color: inherit; text-decoration: none;">
                     <div class="card bg-primary dash-cards">
                         <div class="card-body">
                             <div class="d-flex justify-content-between align-items-center mb-2">
-                                <h4 class="mb-0"style="font-size:22px;">Application{{ $userApplications->count() === 1 ? '' : 's' }}</h4>
+                                <h4 class="mb-0"style="font-size:22px;">Application<?php echo e($userApplications->count() === 1 ? '' : 's'); ?></h4>
                                
                             </div>
 
                             <div class="dash-widgets">                            
                                 <div class="widget-media-body">
-                                    <div class="widget-count">{{ $userApplications->count() }}</div>                                
+                                    <div class="widget-count"><?php echo e($userApplications->count()); ?></div>                                
                                     
                                 </div>
                                 <div class="dash-icons">
@@ -132,23 +132,23 @@
         <!-- Demands -->
             <div class="col-md-4 mb-3">
                 <!-- by Swati on 16-07-2025 for adding hyperlink to redirect to demand page -->
-                <a href="{{ route('applicant.pendingDemands') }}" style="color: inherit; text-decoration: none;">
+                <a href="<?php echo e(route('applicant.pendingDemands')); ?>" style="color: inherit; text-decoration: none;">
                     <div class="card bg-dark-orange dash-cards">
                         <div class="card-body">
-                            <!-- <h4>Pending Demands ({{ $demandCount }})</h4> -->
+                            <!-- <h4>Pending Demands (<?php echo e($demandCount); ?>)</h4> -->
                              <div class="d-flex justify-content-between align-items-center mb-2">
                                 <h4 class="mb-0"style="font-size:22px;">Pending Demands</h4>
-                                <!-- <span class="badge badge text-light">{{ $demandCount }}</span> -->
+                                <!-- <span class="badge badge text-light"><?php echo e($demandCount); ?></span> -->
                             </div>
 
                             <div class="dash-widgets">                            
                                 <div class="widget-media-body">
-                                    <div class="widget-count">{{ $demandCount }}</div>                                                   
+                                    <div class="widget-count"><?php echo e($demandCount); ?></div>                                                   
                                     <!-- <div class="property-list">
                                         <div class="row">
                                             <div class="col-sm-12 col-md-12 col-xl-6">
-                                                    <p>{{$demandCount}}</p>
-                                                     <p style="font-size:16px;">Total: ₹{{ number_format($demandTotal) }}</p>
+                                                    <p><?php echo e($demandCount); ?></p>
+                                                     <p style="font-size:16px;">Total: ₹<?php echo e(number_format($demandTotal)); ?></p>
 
                                             </div>
                                         </div>
@@ -165,8 +165,8 @@
                         <div class="card-body">
                             <div class="dashboard-card-view">
                                 <h4>
-                                    <a href="{{ route('applicant.pendingDemands')}}" style="color: inherit">
-                                        <span id="totalAppCount">{{$demandCount}}</span>
+                                    <a href="<?php echo e(route('applicant.pendingDemands')); ?>" style="color: inherit">
+                                        <span id="totalAppCount"><?php echo e($demandCount); ?></span>
                                     </a>
                                 </h4>
                             </div>
@@ -174,9 +174,9 @@
                     </div>
                 </a>    
             </div>
-        {{-- Appointments --}}
+        
 
-        {{-- user Appointments --}}
+        
         
         </div>
 
@@ -195,7 +195,7 @@
 
 
         
-@forelse($userProperties as $property)
+<?php $__empty_1 = true; $__currentLoopData = $userProperties; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $property): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
     <!-- Property 1 -->
     <div class="card border-0 shadow-sm mb-3">
         <div class="card-body p-3">
@@ -205,7 +205,7 @@
                 <div>
                     <span class="fw-bold">
                         <i class="bi bi-house-door text-primary me-1"></i>
-                        Property ID: {{ $property->old_property_id }} 
+                        Property ID: <?php echo e($property->old_property_id); ?> 
                     </span>
                 </div>
 
@@ -222,11 +222,12 @@
                         <small class="text-muted d-block">Ground Rent</small>
                        
                         <span class="fw-bold text-primary">
-                            @if($property->leaseDetails?->gr_in_re_rs !== null)
-                                ₹{{ $property->leaseDetails->gr_in_re_rs }}.{{ str_pad($property->leaseDetails->gr_in_re_paise ?? 0, 2, '0', STR_PAD_LEFT) }}
-                            @else
+                            <?php if($property->leaseDetails?->gr_in_re_rs !== null): ?>
+                                ₹<?php echo e($property->leaseDetails->gr_in_re_rs); ?>.<?php echo e(str_pad($property->leaseDetails->gr_in_re_paise ?? 0, 2, '0', STR_PAD_LEFT)); ?>
+
+                            <?php else: ?>
                                 -
-                            @endif
+                            <?php endif; ?>
                         </span>
                     </div>
                 </div>
@@ -234,27 +235,25 @@
                 <div class="col-lg-2 col-md-4 col-6">
                     <div class="bg-light rounded p-2 h-100">
                         <small class="text-muted d-block">Start Date</small>
-                        <span class="fw-semibold">{{ $property->leaseDetails?->start_date_of_gr
+                        <span class="fw-semibold"><?php echo e($property->leaseDetails?->start_date_of_gr
     ? \Carbon\Carbon::parse($property->leaseDetails->start_date_of_gr)->format('d-m-Y')
-    : '-'
-}}</span>
+    : '-'); ?></span>
                     </div>
                 </div>
 
                 <div class="col-lg-2 col-md-4 col-6">
                     <div class="bg-light rounded p-2 h-100">
                         <small class="text-muted d-block">First RGR Due On</small>
-                        <span class="fw-semibold">{{ $property->leaseDetails?->first_rgr_due_on
+                        <span class="fw-semibold"><?php echo e($property->leaseDetails?->first_rgr_due_on
     ? \Carbon\Carbon::parse($property->leaseDetails->first_rgr_due_on)->format('d-m-Y')
-    : '-'
-}}</span>
+    : '-'); ?></span>
                     </div>
                 </div>
 
                 <div class="col-lg-2 col-md-4 col-6">
                     <div class="bg-light rounded p-2 h-100">
                         <small class="text-muted d-block">RGR Duration</small>
-                        <span class="fw-semibold">{{ $property->leaseDetails?->rgr_duration ?? '-' }} Years</span>
+                        <span class="fw-semibold"><?php echo e($property->leaseDetails?->rgr_duration ?? '-'); ?> Years</span>
                     </div>
                 </div>
 
@@ -274,7 +273,7 @@
 
         </div>
     </div>
-@empty
+<?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
 
     <div class="card border-0 shadow-sm">
         <div class="card-body text-center py-5">
@@ -292,7 +291,7 @@
         </div>
     </div>
 
-@endforelse
+<?php endif; ?>
 
 
 
@@ -304,13 +303,13 @@
 
 
 
-        @if($userAppointments->count() > 0)
+        <?php if($userAppointments->count() > 0): ?>
         <div class="row justify-content-between mb-3">
             <div class="col">
                 <div class="card darkbluecard">
                     <div class="card-body">
                         <div class="dashboard-card-view">
-                            <h4>Appointment{{$userAppointments->count() == 1 ? '':'s'}}</h4>
+                            <h4>Appointment<?php echo e($userAppointments->count() == 1 ? '':'s'); ?></h4>
                             <div class="row p-2">
                                 <table class="table table-bordered">
                                     <thead>
@@ -321,17 +320,17 @@
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        @forelse($userAppointments as $uapt)
+                                        <?php $__empty_1 = true; $__currentLoopData = $userAppointments; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $uapt): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
                                         <tr>
-                                            <td> <h5>{{$uapt->application_no.'('.getApplicationTypeByApplicationNo($uapt->application_no).')'}}</h5></td>
-                                            <td>{{date('d-m-Y',strtotime($uapt->valid_till))}}</td>
-                                            <td>{!! !is_null($uapt->schedule_date) ? date('d-m-Y',strtotime($uapt->schedule_date))  : '<a href="'.$uapt->link.'" target="_blank">Click to schedule</a>'!!}</td>
+                                            <td> <h5><?php echo e($uapt->application_no.'('.getApplicationTypeByApplicationNo($uapt->application_no).')'); ?></h5></td>
+                                            <td><?php echo e(date('d-m-Y',strtotime($uapt->valid_till))); ?></td>
+                                            <td><?php echo !is_null($uapt->schedule_date) ? date('d-m-Y',strtotime($uapt->schedule_date))  : '<a href="'.$uapt->link.'" target="_blank">Click to schedule</a>'; ?></td>
                                         </tr>
-                                        @empty
+                                        <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                                         <tr>
                                             <td colspan="3" style="text-align: center"> No appointment</td>
                                         </tr>
-                                        @endforelse
+                                        <?php endif; ?>
                                     </tbody>
                                 </table>
                           
@@ -341,10 +340,12 @@
                 </div>
             </div>
         </div>
-        @endif
+        <?php endif; ?>
     </div>
 
-    @include('include.alerts.ajax-alert')
-    @endsection
-    @section('footerScript')
-    @endsection
+    <?php echo $__env->make('include.alerts.ajax-alert', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
+    <?php $__env->stopSection(); ?>
+    <?php $__env->startSection('footerScript'); ?>
+    <?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('layouts.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\Users\WORK\Laravel\Development Server\edharti_v2\resources\views/dashboard/applicant.blade.php ENDPATH**/ ?>

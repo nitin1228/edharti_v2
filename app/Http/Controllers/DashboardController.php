@@ -36,6 +36,7 @@ use App\Models\PropertyOutside;
 use Spatie\Permission\Models\Role;
 use App\Models\UserRegistration;
 use App\Models\Section;
+use App\Models\PropertyLeaseDetail;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Session;
 use Yajra\DataTables\DataTables;
@@ -1289,6 +1290,9 @@ private function applicantData()
                 }
                 return $up;
             });
+        }
+        foreach ($userProperties as $property) {
+            $property->leaseDetails = PropertyLeaseDetail::where('property_master_id', $property->new_property_id)->first();
         }
         $data['userProperties'] = $userProperties;
         $userApplications = Application::where('created_by', $user->id)->get();
