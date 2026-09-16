@@ -137,6 +137,7 @@ Route::prefix('edharti')->group(function () {
 
         //route for lease hold demands
         Route::get('/lease-hold-demands', [ReportController::class, 'leaseHoldDemands'])->name('leaseHoldDemands');
+        Route::get('/lease-hold-demands-data', [ReportController::class, 'leaseHoldDemandsData'])->name('leaseHoldDemandsData');
 
         // Add this line before the resource route
         Route::get('revenues/{id}/edit', [RevenueController::class, 'edit'])->name('revenues.edit')->middleware('permission:revenue.create');

@@ -1935,7 +1935,7 @@ class ReportController extends Controller
         return $results;
     }
 
-    public function leaseHoldDemands()
+    /* public function leaseHoldDemands()
     {
         $data['properties']  = DB::table('property_masters as pm')
             ->leftJoin('property_lease_details as pld', 'pm.id', '=', 'pld.property_master_id')
@@ -1986,5 +1986,311 @@ class ReportController extends Controller
             ->get();
 
         return view('report.lease-hold-demand-report', $data);
+    } */
+
+    public function leaseHoldDemands()
+    {
+        return view('report.lease-hold-demand-report');
+    }
+
+    public function leaseHoldDemandsData(Request $request)
+    {
+        /*
+     * ---------------------------------------------------------
+     * BASE PROPERTY QUERY
+     * ---------------------------------------------------------
+     */
+        $baseQuery = DB::table('property_masters as pm')
+            ->leftJoin(
+                'property_lease_details as pld',
+                'pm.id',
+                '=',
+                'pld.property_master_id'
+            )
+            ->leftJoin(
+                'splited_property_details as spd',
+                'pm.id',
+                '=',
+                'spd.property_master_id'
+            )
+            ->leftJoin(
+                'sections',
+                'pm.section_code',
+                '=',
+                'sections.section_code'
+            )
+            ->where(function ($q) {
+
+                $q->where(function ($q) {
+                    $q->whereNotNull('pm.is_joint_property')
+                        ->where('spd.property_status', 951);
+                })
+
+                    ->orWhere(function ($q) {
+                        $q->whereNull('pm.is_joint_property')
+                            ->where('pm.status', 951);
+                    });
+            });
+
+
+        /*
+     * ---------------------------------------------------------
+     * TOTAL RECORDS
+     * ---------------------------------------------------------
+     */
+        $recordsTotal = (clone $baseQuery)->count();
+
+
+        /*
+     * ---------------------------------------------------------
+     * SELECT
+     * ---------------------------------------------------------
+     */
+        $query = (clone $baseQuery)
+            ->select(
+                'pm.id as property_master_id',
+                'spd.id as split_property_id',
+
+                DB::raw('
+                COALESCE(
+                    spd.old_property_id,
+                    pm.old_propert_id
+                ) as old_property_id
+            '),
+
+                DB::raw('
+                COALESCE(
+                    spd.presently_known_as,
+                    pld.presently_known_as
+                ) as known_as
+            '),
+
+                DB::raw('
+                COALESCE(
+                    spd.area_in_sqm,
+                    pld.plot_area_in_sqm
+                ) as area_in_sqm
+            '),
+
+                DB::raw('
+                COALESCE(
+                    sections.name,
+                    pm.section_code
+                ) as section
+            ')
+            );
+
+
+        /*
+     * ---------------------------------------------------------
+     * SEARCH
+     * Property ID + Known As+ Section name only
+     * ---------------------------------------------------------
+     */
+        $search = $request->input('search.value');
+
+        if ($search !== null && $search !== '') {
+
+            $query->where(function ($q) use ($search) {
+
+                $q->whereRaw(
+                    'COALESCE(spd.old_property_id, pm.old_propert_id) LIKE ?',
+                    ["%{$search}%"]
+                )
+
+                    ->orWhereRaw(
+                        'COALESCE(spd.presently_known_as, pld.presently_known_as) LIKE ?',
+                        ["%{$search}%"]
+                    )
+                    ->orWhereRaw('
+                        COALESCE(
+                            sections.name,
+                            pm.section_code
+                        ) like ?', ["%{$search}%"]);
+            });
+        }
+
+
+        /*
+     * ---------------------------------------------------------
+     * FILTERED COUNT
+     * ---------------------------------------------------------
+     */
+        $recordsFiltered = (clone $query)->count();
+
+
+        /*
+     * ---------------------------------------------------------
+     * SORTING
+     * ---------------------------------------------------------
+     *
+     * 0 = S.No.          -> NOT sortable
+     * 1 = Property ID    -> sortable
+     * 2 = Known As       -> sortable
+     * 3 = Section        -> sortable
+     * 4 = Area           -> sortable
+     * 5 = Outstanding    -> NOT sortable
+     * 6 = View           -> NOT sortable
+     */
+        $sortableColumns = [
+            1 => DB::raw(
+                'COALESCE(spd.old_property_id, pm.old_propert_id)'
+            ),
+
+            2 => DB::raw(
+                'COALESCE(spd.presently_known_as, pld.presently_known_as)'
+            ),
+
+            3 => DB::raw(
+                'COALESCE(sections.name, pm.section_code)'
+            ),
+
+            4 => DB::raw(
+                'COALESCE(spd.area_in_sqm, pld.plot_area_in_sqm)'
+            ),
+        ];
+
+        $orderColumn = $request->input('order.0.column');
+        $orderDirection = $request->input('order.0.dir', 'asc');
+
+        if (
+            isset($sortableColumns[$orderColumn]) &&
+            in_array($orderDirection, ['asc', 'desc'])
+        ) {
+
+            $query->orderBy(
+                $sortableColumns[$orderColumn],
+                $orderDirection
+            );
+        } else {
+
+            $query->orderBy('pm.id', 'asc');
+        }
+
+
+        /*
+     * ---------------------------------------------------------
+     * PAGINATION
+     * ---------------------------------------------------------
+     */
+        $start = max(
+            0,
+            (int) $request->input('start', 0)
+        );
+
+        $length = (int) $request->input('length', 10);
+
+        if ($length < 1) {
+            $length = 10;
+        }
+
+        $properties = $query
+            ->offset($start)
+            ->limit($length)
+            ->get();
+
+
+        /*
+     * ---------------------------------------------------------
+     * IDs FROM CURRENT PAGE ONLY
+     * ---------------------------------------------------------
+     */
+        $propertyIds = $properties
+            ->pluck('property_master_id')
+            ->unique()
+            ->values();
+
+        $oldPropertyIds = $properties
+            ->pluck('old_property_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+
+        /*
+     * ---------------------------------------------------------
+     * CURRENT DEMANDS
+     * One active demand per property/split combination
+     * ---------------------------------------------------------
+     */
+        $demands = DB::table('demands')
+            ->whereIn('property_master_id', $propertyIds)
+            ->whereNull('flat_id')
+            ->whereIn('status', [
+                getServiceType('DEM_PENDING'),
+                getServiceType('DEM_PART_PAID'),
+            ])
+            ->select(
+                'property_master_id',
+                'splited_property_detail_id',
+                DB::raw('SUM(balance_amount) as balance_amount')
+            )
+            ->groupBy(
+                'property_master_id',
+                'splited_property_detail_id'
+            )
+            ->get()
+            ->keyBy(function ($demand) {
+                return $demand->property_master_id . '_' .
+                    ($demand->splited_property_detail_id ?? 'normal');
+            });
+
+
+        /*
+     * ---------------------------------------------------------
+     * OLD DEMANDS
+     * Multiple rows possible
+     * Only rows not migrated to new demand
+     * ---------------------------------------------------------
+     */
+        $oldDemands = DB::table('old_demands')
+            ->whereIn('property_id', $oldPropertyIds)
+            ->whereNull('new_demand_id')
+            ->select(
+                'property_id',
+                DB::raw('SUM(outstanding) as outstanding')
+            )
+            ->groupBy('property_id')
+            ->get()
+            ->keyBy('property_id');
+
+
+        /*
+     * ---------------------------------------------------------
+     * ATTACH OUTSTANDING
+     * ---------------------------------------------------------
+     */
+        $properties->transform(function ($property) use (
+            $demands,
+            $oldDemands
+        ) {
+
+            $demandKey = $property->property_master_id . '_' .
+                ($property->split_property_id ?? 'normal');
+
+            $newOutstanding =
+                $demands[$demandKey]->balance_amount ?? 0;
+
+            $oldOutstanding =
+                $oldDemands[$property->old_property_id]->outstanding ?? 0;
+
+            $property->outstanding =
+                $newOutstanding + $oldOutstanding;
+
+            return $property;
+        });
+
+
+        /*
+     * ---------------------------------------------------------
+     * DATATABLES RESPONSE
+     * ---------------------------------------------------------
+     */
+        return response()->json([
+            'draw' => (int) $request->input('draw'),
+            'recordsTotal' => $recordsTotal,
+            'recordsFiltered' => $recordsFiltered,
+            'data' => $properties,
+        ]);
     }
 }

@@ -1,15 +1,13 @@
-@extends('layouts.app')
+<?php $__env->startSection('title', 'Lease Hold Demand Report'); ?>
 
-@section('title', 'Lease Hold Demand Report')
-
-@section('content')
+<?php $__env->startSection('content'); ?>
 <!--breadcrumb-->
 <div class="page-breadcrumb d-none d-sm-flex align-items-center mb-3">
    <div class="breadcrumb-title pe-3">Reports</div>
     <div class="ps-3">
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb mb-0 p-0">
-                <li class="breadcrumb-item"><a href="{{ route('dashboard') }}"><i class="bx bx-home-alt"></i></a>
+                <li class="breadcrumb-item"><a href="<?php echo e(route('dashboard')); ?>"><i class="bx bx-home-alt"></i></a>
                 </li>
                  <li class="breadcrumb-item active" aria-current="page">Reports</li>
                 <li class="breadcrumb-item active" aria-current="page">Lease Hold Demand Report</li>
@@ -19,7 +17,7 @@
 </div>
 <!--breadcrumb-->
 <!--end breadcrumb-->
-{{-- @dd($filters) --}}
+
 <hr>
 <div class="card">
     <div class="card-body">
@@ -109,9 +107,9 @@
 </div>
 
 
-@endsection
+<?php $__env->stopSection(); ?>
 
-@section('footerScript')
+<?php $__env->startSection('footerScript'); ?>
 <script>
     $(document).ready(function() {
         $('#reportTable').DataTable({
@@ -120,7 +118,7 @@
             serverSide: true,
 
             ajax: {
-                url: "{{ route('leaseHoldDemandsData') }}",
+                url: "<?php echo e(route('leaseHoldDemandsData')); ?>",
                 type: "GET"
             },
 
@@ -221,7 +219,7 @@
     });
 
     const loadDemandDetails = propertyId=>{
-        var responseUrl = "{{ route('getExistingPropertyDemand', ['oldPropertyId' => '__ID__']) }}";
+        var responseUrl = "<?php echo e(route('getExistingPropertyDemand', ['oldPropertyId' => '__ID__'])); ?>";
         responseUrl = responseUrl.replace('__ID__', propertyId);
 
         $.ajax({
@@ -287,4 +285,5 @@
         })
     }
 </script>
-@endsection
+<?php $__env->stopSection(); ?>
+<?php echo $__env->make('layouts.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\Users\SPRAC SERVICES\Desktop\edharti_v2\resources\views/report/lease-hold-demand-report.blade.php ENDPATH**/ ?>

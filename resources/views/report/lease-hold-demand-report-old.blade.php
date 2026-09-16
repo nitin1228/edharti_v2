@@ -36,10 +36,36 @@
                                 <th>Known as</th>
                                 <th>Section</th>
                                 <th>Area(Sqm)</th>
+                                
                                 <th>Outstanding Amount</th>
                                 <th></th>
                             </tr>
                         </thead>
+                        <tbody>
+                            
+                            @forelse($properties as $prop)
+                            <tr>
+                                <td>{{$loop->iteration}}</td>
+                                <td>{{$prop->old_property_id}}</td>
+                                <td>{{$prop->known_as}}</td>
+                                <td>{{$prop->section}}</td>
+                               
+                                <td>{{round($prop->area_in_sqm,2)}}</td>
+                                
+                                <td> &#8377; {{customNumFormat($prop->outstanding)}}</td>
+                                <td>
+                                  
+                                    <button class="btn btn-success" onclick="loadDemandDetails({{$prop->old_property_id}})" 
+                                        data-bs-toggle="modal"
+                                        data-bs-target="#viewDemandModal">View Details</button>
+                                </td>
+                            </tr>
+                            @empty
+                            <tr>
+                                <td colspan="6">No Data to Display</td>
+                            </tr>
+                            @endforelse
+                        </tbody>
                     </table>
                 </div>
             </div>
@@ -94,11 +120,6 @@
                         </table>
                     </div>
                 </div>
-                <div class="row" id="no-data" style="display: none">
-                    <div class="col-md-12">
-                        <h3>No Pending Demand Found for this Property</h3>
-                    </div>
-                </div>
             </div>
             <div class="modal-footer">
                 <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -114,109 +135,11 @@
 @section('footerScript')
 <script>
     $(document).ready(function() {
-        $('#reportTable').DataTable({
-
-            processing: true,
-            serverSide: true,
-
-            ajax: {
-                url: "{{ route('leaseHoldDemandsData') }}",
-                type: "GET"
-            },
-
-            pageLength: 10,
-
-            lengthMenu: [
-                [10, 25, 50, 100], //for values
-                [10, 25, 50, 100] //for labels
-            ],
-
+        var table = $('#reportTable').DataTable({
+            responsive: false,
             searching: true,
-            searchDelay: 1000,
-
-            order: [
-                [1, 'asc']
-            ],
-
-            columns: [
-
-                {
-                    data: null,
-                    orderable: false,
-                    searchable: false,
-
-                    render: function (data, type, row, meta) {
-                        return meta.settings._iDisplayStart +
-                            meta.row + 1;
-                    }
-                },
-
-                {
-                    data: 'old_property_id',
-                    name: 'old_property_id'
-                },
-
-                {
-                    data: 'known_as',
-                    name: 'known_as'
-                },
-
-                {
-                    data: 'section',
-                    name: 'section'
-                },
-
-                {
-                    data: 'area_in_sqm',
-                    name: 'area_in_sqm',
-
-                    render: function (data) {
-                        return data !== null
-                            ? parseFloat(data).toFixed(2)
-                            : '';
-                    }
-                },
-
-                {
-                    data: 'outstanding',
-                    orderable: false,
-                    searchable: false,
-
-                    render: function (data) {
-                        return '₹ ' + customNumFormat(data || 0);
-                    }
-                },
-
-                {
-                    data: null,
-                    orderable: false,
-                    searchable: false,
-
-                    render: function (data, type, row) {
-
-                        return `
-                            <button
-                                class="btn btn-success"
-                                onclick="loadDemandDetails('${row.old_property_id}')"
-                                data-bs-toggle="modal"
-                                data-bs-target="#viewDemandModal">
-                                View Details
-                            </button>
-                        `;
-                    }
-                }
-            ],
-
-            columnDefs: [
-
-                {
-                    targets: [0, 5, 6],
-                    orderable: false,
-                    searchable: false
-                }
-
-            ]
-
+            paging: true,
+            info: true
         });
     });
 
@@ -233,7 +156,7 @@
                 let data = response.data;
                 $('#propName').html(data.propertyContactDetails.address);
                  $('#old-demand-table tbody').empty();
-                if(data.previousDemands && data.previousDemands.length > 0){
+                if(data.previousDemands){
                     $('#old-demand-details').show();
                     data.previousDemands.forEach((item,index) => {
                         let dataRow = `<tr>
@@ -271,16 +194,6 @@
                 }
                 else{
                     $('#new-demand-details').hide();
-                }
-
-                if (
-                    !data.demand &&
-                    (!data.previousDemands || data.previousDemands.length === 0)
-                ){
-                    $('#no-data').show();
-                }
-                else{
-                    $('#no-data').hide();
                 }
                }
             }
