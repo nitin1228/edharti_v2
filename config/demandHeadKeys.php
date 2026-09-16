@@ -178,6 +178,50 @@ return [
             'requiredIf' => 'penal_subletting'
         ],
     ],
+    'DEM_ENCH_CHG' => [
+        [
+            'key' => 'ench_area',
+            'label' => 'Enchroached Area',
+            'type' => 'number',
+            'required' => true
+        ],
+        [
+            'key' => 'ench_from_date',
+            'label' => 'From Date',
+            'type' => 'date',
+            'required' => true
+        ],
+        [
+            'key' => 'ench_to_date',
+            'label' => 'To Date',
+            'type' => 'date',
+            'required' => true
+        ],
+        [
+            'key' => 'ench_no_of_days[]',
+            'label' => 'No. of Days',
+            'type' => 'number',
+            'required' => true
+        ],
+        [
+            'key' => 'ench_land_rate',
+            'label' => 'Land Rate per Sqm',
+            'type' => 'number',
+            'required' => true
+        ],
+        [
+            'key' => 'ench_rate_per_annum',
+            'label' => 'Charges Per Annum',
+            'type' => 'number',
+            'required' => true
+        ],
+        [
+            'key' => 'ench_amount',
+            'label' => 'Amount',
+            'type' => 'number',
+            'required' => true
+        ],
+    ],
     'DEM_PENAL_STANDARD' => [
         [
             'key' => 'standard_penalty_land_value',

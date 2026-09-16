@@ -1,5 +1,5 @@
-@extends('layouts.app') @section('title', 'Create Demand') @section('content')
-<link rel="stylesheet" href="{{ asset('assets/css/rgr.css') }}" />
+ <?php $__env->startSection('title', 'Create Demand'); ?> <?php $__env->startSection('content'); ?>
+<link rel="stylesheet" href="<?php echo e(asset('assets/css/rgr.css')); ?>" />
 <style>
   .subhead-input {
     margin: 10px 0 !important;
@@ -131,15 +131,15 @@
     <nav aria-label="breadcrumb">
       <ol class="breadcrumb mb-0 p-0">
         <li class="breadcrumb-item">
-          <a href="{{ route('dashboard') }}"><i class="bx bx-home-alt"></i></a>
+          <a href="<?php echo e(route('dashboard')); ?>"><i class="bx bx-home-alt"></i></a>
         </li>
         <li class="breadcrumb-item" aria-current="page">Demand</li>
         <li class="breadcrumb-item active" aria-current="page">
-          @if (Route::is('createDemandView'))
+          <?php if(Route::is('createDemandView')): ?>
           Create Demand
-          @elseif (Route::is('EditDemand'))
+          <?php elseif(Route::is('EditDemand')): ?>
           Edit Demand
-          @endif
+          <?php endif; ?>
         </li>
       </ol>
     </nav>
@@ -148,7 +148,7 @@
 </div>
 <!--end breadcrumb-->
 <hr />
-@php
+<?php
 $propertyAllreadySelected = isset($demand) || isset($applicationData);
 $creatingNewDemand = !isset($demand);
 $propertSelectorPath = $propertyAllreadySelected ? null: 'include.parts.property-selector';
@@ -157,13 +157,13 @@ $isPending = isset($demand) && getServiceCodeById($demand->status) == "DEM_PENDI
 $isDraft = isset($demand) && getServiceCodeById($demand->status) == "DEM_DRAFT";
 $isPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM_PAID";
 $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM_PART_PAID";
-@endphp
+?>
 <div class="card">
   <div class="card-body">
-    @if($propertyAllreadySelected)
+    <?php if($propertyAllreadySelected): ?>
     <div class="row">
 
-     @if(isset($demand->flat_id))
+     <?php if(isset($demand->flat_id)): ?>
      <div class="col-lg-12">
         <div class="part-title">
           <h5>Flat Details</h5>
@@ -175,32 +175,32 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
                 <table class="table table-bordered property-table-info">
                   <tbody>
                     <th>Flat ID:</th>
-                    <td>{{ $demand->flat->unique_flat_id}}</td>
+                    <td><?php echo e($demand->flat->unique_flat_id); ?></td>
                     <th>Known As:</th>
-                    <td>{{ $demand->flat->known_as}}</td>
+                    <td><?php echo e($demand->flat->known_as); ?></td>
                     <tr>
                       <th>Floor:</th>
-                      <td>{{ $demand->flat->floor}}</td>
+                      <td><?php echo e($demand->flat->floor); ?></td>
                       <th>Flat Number:</th>
-                      <td>{{ $demand->flat->flat_number}}</td>
+                      <td><?php echo e($demand->flat->flat_number); ?></td>
                     </tr>
                     <tr>
                       <th>Area:</th>
-                      <td>{{ $demand->flat->area_in_sqm}} Sqm</td>
+                      <td><?php echo e($demand->flat->area_in_sqm); ?> Sqm</td>
                       <th>Purchase Date:</th>
-                      <td>{{ $demand->flat->purchase_date}}</td>
+                      <td><?php echo e($demand->flat->purchase_date); ?></td>
                     </tr>
                     <tr>
                       <th>Original Buyer Name:</th>
-                      <td>{{ $demand->flat->original_buyer_name}}</td>
+                      <td><?php echo e($demand->flat->original_buyer_name); ?></td>
                       <th>Present Occupant Name:</th>
-                      <td>{{ $demand->flat->present_occupant_name}}</td>
+                      <td><?php echo e($demand->flat->present_occupant_name); ?></td>
                     </tr>
                     <tr>
                       <th>Address:</th>
-                      <td>{{ $demand->flat->address}}</td>
+                      <td><?php echo e($demand->flat->address); ?></td>
                       <th>Flat Status:</th>
-                      <td>{{ getServiceNameById($demand->flat->property_flat_status)}}</td>
+                      <td><?php echo e(getServiceNameById($demand->flat->property_flat_status)); ?></td>
                     </tr>
                   </tbody>
                 </table>
@@ -209,15 +209,15 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
           </div>
         </div>
     </div>
-    @endif
+    <?php endif; ?>
 
 
 
       <div class="col-lg-12">
         <div class="part-title">
           <h5>Property
-            @if(isset($demand) || isset($applicationData)) and @endif
-            @isset($demand) Demand @endisset @isset($applicationData) Application @endisset Details</h5>
+            <?php if(isset($demand) || isset($applicationData)): ?> and <?php endif; ?>
+            <?php if(isset($demand)): ?> Demand <?php endif; ?> <?php if(isset($applicationData)): ?> Application <?php endif; ?> Details</h5>
         </div>
         <div class="part-details">
           <div class="container-fluid">
@@ -226,60 +226,62 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
                 <table class="table table-bordered property-table-info">
                   <tbody>
                     <th>Old Property ID:</th>
-                    <td>{{ $demand->splited_property_detail->old_property_id ?? $demand->property_master->old_propert_id ?? $applicationData->old_property_id }}</td>
+                    <td><?php echo e($demand->splited_property_detail->old_property_id ?? $demand->property_master->old_propert_id ?? $applicationData->old_property_id); ?></td>
 
                     <th>New Property ID:</th>
-                    <td>{{ $demand->splited_property_detail->child_property_id ?? $demand->property_master->unique_propert_id ?? $applicationData->new_property_id }}</td>
+                    <td><?php echo e($demand->splited_property_detail->child_property_id ?? $demand->property_master->unique_propert_id ?? $applicationData->new_property_id); ?></td>
 
                     <tr>
                       <th>Property Status:</th>
-                      <td colspan="3">{{ getServiceNameById($demand->splited_property_detail->property_status ?? $demand->property_master->status ?? $applicationData->property_status ?? $applicationData->propertyMaster->status) }}</td>
+                      <td colspan="3"><?php echo e(getServiceNameById($demand->splited_property_detail->property_status ?? $demand->property_master->status ?? $applicationData->property_status ?? $applicationData->propertyMaster->status)); ?></td>
                     </tr>
 
                     <tr>
                       <th>Property Type:</th>
-                      <td>{{ getServiceNameById($demand->property_master->property_type ?? $applicationData->propertyMaster->property_type) }}</td>
+                      <td><?php echo e(getServiceNameById($demand->property_master->property_type ?? $applicationData->propertyMaster->property_type)); ?></td>
 
                       <th>Presently Known As:</th>
-                      <td>{{ $demand->property_known_as ?? $applicationData->propertyMaster->plot_or_property_no.'/'. $applicationData->propertyMaster->block_no.'/'. $applicationData->propertyMaster->newColony->name}}</td>
+                      <td><?php echo e($demand->property_known_as ?? $applicationData->propertyMaster->plot_or_property_no.'/'. $applicationData->propertyMaster->block_no.'/'. $applicationData->propertyMaster->newColony->name); ?></td>
                     </tr>
 
                     <tr>
                       <th>Lessee's Name:</th>
-                      <td colspan="3"> @if(isset($demand))
-                        {{ $demand->current_lessee ?? '-' }}
-                        @elseif(isset($applicationData))
-                        {{ $applicationData->name_as_per_lease_conv_deed ?? $applicationData->propertyMaster->current_lesse_name ?? '-' }}
-                        @else
+                      <td colspan="3"> <?php if(isset($demand)): ?>
+                        <?php echo e($demand->current_lessee ?? '-'); ?>
+
+                        <?php elseif(isset($applicationData)): ?>
+                        <?php echo e($applicationData->name_as_per_lease_conv_deed ?? $applicationData->propertyMaster->current_lesse_name ?? '-'); ?>
+
+                        <?php else: ?>
                         -
-                        @endif
+                        <?php endif; ?>
                       </td>
                     </tr>
-                    @isset($demand)
+                    <?php if(isset($demand)): ?>
                     <tr>
                       <th>Demand Id:</th>
-                      <td>{{ $demand->unique_id ?? 'N/A' }}</td>
+                      <td><?php echo e($demand->unique_id ?? 'N/A'); ?></td>
 
                       <th>Amount:</th>
-                      <td>₹ {{ customNumFormat($demand->net_total ?? 0) }}</td>
+                      <td>₹ <?php echo e(customNumFormat($demand->net_total ?? 0)); ?></td>
                     </tr>
 
                     <tr>
                       <th>Balance:</th>
-                      <td>₹ {{ customNumFormat($demand->balance_amount ?? 0) }}</td>
+                      <td>₹ <?php echo e(customNumFormat($demand->balance_amount ?? 0)); ?></td>
 
                       <th>Financial Year:</th>
-                      <td>{{ $demand->current_fy ?? 'N/A' }}</td>
+                      <td><?php echo e($demand->current_fy ?? 'N/A'); ?></td>
                     </tr>
-                    @endif
-                    @if(isset($applicationData))
+                    <?php endif; ?>
+                    <?php if(isset($applicationData)): ?>
                     <tr>
                       <th>Application No.</th>
-                      <td>{{$applicationData->application_no}}</td>
+                      <td><?php echo e($applicationData->application_no); ?></td>
                       <th>Application Type</th>
-                      <td>{{$applicationData->service_type->item_name}}</td>
+                      <td><?php echo e($applicationData->service_type->item_name); ?></td>
                     </tr>
-                    @endif
+                    <?php endif; ?>
                   </tbody>
                 </table>
               </div>
@@ -287,15 +289,15 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
           </div>
         </div>
       </div>
-      @endif
+      <?php endif; ?>
       <div class="row">
-        <div class="col-lg-12 mb-2  {{$propertyAllreadySelected ? 'd-none':''}}">
-          @if($propertSelectorPath)
-          @include($propertSelectorPath)
-          @endif
+        <div class="col-lg-12 mb-2  <?php echo e($propertyAllreadySelected ? 'd-none':''); ?>">
+          <?php if($propertSelectorPath): ?>
+          <?php echo $__env->make($propertSelectorPath, \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
+          <?php endif; ?>
         </div>
       </div>
-      <div class="col col-lg-2 pt-1 mb-2 {{$propertyAllreadySelected ? 'd-none':''}}">
+      <div class="col col-lg-2 pt-1 mb-2 <?php echo e($propertyAllreadySelected ? 'd-none':''); ?>">
         <button type="button" class="btn btn-primary px-4 mt-4" id="submitButton">Search<i class="bx bx-right-arrow-alt ms-2"></i></button>
       </div>
 
@@ -328,30 +330,30 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
           </div>
         </div>
       </div>
-      <div class="{{ $propertyAllreadySelected ? '':'d-none' }}" id="input-form-container">
+      <div class="<?php echo e($propertyAllreadySelected ? '':'d-none'); ?>" id="input-form-container">
         <form id="demand-input-form" method="post" action="">
           <div id="formOldDemandDetails">
-            @if(isset($oldDemands))
-            @include('include.parts.old-demand-details')
-            @endif
+            <?php if(isset($oldDemands)): ?>
+            <?php echo $__env->make('include.parts.old-demand-details', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
+            <?php endif; ?>
           </div>
-          <input type="hidden" id="selectedOldPropertyId" name="oldPropertyId" value="{{$demand->old_property_id ?? $applicationData->old_property_id ?? ''}}" />
-          <input type="hidden" name="id" value="{{isset($demand) ? $demand->id : ''}}" />
-          <input type="hidden" name="application_no" value="{{$demand->app_no ?? $applicationData->application_no ?? ''}}" />
-          <input type="hidden" id="withOutLeaseHold" value="{{ $withOutLeaseHold ?? 0 }}">
-          <input type="hidden" id="selectedFlatIdValue" name="flat_id" value="{{$demand->flat_id ?? $applicationData->flat_id ?? ''}}" />
-          @csrf
+          <input type="hidden" id="selectedOldPropertyId" name="oldPropertyId" value="<?php echo e($demand->old_property_id ?? $applicationData->old_property_id ?? ''); ?>" />
+          <input type="hidden" name="id" value="<?php echo e(isset($demand) ? $demand->id : ''); ?>" />
+          <input type="hidden" name="application_no" value="<?php echo e($demand->app_no ?? $applicationData->application_no ?? ''); ?>" />
+          <input type="hidden" id="withOutLeaseHold" value="<?php echo e($withOutLeaseHold ?? 0); ?>">
+          <input type="hidden" id="selectedFlatIdValue" name="flat_id" value="<?php echo e($demand->flat_id ?? $applicationData->flat_id ?? ''); ?>" />
+          <?php echo csrf_field(); ?>
           <div class="">
             <div class="row">
               <div class="col-lg-12">
                 <div class="part-title">
-                  <h5>@if(isset($demand)) Demand Details @else New Demand @endif</h5>
+                  <h5><?php if(isset($demand)): ?> Demand Details <?php else: ?> New Demand <?php endif; ?></h5>
                 </div>
                 <div class="part-details">
                   <div class="container-fluid">
-                    @if(isset($carried) && count($carried) > 0)
+                    <?php if(isset($carried) && count($carried) > 0): ?>
                     <div class="row py-2">
-                      <label> Details of carried forward demand id: {{$carriedDemandId}}</label>
+                      <label> Details of carried forward demand id: <?php echo e($carriedDemandId); ?></label>
                       <div class="col-lg-12">
                         <table class="table table-bordered">
                           <thead>
@@ -363,57 +365,57 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
                             </tr>
                           </thead>
                           <tbody>
-                            @foreach($carried as $item)
+                            <?php $__currentLoopData = $carried; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $item): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                             <tr>
-                              <td>{{$loop->iteration}}</td>
-                              <td>{{getServiceNameById($item->subhead_id)}}</td>
-                              <td>{{$item->fy}}</td>
-                              <td>&#8377; {{customNumFormat($item->net_total)}}</td>
-                              @php
+                              <td><?php echo e($loop->iteration); ?></td>
+                              <td><?php echo e(getServiceNameById($item->subhead_id)); ?></td>
+                              <td><?php echo e($item->fy); ?></td>
+                              <td>&#8377; <?php echo e(customNumFormat($item->net_total)); ?></td>
+                              <?php
                               $totalDemandAmount += $item->net_total;
-                              @endphp
+                              ?>
                             </tr>
-                            @endforeach
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                           </tbody>
                         </table>
                       </div>
                     </div>
-                    @endif
+                    <?php endif; ?>
                     <div class="row">
                       <div class="col-lg-3"><label>Is it a new allotment?</label></div>
                       <div class="col-lg-9">
                         <div class="new-allotment-option">
                           <div class="form-check form-check-inline mr-5">
-                            <input type="radio" name="new_allotment_radio" class="form-check-input" value="1" {{(isset($newAllotment) && $newAllotment == 1) ? 'checked': ''}} {{(isset($newAllotment))?'disabled':''}}>
+                            <input type="radio" name="new_allotment_radio" class="form-check-input" value="1" <?php echo e((isset($newAllotment) && $newAllotment == 1) ? 'checked': ''); ?> <?php echo e((isset($newAllotment))?'disabled':''); ?>>
                             <label class="form-check-label">Yes</label>
                           </div>
                           <div class="form-check form-check-inline">
-                            <input type="radio" name="new_allotment_radio" class="form-check-input" value="0" {{(isset($newAllotment) && $newAllotment == 0) ? 'checked':''}} {{(isset($newAllotment))?'disabled':''}}>
+                            <input type="radio" name="new_allotment_radio" class="form-check-input" value="0" <?php echo e((isset($newAllotment) && $newAllotment == 0) ? 'checked':''); ?> <?php echo e((isset($newAllotment))?'disabled':''); ?>>
                             <label class="form-check-label">No</label>
                           </div>
                         </div>
-      			              @if(isset($newAllotment)) {{-- for edit case only --}}
-                            <input type="hidden" name="new_allotment_radio" value="{{ $newAllotment }}">
-                          @endif
+      			              <?php if(isset($newAllotment)): ?> 
+                            <input type="hidden" name="new_allotment_radio" value="<?php echo e($newAllotment); ?>">
+                          <?php endif; ?>
                       </div>
                     </div>
 
-                    <div style="display: {{(isset($newAllotment) && $newAllotment == 1) ? 'block':'none'}}" id="allocation-type-inputs">
+                    <div style="display: <?php echo e((isset($newAllotment) && $newAllotment == 1) ? 'block':'none'); ?>" id="allocation-type-inputs">
                       <div class="row">
                         <div class="col-lg-3"><label>Type of Allocation</label></div>
                         <div class="col-lg-9">
                           <div class="allocation-type-option">
                             <div class="form-check form-check-inline mr-5">
-                              <input type="radio" name="allocation_type_radio" class="form-check-input" value="1" {{(isset($allocationType) && $allocationType == 1) ? 'checked': ''}} {{(isset($allocationType))?'disabled':''}}>
+                              <input type="radio" name="allocation_type_radio" class="form-check-input" value="1" <?php echo e((isset($allocationType) && $allocationType == 1) ? 'checked': ''); ?> <?php echo e((isset($allocationType))?'disabled':''); ?>>
                               <label class="form-check-label">Permanent</label>
                             </div>
                             <div class="form-check form-check-inline">
-                              <input type="radio" name="allocation_type_radio" class="form-check-input" value="0" {{(isset($allocationType) && $allocationType == 0) ? 'checked':''}} {{(isset($allocationType))?'disabled':''}}>
+                              <input type="radio" name="allocation_type_radio" class="form-check-input" value="0" <?php echo e((isset($allocationType) && $allocationType == 0) ? 'checked':''); ?> <?php echo e((isset($allocationType))?'disabled':''); ?>>
                               <label class="form-check-label">Temporary</label>
                             </div>
-                            @if(isset($allocationType)) {{-- for edit case only --}}
-                            <input type="hidden" name="allocation_type_radio" value="{{ $allocationType }}">
-                            @endif
+                            <?php if(isset($allocationType)): ?> 
+                            <input type="hidden" name="allocation_type_radio" value="<?php echo e($allocationType); ?>">
+                            <?php endif; ?>
 
                           </div>
                         </div>
@@ -421,243 +423,136 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
                       <div class="row">
                         <div class="col-lg-6">
                           <label for="allocation_start_date">Allocation Start Date</label>
-                          <input type="date" name="allocation_start_date" id="allocation_start_date" class="form-control allocation-dates" value="{{isset($selectedValues['allocation_start_date']) ? $selectedValues['allocation_start_date']:''}}">
+                          <input type="date" name="allocation_start_date" id="allocation_start_date" class="form-control allocation-dates" value="<?php echo e(isset($selectedValues['allocation_start_date']) ? $selectedValues['allocation_start_date']:''); ?>">
                           <span class="error"></span>
                         </div>
                         <div class="col-lg-6">
                           <label for="allocation_end_date">Allocation End Date</label>
-                          <input type="date" name="allocation_end_date" id="allocation_end_date" class="form-control allocation-dates" value="{{isset($selectedValues['allocation_end_date']) ? $selectedValues['allocation_end_date']:''}}">
+                          <input type="date" name="allocation_end_date" id="allocation_end_date" class="form-control allocation-dates" value="<?php echo e(isset($selectedValues['allocation_end_date']) ? $selectedValues['allocation_end_date']:''); ?>">
                           <span class="error"></span>
                         </div>
                       </div>
                     </div>
 
                     <div class="col mt-2 mb-2" id="demand-subheads-container">
-                      @isset($demand)
-                      @php
+                      <?php if(isset($demand)): ?>
+                      <?php
                       $selectedSubheadCodes = array_keys($slectedSubheads);
                       //dd($penalties);
-                      @endphp
-                      @foreach($subheads as $head)
-                      @if($demand->is_lease_hold || in_array($head->item_code,['DEM_LUC_RC', 'DEM_MANUAL','DEM_SETTLED_AMOUNT']))
+                      ?>
+                      <?php $__currentLoopData = $subheads; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $head): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                      <?php if($demand->is_lease_hold || in_array($head->item_code,['DEM_LUC_RC', 'DEM_MANUAL','DEM_SETTLED_AMOUNT'])): ?>
                       <div class="demand-item-container">
                         <div class="col-lg-12 my-1">
                           <div class=" form-check">
-                            <input type="checkbox" name="{{$head->item_code}}" class="select-head-check form-check-input" @checked(in_array($head->item_code, $selectedSubheadCodes))>
-                            <h6>{{$head->item_name}}</h6>
-                            <input type="hidden" name="demand_amount[{{$head->item_code}}]" id="include-demand-amount" value="{{isset($slectedSubheads[$head->item_code]) && isset($slectedSubheads[$head->item_code]['amount']) ? $slectedSubheads[$head->item_code]['amount']:0}}">
+                            <input type="checkbox" name="<?php echo e($head->item_code); ?>" class="select-head-check form-check-input" <?php if(in_array($head->item_code, $selectedSubheadCodes)): echo 'checked'; endif; ?>>
+                            <h6><?php echo e($head->item_name); ?></h6>
+                            <input type="hidden" name="demand_amount[<?php echo e($head->item_code); ?>]" id="include-demand-amount" value="<?php echo e(isset($slectedSubheads[$head->item_code]) && isset($slectedSubheads[$head->item_code]['amount']) ? $slectedSubheads[$head->item_code]['amount']:0); ?>">
                           </div>
                         </div>
                         <div class="col-lg-12 user-inputs" id="user-inputs">
 
-                          @if(in_array($head->item_code,$selectedSubheadCodes))
-                          <input type="hidden" name="detail_id[{{$head->item_code}}]" value="{{$slectedSubheads[$head->item_code] ['id'] ?? ''}}">
-                          @switch($head->item_code)
-                          @case('DEM_AF_P')
-                          {{-- <div class="input-block">
-                            <label class="form-label">Start date</label>
-                            <input type="date" class="form-control" name="allotment_fee_date_from" value="{{isset($selectedValues['allotment_fee_date_from']) ? $selectedValues['allotment_fee_date_from']:''}}">
-                          <div class="error" id="allotment_fee_date_from_error"></div>
-                        </div>
-                        <div class="input-block">
-                          <label class="form-label">End date</label>
-                          <input type="date" class="form-control" name="allotment_fee_date_to" value="{{isset($selectedValues['allotment_fee_date_to']) ? $selectedValues['allotment_fee_date_to']:''}}">
-                          <div class="error" id="allotment_fee_date_to_error"></div>
-                        </div> --}}
-                        {{-- <div class="hint-text mb-2">Minimum 15 days of allotment will be charged. Maximum allowed duration will be 50 years.</div> --}}
-                        <div class="calculation-info">&diam; Area of property &nbsp; &nbsp; &rarr; {{isset($selectedValues['allotment_fee_land_area']) ? $selectedValues['allotment_fee_land_area']:''}} </div>
-                        <input type="hidden" name="allotment_fee_land_area" value="{{isset($selectedValues['allotment_fee_land_area']) ? $selectedValues['allotment_fee_land_area']:''}}">
-                        <div class="calculation-info">&diam; Land rate for property &nbsp; &nbsp; &rarr; &#8377; {{isset($selectedValues['allocation_type_land_rate']) ? $selectedValues['allocation_type_land_rate']:''}}</div>
-                        <input type="hidden" name="allocation_type_land_rate" value="{{isset($selectedValues['allocation_type_land_rate']) ? $selectedValues['allocation_type_land_rate']:''}}">
-                          @break
+                          <?php if(in_array($head->item_code,$selectedSubheadCodes)): ?>
+                          <input type="hidden" name="detail_id[<?php echo e($head->item_code); ?>]" value="<?php echo e($slectedSubheads[$head->item_code] ['id'] ?? ''); ?>">
+                          <?php switch($head->item_code):
+                          case ('DEM_AF_P'): ?>
+                          
+                        
+                        <div class="calculation-info">&diam; Area of property &nbsp; &nbsp; &rarr; <?php echo e(isset($selectedValues['allotment_fee_land_area']) ? $selectedValues['allotment_fee_land_area']:''); ?> </div>
+                        <input type="hidden" name="allotment_fee_land_area" value="<?php echo e(isset($selectedValues['allotment_fee_land_area']) ? $selectedValues['allotment_fee_land_area']:''); ?>">
+                        <div class="calculation-info">&diam; Land rate for property &nbsp; &nbsp; &rarr; &#8377; <?php echo e(isset($selectedValues['allocation_type_land_rate']) ? $selectedValues['allocation_type_land_rate']:''); ?></div>
+                        <input type="hidden" name="allocation_type_land_rate" value="<?php echo e(isset($selectedValues['allocation_type_land_rate']) ? $selectedValues['allocation_type_land_rate']:''); ?>">
+                          <?php break; ?>
 
 
-                          @case('DEM_LF_GR')
-                            <div class="calculation-info">&diam; Area of property &nbsp; &nbsp; &rarr; {{customNumFormat(round($selectedValues['ground_rent_land_area'],2))}} sq. Mtr </div>
-                            <input type="hidden" name="ground_rent_land_area" value="{{isset($selectedValues['ground_rent_land_area']) ? $selectedValues['ground_rent_land_area']:''}}">
-                            <div class="calculation-info">&diam; Land rate for property &nbsp; &nbsp; &rarr; &#8377; {{customNumFormat($selectedValues['ground_rent_land_rate'] ?? 0)}} per Sq. Mtr</div>
-                            <input type="hidden" name="ground_rent_land_rate" value="{{isset($selectedValues['ground_rent_land_rate']) ? $selectedValues['ground_rent_land_rate']:''}}">
-                            <div class="calculation-info">&diam; Type of property &nbsp; &nbsp; &rarr; {{isset($selectedValues['ground_rent_property_type']) ? getServiceNameById($selectedValues['ground_rent_property_type']) : 'N/A'}} </div>
-                            <input type="hidden" name="ground_rent_property_type" id="" value="{{$selectedValues['ground_rent_property_type'] ??'' }}">
-                          @break
+                          <?php case ('DEM_LF_GR'): ?>
+                            <div class="calculation-info">&diam; Area of property &nbsp; &nbsp; &rarr; <?php echo e(customNumFormat(round($selectedValues['ground_rent_land_area'],2))); ?> sq. Mtr </div>
+                            <input type="hidden" name="ground_rent_land_area" value="<?php echo e(isset($selectedValues['ground_rent_land_area']) ? $selectedValues['ground_rent_land_area']:''); ?>">
+                            <div class="calculation-info">&diam; Land rate for property &nbsp; &nbsp; &rarr; &#8377; <?php echo e(customNumFormat($selectedValues['ground_rent_land_rate'] ?? 0)); ?> per Sq. Mtr</div>
+                            <input type="hidden" name="ground_rent_land_rate" value="<?php echo e(isset($selectedValues['ground_rent_land_rate']) ? $selectedValues['ground_rent_land_rate']:''); ?>">
+                            <div class="calculation-info">&diam; Type of property &nbsp; &nbsp; &rarr; <?php echo e(isset($selectedValues['ground_rent_property_type']) ? getServiceNameById($selectedValues['ground_rent_property_type']) : 'N/A'); ?> </div>
+                            <input type="hidden" name="ground_rent_property_type" id="" value="<?php echo e($selectedValues['ground_rent_property_type'] ??''); ?>">
+                          <?php break; ?>
 
-                          {{-- @case('DEM_CONV_CHG')
-                              <div class="input-block">
-                                  <label class="form-label">Land value</label>
-                                  <input type="number" min="0" class="form-control"
-                                      value="{{ $selectedValues['conversion_land_value'] ?? '' }}"
-                                      readOnly id="conversion_land_value"
-                                      name="conversion_land_value">
-                                  <div class="error" id="conversion_land_value_error"></div>
-                              </div>
-                              <div class="col-lg-12">
-                                  {{-- <div class="calculation-info"> &diams; <b>Total coversion charges &rarr;</b> ₹{{customNumFormat(round(0.2*((float)$selectedValues['conversion_land_value'])),2)}} [20% of land value]<br>
-                                      &diams; <b>Applicable remission &rarr;</b> ₹{{customNumFormat(round(0.2*0.4*((float)$selectedValues['conversion_land_value'])),2)}} [40% of converison charges]
-                                  </div> -}}
-                                  <div class="calculation-info"> &diams; <b>Land Rate &rarr;</b>
-                                      ₹{{ customNumFormat(round((float) $selectedValues['conversion_land_rate']), 2) }}<br>
-                                  </div>
-                                  <div class="calculation-info"> &diams; <b>Plot Area &rarr;</b>
-                                      {{ customNumFormat(round((float) $selectedValues['conversion_plot_area']), 2) }}
-                                      Sqm.<br></div>
-                                  <div class="calculation-info"> &diams; <b>Total conversion
-                                          charges</b> [{{ $selectedValues['conversion_formula'] }}]
-                                      &rarr;
-                                      ₹{{ customNumFormat(round((float) $selectedValues['conversion_charges']), 2) }}
-                                      </b><br>
-                                      &diams; <b>Applicable remission &rarr;</b>
-                                      ₹{{ customNumFormat(round((float) $selectedValues['conversion_remission_amount']), 2) }}
-                                      [40% of conversion charges]<br>
-                                      &diams; <b>Applicable surcharge &rarr;</b>
-                                      ₹{{ customNumFormat(round((float) $selectedValues['conversion_surcharge_amount']), 2) }}
-                                      [33.33% of conversion charges]</div>
-                              </div>
-                              <div class="col-lg-12">
-                                  <div class="form-check ">
-                                      <input type="hidden" name="conversion_land_rate"
-                                          id="conversion_land_rate"
-                                          value="{{ $selectedValues['conversion_land_rate'] }}">
-                                      <input type="hidden" name="conversion_plot_area"
-                                          id="conversion_plot_area"
-                                          value="{{ $selectedValues['conversion_plot_area'] }}">
-                                      <input type="hidden" name="conversion_remission_amount"
-                                          id="conversion_remission_amount"
-                                          value="{{ $selectedValues['conversion_remission_amount'] }}">
-                                      <input type="hidden" name="conversion_surcharge_amount"
-                                          id="conversion_surcharge_amount"
-                                          value="{{ $selectedValues['conversion_surcharge_amount'] }}">
-                                      <input type="hidden" name="conversion_formula"
-                                          id="conversion_formula"
-                                          value="{{ $selectedValues['conversion_formula'] }}">
-                                      <input type="hidden" name="conversion_charges"
-                                          id="conversion_charges"
-                                          value="{{ $selectedValues['conversion_charges'] }}">
-                                      <div class="row mt-2">
-                                          <div class="col-lg-3">
-                                              <input class="form-check-input" type="checkbox"
-                                                  name="conversion_remission"
-                                                  id="conversion_remission"
-                                                  @checked(isset($selectedValues['conversion_remission']) && $selectedValues['conversion_remission'] == 1)>
-                                              <label class="form-check-label">Allow Remission</label>
-                                          </div>
-                                          <div class="col-lg-3">
-                                              <input class="form-check-input" type="checkbox"
-                                                  name="conversion_surcharge"
-                                                  id="conversion_surcharge"
-                                                  @checked(isset($selectedValues['conversion_surcharge']) && $selectedValues['conversion_surcharge'] == 1)>
-                                              <label class="form-check-label">Add Surcharge</label>
-                                          </div>
-                                      </div>
-                                  </div>
-                              </div>
-                          @break --}}
+                          
 
-                          @case('DEM_CONV_CHG')
+                          <?php case ('DEM_CONV_CHG'): ?>
                          
                               <div class="col-lg-12">
-                                {{-- <div class="calculation-info"> &diams; <b>Total coversion charges &rarr;</b> ₹{{customNumFormat(round(0.2*((float)$selectedValues['conversion_land_value'])),2)}} [20% of land value]<br>
-                                &diams; <b>Applicable remission &rarr;</b> ₹{{customNumFormat(round(0.2*0.4*((float)$selectedValues['conversion_land_value'])),2)}} [40% of converison charges]
-                              </div> --}}
-                              <div class="calculation-info"> &diams; <b>Land Rate &rarr;</b> ₹{{customNumFormat(round((float)$selectedValues['conversion_land_rate']),2)}}<br></div>
-                              <div class="calculation-info"> &diams; <b>Plot Area &rarr;</b> {{customNumFormat(round((float)$selectedValues['conversion_plot_area']),2)}} Sqm.<br></div>
-                              <div class="calculation-info"> &diams; <b>Total conversion charges</b> [{{$selectedValues['conversion_formula']}}] &rarr; ₹{{customNumFormat(round((float)$selectedValues['conversion_charges']),2)}} </b><br>
-                                &diams; <b>Applicable remission &rarr;</b> [40% of conversion charges] <b>₹{{customNumFormat(round((float)$selectedValues['conversion_remission_amount']),2)}}</b><br>
-                                &diams; <b>Applicable surcharge &rarr;</b> [33.33% of conversion charges]  <b>₹{{customNumFormat(round((float)$selectedValues['conversion_surcharge_amount']),2)}}</b></div>
+                                
+                              <div class="calculation-info"> &diams; <b>Land Rate &rarr;</b> ₹<?php echo e(customNumFormat(round((float)$selectedValues['conversion_land_rate']),2)); ?><br></div>
+                              <div class="calculation-info"> &diams; <b>Plot Area &rarr;</b> <?php echo e(customNumFormat(round((float)$selectedValues['conversion_plot_area']),2)); ?> Sqm.<br></div>
+                              <div class="calculation-info"> &diams; <b>Total conversion charges</b> [<?php echo e($selectedValues['conversion_formula']); ?>] &rarr; ₹<?php echo e(customNumFormat(round((float)$selectedValues['conversion_charges']),2)); ?> </b><br>
+                                &diams; <b>Applicable remission &rarr;</b> [40% of conversion charges] <b>₹<?php echo e(customNumFormat(round((float)$selectedValues['conversion_remission_amount']),2)); ?></b><br>
+                                &diams; <b>Applicable surcharge &rarr;</b> [33.33% of conversion charges]  <b>₹<?php echo e(customNumFormat(round((float)$selectedValues['conversion_surcharge_amount']),2)); ?></b></div>
                             </div>
                             <div class="col-lg-12">
                               <div class="form-check ">
-                                <input type="hidden" name="conversion_land_rate" id="conversion_land_rate" value="{{$selectedValues['conversion_land_rate']}}">
-                                <input type="hidden" name="conversion_plot_area" id="conversion_plot_area" value="{{$selectedValues['conversion_plot_area']}}">
-                                <input type="hidden" name="conversion_remission_amount" id="conversion_remission_amount" value="{{$selectedValues['conversion_remission_amount']}}">
-                                <input type="hidden" name="conversion_surcharge_amount" id="conversion_surcharge_amount" value="{{$selectedValues['conversion_surcharge_amount']}}">
-                                <input type="hidden" name="conversion_formula" id="conversion_formula" value="{{$selectedValues['conversion_formula']}}">
-                                <input type="hidden" name="conversion_charges" id="conversion_charges" value="{{$selectedValues['conversion_charges']}}">
+                                <input type="hidden" name="conversion_land_rate" id="conversion_land_rate" value="<?php echo e($selectedValues['conversion_land_rate']); ?>">
+                                <input type="hidden" name="conversion_plot_area" id="conversion_plot_area" value="<?php echo e($selectedValues['conversion_plot_area']); ?>">
+                                <input type="hidden" name="conversion_remission_amount" id="conversion_remission_amount" value="<?php echo e($selectedValues['conversion_remission_amount']); ?>">
+                                <input type="hidden" name="conversion_surcharge_amount" id="conversion_surcharge_amount" value="<?php echo e($selectedValues['conversion_surcharge_amount']); ?>">
+                                <input type="hidden" name="conversion_formula" id="conversion_formula" value="<?php echo e($selectedValues['conversion_formula']); ?>">
+                                <input type="hidden" name="conversion_charges" id="conversion_charges" value="<?php echo e($selectedValues['conversion_charges']); ?>">
                                 <div class="row mt-2">
                                   <div class="col-lg-3">
-                                    <input class="form-check-input" type="checkbox" name="conversion_remission" id="conversion_remission" @checked(isset($selectedValues['conversion_remission']) && $selectedValues['conversion_remission']==1)>
+                                    <input class="form-check-input" type="checkbox" name="conversion_remission" id="conversion_remission" <?php if(isset($selectedValues['conversion_remission']) && $selectedValues['conversion_remission']==1): echo 'checked'; endif; ?>>
                                     <label class="form-check-label">Allow Remission</label>
                                   </div>
                                   <div class="col-lg-3">
-                                    <input class="form-check-input" type="checkbox" name="conversion_surcharge" id="conversion_surcharge" @checked(isset($selectedValues['conversion_surcharge']) && $selectedValues['conversion_surcharge']==1)>
+                                    <input class="form-check-input" type="checkbox" name="conversion_surcharge" id="conversion_surcharge" <?php if(isset($selectedValues['conversion_surcharge']) && $selectedValues['conversion_surcharge']==1): echo 'checked'; endif; ?>>
                                     <label class="form-check-label">Add Surcharge</label>
                                   </div>
                                 </div>
                               </div>
                             </div>
-                          @break
+                          <?php break; ?>
 
-                          @case('DEM_UEI')
+                          <?php case ('DEM_UEI'): ?>
                             <div class="col-lg-12 mt-2">
                               <div class="form-check form-check-inline custom-check">
-                                  <input class="form-check-input" type="radio" name="is_transfer_done" value="1" onchange="appendUnearnedIncreaseInput(this,3,true)" @if($selectedValues['is_transfer_done'] == 1) checked @endif>
+                                  <input class="form-check-input" type="radio" name="is_transfer_done" value="1" onchange="appendUnearnedIncreaseInput(this,3,true)" <?php if($selectedValues['is_transfer_done'] == 1): ?> checked <?php endif; ?>>
                                   <label class="form-check-label">Transfer completed</label>
                               </div>
                               <div class="form-check form-check-inline custom-check">
-                                  <input class="form-check-input" type="radio" name="is_transfer_done" value="0" onchange="appendUnearnedIncreaseInput(this,2,true)" @if($selectedValues['is_transfer_done'] == 0) checked @endif>
+                                  <input class="form-check-input" type="radio" name="is_transfer_done" value="0" onchange="appendUnearnedIncreaseInput(this,2,true)" <?php if($selectedValues['is_transfer_done'] == 0): ?> checked <?php endif; ?>>
                                   <label class="form-check-label">Transfer yet to be completed</label>
                               </div>
                             </div>
-                            @if($selectedValues['is_transfer_done'] == 1)
+                            <?php if($selectedValues['is_transfer_done'] == 1): ?>
                               <div class="input-block">
                                   <label class="form-label">Consideration value</label>
-                                  <input type="number" min="0" class="form-control" id="unearned_increase_consideration_value" name="unearned_increase_consideration_value" value="{{$selectedValues['unearned_increase_consideration_value']}}">
+                                  <input type="number" min="0" class="form-control" id="unearned_increase_consideration_value" name="unearned_increase_consideration_value" value="<?php echo e($selectedValues['unearned_increase_consideration_value']); ?>">
                                   <div class="error" id="unearned_increase_consideration_value_error"></div>
                               </div>
                               <div class="input-block">
                                   <label class="form-label">Last transaction value</label>
-                                  <input type="number" min="0" class="form-control" id="unearned_increase_ltv" name="unearned_increase_ltv" value="{{$selectedValues['unearned_increase_ltv']}}">
+                                  <input type="number" min="0" class="form-control" id="unearned_increase_ltv" name="unearned_increase_ltv" value="<?php echo e($selectedValues['unearned_increase_ltv']); ?>">
                                   <div class="error" id="unearned_increase_ltv_error"></div>
                               </div>
                               <div class="input-block">
                                   <label class="form-label">Transfer Date</label>
-                                  <input type="date" class="form-control" onblur="getLandValueAtDate(${propertyId}, this.value)" name="unearned_increase_transfer_date" value="{{$selectedValues['unearned_increase_transfer_date']}}">
+                                  <input type="date" class="form-control" onblur="getLandValueAtDate(${propertyId}, this.value)" name="unearned_increase_transfer_date" value="<?php echo e($selectedValues['unearned_increase_transfer_date']); ?>">
                                   <div class="error" id="unearned_increase_transfer_date_error"></div>
                               </div>
-                            @endif
+                            <?php endif; ?>
 
-                            @if($selectedValues['is_transfer_done'] == 0)
+                            <?php if($selectedValues['is_transfer_done'] == 0): ?>
                               <div class="input-block">
                                   <label class="form-label">Land value</label>
-                                  <input type="number" min="0" class="form-control" value="{{$selectedValues['unearned_increase_land_value']}}" readOnly id="unearned_increase_land_value" name="unearned_increase_land_value">
+                                  <input type="number" min="0" class="form-control" value="<?php echo e($selectedValues['unearned_increase_land_value']); ?>" readOnly id="unearned_increase_land_value" name="unearned_increase_land_value">
                                   <div class="error" id="unearned_increase_land_value_error"></div>
                               </div>
                               <div class="input-block">
                                   <label class="form-label">Last transaction value</label>
-                                  <input type="number" min="0" class="form-control" id="unearned_increase_ltv" name="unearned_increase_ltv" value="{{$selectedValues['unearned_increase_ltv']}}">
+                                  <input type="number" min="0" class="form-control" id="unearned_increase_ltv" name="unearned_increase_ltv" value="<?php echo e($selectedValues['unearned_increase_ltv']); ?>">
                                   <div class="error" id="unearned_increase_ltv_error"></div>
                               </div>
-                            @endif
-                          @break
+                            <?php endif; ?>
+                          <?php break; ?>
 
-                          @case('DEM_LUC_RC')
-                          {{-- <div class="col-lg-12 mt-2">
-                            <div class="form-check form-check-inline">
-                              <input class="form-check-input" type="checkbox" name="partial_change" id="partial_change" onchange="toggleBuiltUpAreaInputs(this)" @checked(isset($selectedValues['partial_change']) && $selectedValues['partial_change']==1)>
-                              <label class="form-check-label">Land use change sought under mixed use policy</label>
-                            </div>
-                          </div>
-                          <div class="col-lg-12 mb-2">
-                            <div class="calculation-info">Land value @ commercial land rate &rarr; &#8377;{{customNumFormat(
-                                      round($selectedValues['luc_land_value'] ?? 0))}}</div>
-                          </div>
-                          <div class="input-block">
-                            <label class="form-label">Commercial Land value</label>
-                            <input type="number" min="0" class="form-control" value="{{$selectedValues['luc_land_value']??''}}" readOnly id="luc_land_value" name="luc_land_value">
-                            <div class="error" id="luc_land_value_error"></div>
-                          </div>
-                          {{-- @dd(($selectedValues['partial_change']) && $selectedValues['partial_change'] == 1) --}
-                          @if(isset($selectedValues['partial_change']) && $selectedValues['partial_change'] == 1)
-                          <div class="input-block builtUpAreaInputs">
-                            <label class="form-label">Total built up area</label>
-                            <input type="number" min="0" class="form-control" id="luc_TBUA" name="luc_TBUA" value="{{$selectedValues['luc_TBUA'] ?? ''}}">
-                            <div class="error" id="luc_TBUA_error"></div>
-                          </div>
-                          <div class="input-block builtUpAreaInputs">
-                            <label class="form-label">Area to be used as commercial</label>
-                            <input type="number" min="0" class="form-control" id="luc_BUAC" name="luc_BUAC" value="{{$selectedValues['luc_BUAC'] ?? ''}}">
-                            <div class="error" id="luc_BUAC_error"></div>
-                          </div>
-                          @endif --}}
+                          <?php case ('DEM_LUC_RC'): ?>
+                          
                           <div class="col-lg-12 mt-2">
                             <div class="form-check form-check-inline">
                                 <input class="form-check-input" type="checkbox" name="partial_change" id="partial_change" checked="${applicationData.mixed_use == 1}" disabled">
@@ -665,199 +560,199 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
                                 <label class="form-check-label">Land use change sought under mixed use policy</label>
                             </div>
                           </div>
-                          <div class="calculation-info">&diam; Total built up area as per Application &nbsp; &nbsp; &rarr;{{$selectedValues['luc_TBUA']}}(Sqm) </div>
-                          <input type="hidden" name="luc_TBUA" value="{{$selectedValues['luc_TBUA']}}">
-                          <div class="calculation-info">&diam; Land use change sought &nbsp; &nbsp; &rarr; {{getServiceNameById($selectedValues['land_use_change_to'])}}</div>
-                          <input type="hidden" name="land_use_change_to" value="{{$selectedValues['land_use_change_to']}}">
-                          <div class="calculation-info">&diam; Area sought for land use change &nbsp; &nbsp; &rarr; {{$selectedValues['luc_BUAC']}}(Sqm) </div>
-                          {{-- @dd($demand->propertyMaster) --}}
-                          <input type="hidden" name="luc_BUAC" value="{{$selectedValues['luc_BUAC']}}">
-                          <div class="calculation-info">&diam; Land rate for {{strtolower(getServiceNameById($selectedValues['land_use_change_to']))}} properties in {{$demand->propertyMaster->newColony->name}} &nbsp; &nbsp; &rarr; {{$selectedValues['luc_land_rate']}}/sqm </div>
-                          <input type="hidden" name="luc_land_rate" value="{{$selectedValues['luc_land_rate']}}">
+                          <div class="calculation-info">&diam; Total built up area as per Application &nbsp; &nbsp; &rarr;<?php echo e($selectedValues['luc_TBUA']); ?>(Sqm) </div>
+                          <input type="hidden" name="luc_TBUA" value="<?php echo e($selectedValues['luc_TBUA']); ?>">
+                          <div class="calculation-info">&diam; Land use change sought &nbsp; &nbsp; &rarr; <?php echo e(getServiceNameById($selectedValues['land_use_change_to'])); ?></div>
+                          <input type="hidden" name="land_use_change_to" value="<?php echo e($selectedValues['land_use_change_to']); ?>">
+                          <div class="calculation-info">&diam; Area sought for land use change &nbsp; &nbsp; &rarr; <?php echo e($selectedValues['luc_BUAC']); ?>(Sqm) </div>
+                          
+                          <input type="hidden" name="luc_BUAC" value="<?php echo e($selectedValues['luc_BUAC']); ?>">
+                          <div class="calculation-info">&diam; Land rate for <?php echo e(strtolower(getServiceNameById($selectedValues['land_use_change_to']))); ?> properties in <?php echo e($demand->propertyMaster->newColony->name); ?> &nbsp; &nbsp; &rarr; <?php echo e($selectedValues['luc_land_rate']); ?>/sqm </div>
+                          <input type="hidden" name="luc_land_rate" value="<?php echo e($selectedValues['luc_land_rate']); ?>">
                         
                 
                           <div class="input-block">
                                 <label class="form-label">Last Transaction Value</label>
-                                <input type="number" min="0" class="form-control" id="luc_ltv" name="luc_ltv" value="{{$selectedValues['luc_ltv']}}">
+                                <input type="number" min="0" class="form-control" id="luc_ltv" name="luc_ltv" value="<?php echo e($selectedValues['luc_ltv']); ?>">
                                 <div class="error" id="luc_ltv_error"></div>
                           </div>
 
 
 
-                          @break
+                          <?php break; ?>
 
-                          @case('DEM_SLET_CHG')
+                          <?php case ('DEM_SLET_CHG'): ?>
                           <div class="col-lg-12 mt-2">
                             <div class="form-check form-check-inline">
-                              <input class="form-check-input" type="checkbox" name="penal_subletting" id="penal_subletting" onchange="togglePenalSublettingInputs(this)" @checked(isset($selectedValues['penal_subletting']) && $selectedValues['penal_subletting']==1)>
+                              <input class="form-check-input" type="checkbox" name="penal_subletting" id="penal_subletting" onchange="togglePenalSublettingInputs(this)" <?php if(isset($selectedValues['penal_subletting']) && $selectedValues['penal_subletting']==1): echo 'checked'; endif; ?>>
                               <label class="form-check-label">Add Penalty</label>
                             </div>
                           </div>
                           <div class="input-block">
                             <label class="form-label">Annual income from subletting</label>
-                            <input type="number" min="0" class="form-control" id="annual_subletting_income" name="annual_subletting_income" value="{{$selectedValues['annual_subletting_income'] ?? ''}}">
+                            <input type="number" min="0" class="form-control" id="annual_subletting_income" name="annual_subletting_income" value="<?php echo e($selectedValues['annual_subletting_income'] ?? ''); ?>">
                             <div class="error" id="annual_subletting_income_error"></div>
                           </div>
-                          @if (isset($selectedValues['penal_subletting']) && $selectedValues['penal_subletting'] == 1)
+                          <?php if(isset($selectedValues['penal_subletting']) && $selectedValues['penal_subletting'] == 1): ?>
                           <div class="input-block panalSublettingInputs">
                             <label class="form-label">Date of start of subletting</label>
-                            <input type="date" class="form-control" id="subletting_start_date" name="subletting_start_date" value="{{$selectedValues['subletting_start_date'] ?? '' }}">
+                            <input type="date" class="form-control" id="subletting_start_date" name="subletting_start_date" value="<?php echo e($selectedValues['subletting_start_date'] ?? ''); ?>">
                             <div class="error" id="subletting_start_date_error"></div>
                           </div>
                           <div class="input-block panalSublettingInputs">
                             <label class="form-label">Date of confirmation of subletting</label>
-                            <input type="date" class="form-control" id="subletting_confirmation_date" name="subletting_confirmation_date" value="{{$selectedValues['subletting_confirmation_date'] ?? '' }}">
+                            <input type="date" class="form-control" id="subletting_confirmation_date" name="subletting_confirmation_date" value="<?php echo e($selectedValues['subletting_confirmation_date'] ?? ''); ?>">
                             <div class="error" id="subletting_confirmation_date_error"></div>
                           </div>
-                          @endif
-                          @break
+                          <?php endif; ?>
+                          <?php break; ?>
 
-                          @case('DEM_PENAL_STANDARD')
+                          <?php case ('DEM_PENAL_STANDARD'): ?>
                           <div class="input-block">
                             <label class="form-label">Land Value</label>
-                            <input type="number" min="0" class="form-control" value="{{$selectedValues['standard_penalty_land_value']}}" readOnly id="standard_penalty_land_value" name="standard_penalty_land_value">
+                            <input type="number" min="0" class="form-control" value="<?php echo e($selectedValues['standard_penalty_land_value']); ?>" readOnly id="standard_penalty_land_value" name="standard_penalty_land_value">
                             <div class="error" id="standard_penalty_land_value_error"></div>
                           </div>
                           <div class="col-lg-12">
-                            <div class="calculation-info">Standard penalty is 1% of land value (&#8377;{{customNumFormat(round($selectedValues['standard_penalty_land_value'],2 ))}}) &approx; &#8377;{{customNumFormat(round(0.01*$selectedValues['standard_penalty_land_value'],2))}}</div>
+                            <div class="calculation-info">Standard penalty is 1% of land value (&#8377;<?php echo e(customNumFormat(round($selectedValues['standard_penalty_land_value'],2 ))); ?>) &approx; &#8377;<?php echo e(customNumFormat(round(0.01*$selectedValues['standard_penalty_land_value'],2))); ?></div>
                           </div>
                           <div class="col-lg-12">
                             <div class="input-block">
                               <label class="form-label">Description</label>
-                              <textarea class="form-control" name="standard_penalty_description" id="standard_penalty_description" rows="5" placeholder="Add description of penalty (min. 50 characters)">{{$selectedValues['standard_penalty_description'] ?? '' }}</textarea>
+                              <textarea class="form-control" name="standard_penalty_description" id="standard_penalty_description" rows="5" placeholder="Add description of penalty (min. 50 characters)"><?php echo e($selectedValues['standard_penalty_description'] ?? ''); ?></textarea>
                               <div class="error" id="standard_penalty_description_error"></div>
                             </div>
                           </div>
-                          @break
+                          <?php break; ?>
 
-                          @case("DEM_MANUAL")
+                          <?php case ("DEM_MANUAL"): ?>
                           <!-- code moved -->
-                          @break
+                          <?php break; ?>
 
-                          @case('DEM_OTHER')
+                          <?php case ('DEM_OTHER'): ?>
                           <div class="input-block">
                             <label class="form-label">Demand Amount</label>
-                            <input type="number" min="0" class="form-control" id="others_deamnd_amount" step="0.01" value="{{$slectedSubheads['DEM_OTHER']['amount']}}">
+                            <input type="number" min="0" class="form-control" id="others_deamnd_amount" step="0.01" value="<?php echo e($slectedSubheads['DEM_OTHER']['amount']); ?>">
                             <div class="error" id="others_deamnd_amount_error"></div>
                           </div>
                           <div class="input-block">
                             <label class="form-label">Description</label>
-                            <textarea class="form-control" name="others_description" id="others_description" rows="2" placeholder="Add description of penalty (min. 50 characters)">{{$selectedValues['others_description'] ??''}}</textarea>
+                            <textarea class="form-control" name="others_description" id="others_description" rows="2" placeholder="Add description of penalty (min. 50 characters)"><?php echo e($selectedValues['others_description'] ??''); ?></textarea>
                             <div class="error" id="others_description_error"></div>
                           </div>
-                          @break
-                          @default
+                          <?php break; ?>
+                          <?php default: ?>
 
-                          @endswitch
+                          <?php endswitch; ?>
 
-                          @endif
+                          <?php endif; ?>
                         </div>
-                        @if(in_array($head->item_code,$selectedSubheadCodes))
+                        <?php if(in_array($head->item_code,$selectedSubheadCodes)): ?>
                         <div class="col-lg-12 my-3" id="calculation-div">
-                          <button type="button" class="btn btn-sm btn-primary btn-calculate me-auto" style="display: none">{{($head->item_code == "DEM_PENAL_STANDARD" || $head->item_code == "DEM_OTHER" || $head->item_code == "DEM_ENCH_CHG")?'Add to Demand':'Calculate'}}</button>
+                          <button type="button" class="btn btn-sm btn-primary btn-calculate me-auto" style="display: none"><?php echo e(($head->item_code == "DEM_PENAL_STANDARD" || $head->item_code == "DEM_OTHER" || $head->item_code == "DEM_ENCH_CHG")?'Add to Demand':'Calculate'); ?></button>
                         </div>
-                        @endif
+                        <?php endif; ?>
                       </div>
-                      @endif
-                      @endforeach
-                      @isset($slectedSubheads['DEM_MANUAL'])
-                      @foreach ($slectedSubheads['DEM_MANUAL'] as $counter=>$manualDemand)
+                      <?php endif; ?>
+                      <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                      <?php if(isset($slectedSubheads['DEM_MANUAL'])): ?>
+                      <?php $__currentLoopData = $slectedSubheads['DEM_MANUAL']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $counter=>$manualDemand): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                       <div class="demand-item-container manual-demand-input">
                         <div class="col-lg-12 my-1">
                           <div class=" form-check">
                             <h6>Others</h6>
-                            <input type="hidden" name="detail_id[DEM_MANUAL][{{$counter}}]" value="{{$manualDemand['id'] ?? ''}}">
-                            <input type="hidden" name="demand_amount[DEM_MANUAL][{{$counter}}]" id="include-demand-amount" value="{{$manualDemand['amount'] ?? 0}}">
+                            <input type="hidden" name="detail_id[DEM_MANUAL][<?php echo e($counter); ?>]" value="<?php echo e($manualDemand['id'] ?? ''); ?>">
+                            <input type="hidden" name="demand_amount[DEM_MANUAL][<?php echo e($counter); ?>]" id="include-demand-amount" value="<?php echo e($manualDemand['amount'] ?? 0); ?>">
                           </div>
                         </div>
                         <div class="col-lg-12 user-inputs" id="user-inputs">
                           <div class="input-block">
                             <label for="" class="form-label">Head</label>
-                            <input type="text" name="manual_title[{{$counter}}]" id="manual_title" class="form-control" value="{{$manualDemand['values']['manual_title']}}">
+                            <input type="text" name="manual_title[<?php echo e($counter); ?>]" id="manual_title" class="form-control" value="<?php echo e($manualDemand['values']['manual_title']); ?>">
                             <div class="error" id="manual_title_error"></div>
                           </div>
                           <div class="input-block">
                             <label class="form-label">Amount</label>
-                            <input type="number" min="0" name="manual_amount[{{$counter}}]" id="manual_amount" class="form-control" step="0.01" value="{{$manualDemand['values']['manual_amount']}}">
+                            <input type="number" min="0" name="manual_amount[<?php echo e($counter); ?>]" id="manual_amount" class="form-control" step="0.01" value="<?php echo e($manualDemand['values']['manual_amount']); ?>">
                             <div class="error" id="manual_amount_error"></div>
                           </div>
                           <div class="input-block">
                             <label for="" class="form-label">Date From</label>
-                            <input type="date" name="manual_date_from[{{$counter}}]" id="manual_date_from" class="form-control" value="{{$manualDemand['values']['manual_date_from']}}">
+                            <input type="date" name="manual_date_from[<?php echo e($counter); ?>]" id="manual_date_from" class="form-control" value="<?php echo e($manualDemand['values']['manual_date_from']); ?>">
                             <div class="error" id="manual_date_from_error"></div>
                           </div>
                           <div class="input-block">
                             <label for="" class="form-label">Date To</label>
-                            <input type="date" name="manual_date_to[{{$counter}}]" id="manual_date_to" class="form-control" value="{{$manualDemand['values']['manual_date_to']}}">
+                            <input type="date" name="manual_date_to[<?php echo e($counter); ?>]" id="manual_date_to" class="form-control" value="<?php echo e($manualDemand['values']['manual_date_to']); ?>">
                             <div class="error" id="manual_date_to_error"></div>
                           </div>
                           <div class="col-lg-12 mt-2">
                             <label class="form-label">Description</label>
-                            <textarea class="form-control" name="manual_description[{{$counter}}]" id="manual_description" rows="2" placeholder="Add description of demand (min. 50 characters)">{{$manualDemand['values']['manual_description']}}</textarea>
+                            <textarea class="form-control" name="manual_description[<?php echo e($counter); ?>]" id="manual_description" rows="2" placeholder="Add description of demand (min. 50 characters)"><?php echo e($manualDemand['values']['manual_description']); ?></textarea>
                             <div class="error" id="manual_description_error"></div>
                           </div>
                             <div class="col-lg-12 d-flex mt-2 justify-content-between">
                               <button type="button" class="btn btn-sm btn-primary btn-calculate me-auto">Add</button>
-                              @if(!isset($openInReadOnlyMode))
+                              <?php if(!isset($openInReadOnlyMode)): ?>
                                 <button type="button" class="btn btn-danger ms-auto" onclick="removerOthers(this)">Remove</button>
-                              @endif
+                              <?php endif; ?>
                             </div>
                         </div>
                       </div>
 
-                      @endforeach
-                      @endisset
+                      <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                      <?php endif; ?>
 
-                      @isset($slectedSubheads['DEM_SETTLED_AMOUNT'])
-                      @foreach ($slectedSubheads['DEM_SETTLED_AMOUNT'] as $counter=>$settled)
-                      @php
+                      <?php if(isset($slectedSubheads['DEM_SETTLED_AMOUNT'])): ?>
+                      <?php $__currentLoopData = $slectedSubheads['DEM_SETTLED_AMOUNT']; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $counter=>$settled): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                      <?php
                           $settledValues = $settled['values'];
-                      @endphp
+                      ?>
                         <div class="demand-item-container settled-demand-input" style="background: #d2ffd2;">
                           <div class="col-lg-12 my-1">
                             <div class="form-check">
                               <h6>Amount Already Paid</h6>
-                              <input type="hidden" name="demand_amount[DEM_SETTLED_AMOUNT][{{$counter}}]" id="include-demand-amount"value="{{$settled['id'] ?? ''}}">
+                              <input type="hidden" name="demand_amount[DEM_SETTLED_AMOUNT][<?php echo e($counter); ?>]" id="include-demand-amount"value="<?php echo e($settled['id'] ?? ''); ?>">
                             </div>
                           </div>
                             <div class="col-lg-12 user-inputs" id="user-inputs">
                               <div class="input-block">
                                 <label for="" class="form-label">Head</label>
-                                <input type="text" name="settled_title[{{$counter}}]" value="{{$settledValues['settled_title']}}" id="settled_title" class="form-control">
+                                <input type="text" name="settled_title[<?php echo e($counter); ?>]" value="<?php echo e($settledValues['settled_title']); ?>" id="settled_title" class="form-control">
                                 <div class="error" id="settled_title_error"></div>
                               </div>
                               <div class="input-block">
                                 <label class="form-label">Amount</label>
-                                <input type="number" min="0" name="settled_amount[{{$counter}}]" value="{{$settledValues['settled_amount']}}" id="settled_amount" class="form-control" step="0.01">
+                                <input type="number" min="0" name="settled_amount[<?php echo e($counter); ?>]" value="<?php echo e($settledValues['settled_amount']); ?>" id="settled_amount" class="form-control" step="0.01">
                                 <div class="error" id="settled_amount_error"></div>
                               </div>
                               <div class="input-block">
                                 <label for="" class="form-label">Paid On</label>
-                                <input type="date" name="settled_date_from[{{$counter}}]" value="{{$settledValues['settled_date_from']}}"  id="settled_date_from" class="form-control">
+                                <input type="date" name="settled_date_from[<?php echo e($counter); ?>]" value="<?php echo e($settledValues['settled_date_from']); ?>"  id="settled_date_from" class="form-control">
                                 <div class="error" id="settled_date_from_error"></div>
                               </div>
                               <div class="col-lg-12 d-flex mt-2 justify-content-between">
                                 
                                 <button type="button" class="btn btn-sm btn-primary btn-calculate me-auto" data-calculation-type="DEM_SETTLED_AMOUNT">Add</button>
-                                @if(!isset($openInReadOnlyMode))
+                                <?php if(!isset($openInReadOnlyMode)): ?>
                                   <button type="button" class="btn btn-danger ms-auto" onclick="removerOthers(this)">Remove</button>
-                                @endif
+                                <?php endif; ?>
                               </div>
                               </div>
                             </div>
-                      @endforeach
-                      @endisset
+                      <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+                      <?php endif; ?>
 
-                      @endisset
+                      <?php endif; ?>
                     </div>
-                    @if(!isset($openInReadOnlyMode))
-                    <div class="col mt-2 mb-2" id="colAddMore" @if(!isset($demand)) style="display: none" @endif>
+                    <?php if(!isset($openInReadOnlyMode)): ?>
+                    <div class="col mt-2 mb-2" id="colAddMore" <?php if(!isset($demand)): ?> style="display: none" <?php endif; ?>>
                       <button type="button" class="btn btn-primary" onclick="appendManualInput()">Add More</button>
                       <button type="button" class="btn btn-success" onclick="appendSettledAmountInput()">Settle Paid Amount</button>
                     </div>
-                    @endif
+                    <?php endif; ?>
 
-                    @if(isset($penalties) && count($penalties) > 0)
+                    <?php if(isset($penalties) && count($penalties) > 0): ?>
                     <div class="row py-2">
                       <label>Penalties added in demand</label>
                       <div class="col-lg-12">
@@ -870,21 +765,21 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
                             </tr>
                           </thead>
                           <tbody>
-                            @foreach($penalties as $item)
+                            <?php $__currentLoopData = $penalties; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $item): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                             <tr>
-                              <td>{{$loop->iteration}}</td>
-                              <td>{{$item->remarks}}</td>
-                              <td>&#8377; {{customNumFormat($item->net_total)}}</td>
-                              @php
+                              <td><?php echo e($loop->iteration); ?></td>
+                              <td><?php echo e($item->remarks); ?></td>
+                              <td>&#8377; <?php echo e(customNumFormat($item->net_total)); ?></td>
+                              <?php
                               $totalDemandAmount += $item->net_total;
-                              @endphp
+                              ?>
                             </tr>
-                            @endforeach
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                           </tbody>
                         </table>
                       </div>
                     </div>
-                    @endif
+                    <?php endif; ?>
 
                   </div>
                 </div>
@@ -895,7 +790,7 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
           <div class="row my-3">
             <div class="col-lg-12">
               <div class="bill-raise">
-                @if(isset($openInReadOnlyMode))
+                <?php if(isset($openInReadOnlyMode)): ?>
                 <table class="table-bordered">
                   <thead>
                     <tr>
@@ -906,16 +801,16 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
                   </thead>
                   <tbldy>
                     <tr>
-                      <td>&#8377;{{customnumformat($demand->net_total ?? 0)}}</td>
-                      <td>&#8377;{{customnumformat($demand->paid_amount ?? 0)}}</td>
-                      <td>&#8377;{{customnumformat($demand->balance_amount ?? 0)}}</td>
+                      <td>&#8377;<?php echo e(customnumformat($demand->net_total ?? 0)); ?></td>
+                      <td>&#8377;<?php echo e(customnumformat($demand->paid_amount ?? 0)); ?></td>
+                      <td>&#8377;<?php echo e(customnumformat($demand->balance_amount ?? 0)); ?></td>
                     </tr>
                   </tbldy>
                 </table>
-                @else
+                <?php else: ?>
                   <h6 class="demand-total">Demand Total Amount:</h6>
-                  <h6 class="demand-amount">₹<span id="demandTotalAmount" unformatted-amount="{{isset($demand) ? $demand->net_total : 0}}">{{isset($demand) ? customNumFormat($demand->net_total) : 0}}</span></h6>
-                @endif
+                  <h6 class="demand-amount">₹<span id="demandTotalAmount" unformatted-amount="<?php echo e(isset($demand) ? $demand->net_total : 0); ?>"><?php echo e(isset($demand) ? customNumFormat($demand->net_total) : 0); ?></span></h6>
+                <?php endif; ?>
               </div>
             </div>
           </div>
@@ -927,28 +822,28 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
                         <div class="col">
                             <div class="form-group">
                                 <label for="" class="quesLabel">To</label>
-                                <input type="text" name="demand_to" id="additionalInputTo" class="form-control" value="{{ $propertyContactDetails->lessees_name ?? '' }}">
+                                <input type="text" name="demand_to" id="additionalInputTo" class="form-control" value="<?php echo e($propertyContactDetails->lessees_name ?? ''); ?>">
                             </div>
                         </div>
                         <div class="col">
                             <div class="form-group">
                                 <label for="" class="quesLabel">Address</label>
-                                <input type="text" name="demand_to_address" id="additionalInputAddress" class="form-control" value="{{ $propertyContactDetails->address ?? '' }}">
+                                <input type="text" name="demand_to_address" id="additionalInputAddress" class="form-control" value="<?php echo e($propertyContactDetails->address ?? ''); ?>">
                             </div>
                         </div>
                         <div class="col">
                             <div class="form-group">
                                 <label for="" class="quesLabel">Email</label>
-                                <input type="text" name="demand_to_email" id="additionalInputEmail"  class="form-control" value="{{ $propertyContactDetails->email ?? '' }}">
+                                <input type="text" name="demand_to_email" id="additionalInputEmail"  class="form-control" value="<?php echo e($propertyContactDetails->email ?? ''); ?>">
                             </div>
                         </div>
                         <div class="col">
                             <div class="form-group">
                                 <label for="" class="quesLabel">Phone</label>
-                                <input type="text" name="demand_to_phone" id="additionalInputPhone" class="form-control" value="{{ $propertyContactDetails->phone_no ?? '' }}">
+                                <input type="text" name="demand_to_phone" id="additionalInputPhone" class="form-control" value="<?php echo e($propertyContactDetails->phone_no ?? ''); ?>">
                             </div>
                         </div>
-                        <input type="hidden" name="demandcontactRecordId" id="additionalInputcontactRecordId" class="form-control" value="{{$propertyContactDetails->id ?? ''}}">
+                        <input type="hidden" name="demandcontactRecordId" id="additionalInputcontactRecordId" class="form-control" value="<?php echo e($propertyContactDetails->id ?? ''); ?>">
                     </div>
                 </div>
             </div>
@@ -956,38 +851,38 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
           <div class="row mb-2">
 
             <div class="col-lg-4">
-              @if(!isset($openInReadOnlyMode))
+              <?php if(!isset($openInReadOnlyMode)): ?>
               <button type="button" class="btn btn-primary float-right" id="btn-submit">Submit</button>
-              @endif
+              <?php endif; ?>
             </div>
             <div class="col-lg-8 d-flex justify-content-end">
-              @unlessrole('internal-audit-cell')
-                @if(isset($canApprove) && $canApprove)
-                <a href="javascript:void(0)"><button type="button" class="btn btn-success mr-2" {{$demand->status == getServiceType('DEM_PENDING') ? 'disabled': ''}} onclick="confirmApprove('{{$demand->status == getServiceType('DEM_PENDING') ? '': route('ApproveDemand',$demand->id)}}')">{{$demand->status == getServiceType('DEM_PENDING') ? 'Approved': 'Approve'}}</button></a>
-                @endif
-                @if(isset($canEdit) && $canEdit)
-                <a href="{{route('EditDemand',$demand->id)}}"><button type="button" class="btn btn-warning">Edit</button></a>
-                @endif
-                {{-- Demand Letter Button by Swati on 21-07-2025--}}
-                @if($isDraft)
-                    <a href="{{ route('demand.demand_letter_pdf', $demand->id) }}" target="_blank">
+              <?php if (! \Illuminate\Support\Facades\Blade::check('role', 'internal-audit-cell')): ?>
+                <?php if(isset($canApprove) && $canApprove): ?>
+                <a href="javascript:void(0)"><button type="button" class="btn btn-success mr-2" <?php echo e($demand->status == getServiceType('DEM_PENDING') ? 'disabled': ''); ?> onclick="confirmApprove('<?php echo e($demand->status == getServiceType('DEM_PENDING') ? '': route('ApproveDemand',$demand->id)); ?>')"><?php echo e($demand->status == getServiceType('DEM_PENDING') ? 'Approved': 'Approve'); ?></button></a>
+                <?php endif; ?>
+                <?php if(isset($canEdit) && $canEdit): ?>
+                <a href="<?php echo e(route('EditDemand',$demand->id)); ?>"><button type="button" class="btn btn-warning">Edit</button></a>
+                <?php endif; ?>
+                
+                <?php if($isDraft): ?>
+                    <a href="<?php echo e(route('demand.demand_letter_pdf', $demand->id)); ?>" target="_blank">
                         <button type="button" class="btn btn-info ms-2">View Draft Demand Letter</button>
                     </a>
-                @endif
-                @if($isPending || $isPaid || $isPartiallyPaid)
-                    <a href="{{asset('storage/public/'.$demand->demand_path)}}" target="_blank">
+                <?php endif; ?>
+                <?php if($isPending || $isPaid || $isPartiallyPaid): ?>
+                    <a href="<?php echo e(asset('storage/public/'.$demand->demand_path)); ?>" target="_blank">
                         <button type="button" class="btn btn-info ms-2">View Demand Letter</button>
                     </a>
-                @endif
-              @endunlessrole
+                <?php endif; ?>
+              <?php endif; ?>
             </div>
           </div>
         </form>
       </div>
     </div>
   </div>
-  @include('include.alerts.ajax-alert')
-  @include('include.alerts.approve-confirmation')
+  <?php echo $__env->make('include.alerts.ajax-alert', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
+  <?php echo $__env->make('include.alerts.approve-confirmation', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?>
   <div class="modal fade" id="confirmNewDemandModal" data-bs-backdrop="static" tabindex="-1" role="dialog" aria-labelledby="submitModalLabel" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable modal-lg"> <!-- modal-dialog-centered class added by anil on 21-01-2025 -->
       <div class="modal-content text-center">
@@ -995,10 +890,7 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
           <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
         </div>
         <div class="modal-body">
-          {{-- <img
-              src="{{ asset('assets/images/update.svg') }}"
-          alt="success"
-          class="success_icon" /> --}}
+          
           <!-- <h5 class="modal-title mb-2" id="ModalSuccessLabel">Are you sure?</h5> -->
           <p id="confirmationMessage">
             An unpaid demand has been found against the selected property. Do you want to
@@ -1017,9 +909,9 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
       </div>
     </div>
   </div>
-  @endsection
-  @section('footerScript')
-  <script src="{{ asset('assets/js/bootstrap-select.min.js') }}"></script>
+  <?php $__env->stopSection(); ?>
+  <?php $__env->startSection('footerScript'); ?>
+  <script src="<?php echo e(asset('assets/js/bootstrap-select.min.js')); ?>"></script>
   <script>
     let propertyId;
     /* let propertyTypes;
@@ -1037,18 +929,18 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
     let propertyType = false; //to skip appending land use change demand for commercial properties - added bu Ntiin on 24 March 2025
     let propertyTypeName;
     const spinnerOverlay = document.getElementById("spinnerOverlay");
-   @if (isset($applicationData))
-            var applicationData = @json($applicationData);
-        @else
+   <?php if(isset($applicationData)): ?>
+            var applicationData = <?php echo json_encode($applicationData, 15, 512) ?>;
+        <?php else: ?>
             var applicationData = null;
-        @endif
+        <?php endif; ?>
     let redirectToEdit = false;
     let oldDemandId = [];
     let editDemandId = null;
     let landValue = null;
     let landArea = null;
     let addInputPending = 0 //disable submitting form when all inputs are not added
-    let allocationType = @json($allocationType ?? '');
+    let allocationType = <?php echo json_encode($allocationType ?? '', 15, 512) ?>;
     let allocationDateInputErrors = false;
     let allocationLandRate;
 
@@ -1105,9 +997,9 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
       landArea = null;
       $.ajax({
         type: "post",
-        url: "{{route('propertyCommonBasicdetail')}}",
+        url: "<?php echo e(route('propertyCommonBasicdetail')); ?>",
         data: {
-          _token: "{{csrf_token()}}",
+          _token: "<?php echo e(csrf_token()); ?>",
           property_id: propId,
           skipAccessCheck: 1,
           withOutLeaseHold: withOutLeaseHold,
@@ -1331,9 +1223,9 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
 
         $.ajax({
             type: "POST",
-            url: "{{ route('get.flat.details') }}", // You need to create this route
+            url: "<?php echo e(route('get.flat.details')); ?>", // You need to create this route
             data: {
-                _token: "{{ csrf_token() }}",
+                _token: "<?php echo e(csrf_token()); ?>",
                 flat_id: flatId
             },
             beforeSend: function() {
@@ -1467,7 +1359,7 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
       oldDemandId = [];
       var selectedOldPropertyId = $("#selectedOldPropertyId").val();
       var flatId = $("#flat").val();
-      var responseUrl = "{{ route('getExistingPropertyDemand', ['oldPropertyId' => '__ID__','flatId' => '__flatId__']) }}";
+      var responseUrl = "<?php echo e(route('getExistingPropertyDemand', ['oldPropertyId' => '__ID__','flatId' => '__flatId__'])); ?>";
       responseUrl = responseUrl.replace('__ID__', selectedOldPropertyId);
       responseUrl = responseUrl.replace('__flatId__', flatId);
                    
@@ -1626,13 +1518,13 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
         let redirectMessage = `<h6>Redirecting to edit page.</h6>`;
         $('#oldDemandDetails').after(redirectMessage);
         setTimeout(() => {
-          // window.location.href = "{{url('/demand/edit')}}" + '/' + editDemandId;
-          window.location.href = "{{route('EditDemand',['demandId'=>'__ID__'])}}".replace('__ID__',editDemandId);
+          // window.location.href = "<?php echo e(url('/demand/edit')); ?>" + '/' + editDemandId;
+          window.location.href = "<?php echo e(route('EditDemand',['demandId'=>'__ID__'])); ?>".replace('__ID__',editDemandId);
         }, 1000);
       } else if (oldDemandId.length > 0) {
         let ids = oldDemandId.join(',');
-        // $("#formOldDemandDetails").load("{{url('/demand/old-demand-data')}}" + '/' + ids, function() {
-        $("#formOldDemandDetails").load("{{route('oldDemandData',['oldDemands'=> '__IDs__'])}}".replace('__IDs__',ids), function() {
+        // $("#formOldDemandDetails").load("<?php echo e(url('/demand/old-demand-data')); ?>" + '/' + ids, function() {
+        $("#formOldDemandDetails").load("<?php echo e(route('oldDemandData',['oldDemands'=> '__IDs__'])); ?>".replace('__IDs__',ids), function() {
 
           calculateTotalAmount();
         });
@@ -1822,12 +1714,12 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
       spinnerOverlay.style.display = "flex"
       $.ajax({
         type: "post",
-        url: "{{route('storeDemand')}}",
+        url: "<?php echo e(route('storeDemand')); ?>",
         data: formData,
         success: function(response) {
           spinnerOverlay.style.display = "none"
           if (response.status) {
-            showSuccess(response.message, "{{route('demandList')}}");
+            showSuccess(response.message, "<?php echo e(route('demandList')); ?>");
           } else {
             spinnerOverlay.style.display = "none"
             if( typeof response ==  'string'){
@@ -1891,8 +1783,8 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
   function getAndAppendDemandInputs(selectedVal) {
     $.ajax({
       type: "get",
-      // url: "{{url('/demand/get-demand-heads')}}" + "/" + selectedVal, 
-      url: "{{route('getDemandHeads',['newAllotment'=>'__val__'])}}".replace('__val__', selectedVal),
+      // url: "<?php echo e(url('/demand/get-demand-heads')); ?>" + "/" + selectedVal, 
+      url: "<?php echo e(route('getDemandHeads',['newAllotment'=>'__val__'])); ?>".replace('__val__', selectedVal),
       success: function(response) {
         $('#demand-subheads-container').empty();
         response.forEach(function(item) {
@@ -2126,8 +2018,8 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
       let propertyId = $("#selectedOldPropertyId").val()
       $.ajax({
         type: "GET",
-        //url: "{{url('/land-use-change/commercial-land-value')}}" + '/' + propertyId,
-        url: "{{route('chargesForProperty')}}",
+        //url: "<?php echo e(url('/land-use-change/commercial-land-value')); ?>" + '/' + propertyId,
+        url: "<?php echo e(route('chargesForProperty')); ?>",
                 data: {
                     propertyId: propertyId,
                     remission: false
@@ -2174,8 +2066,8 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
       let propertyId = $("#selectedOldPropertyId").val()
       $.ajax({
         type: "GET",
-        //url: "{{url('/land-use-change/commercial-land-value')}}" + '/' + propertyId,
-        url: "{{route('chargesForProperty')}}",
+        //url: "<?php echo e(url('/land-use-change/commercial-land-value')); ?>" + '/' + propertyId,
+        url: "<?php echo e(route('chargesForProperty')); ?>",
         data: {
           propertyId: propertyId,
           remission: 'true',
@@ -2255,7 +2147,7 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
         const targetElement = $(dateInput).parents('#user-inputs');
         $.ajax({
             type: "GET",
-            url: "{{ route('chargesForProperty') }}",
+            url: "<?php echo e(route('chargesForProperty')); ?>",
             data: {
                 propertyId: propertyId,
                 date: dateString, // send string, NOT Date object
@@ -2333,9 +2225,9 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
     let saughtPropertyType = applicationData ? applicationData.property_type_change_to : null;
     $.ajax({
       type: "GET",
-      //url: "{{url('/land-use-change/commercial-land-value')}}" + '/' + propertyId,
+      //url: "<?php echo e(url('/land-use-change/commercial-land-value')); ?>" + '/' + propertyId,
       // url: "{route('getCommercialLandValue',['propertyId'=>'__ID__'])}}".replace('__ID__', propertyId),
-      url: "{{route('getSaughtLandValue')}}",
+      url: "<?php echo e(route('getSaughtLandValue')); ?>",
       data:{
         propertyId:propertyId,
         currentPropertyType:currentPropertyType,
@@ -3681,7 +3573,7 @@ function calculateEncroachment(row) {
       }
       /* $.ajax({
         type: 'get',
-        url: "{{route('getLandValueAtDate')}}",
+        url: "<?php echo e(route('getLandValueAtDate')); ?>",
         data: {
           date: date,
           propertyId: propertyId
@@ -3731,7 +3623,7 @@ function calculateEncroachment(row) {
     function fetchLandValue(date, PropertyId) {
     return $.ajax({
       type: 'get',
-      url: "{{route('getLandValueAtDate')}}",
+      url: "<?php echo e(route('getLandValueAtDate')); ?>",
       data: {
         date: date,
         propertyId: propertyId
@@ -3806,4 +3698,6 @@ function calculateEncroachment(row) {
       }
     }
   </script>
-  @endsection
+  <?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('layouts.app', \Illuminate\Support\Arr::except(get_defined_vars(), ['__data', '__path']))->render(); ?><?php /**PATH C:\Users\WORK\Laravel\Development Server\edharti_v2\resources\views/demand/input-form.blade.php ENDPATH**/ ?>

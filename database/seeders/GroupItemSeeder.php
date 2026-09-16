@@ -278,6 +278,12 @@ class GroupItemSeeder extends Seeder
             ],
             [
                 'group_id' => 7003,
+                'item_code' => 'DEM_ENCH_CHG',
+                'item_name' => 'Encroachment Charges',
+                'item_order' => 1,
+            ],
+            [
+                'group_id' => 7003,
                 'item_code' => 'DEM_PENAL_STANDARD',
                 'item_name' => 'Standard Penalty for violation other than non-payment of demand',
                 'item_order' => 1,
