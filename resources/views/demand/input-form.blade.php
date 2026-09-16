@@ -3108,6 +3108,9 @@ function calculateEncroachment(row) {
         case "DEM_SLET_CHG":
           calculateSublettingCharges(inputElements);
           break;
+        case "DEM_ENCH_CHG":
+          calculateEncroachmentCharges(inputElements);
+          break;
         case "DEM_PENAL_STANDARD":
           calculateStandardPenalty(inputElements);
           break;
@@ -3458,6 +3461,9 @@ function calculateEncroachment(row) {
       let result = `Total Subletting Charges  = ₹ ${customNumFormat(totalSublettingCharges)} (10% of annual income ${penalty> 0 ? '+ penalty for '+penaltyYears+' years at 25% of annual income per year':''})`;
       displayDemandCalculationResult(inputElements, result)
       fillDemandAmount(inputElements, totalSublettingCharges);
+    }
+    function calculateEncroachmentCharges(inputElements){
+      
     }
 
     function calculateStandardPenalty(inputElements) {
