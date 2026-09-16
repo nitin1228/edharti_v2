@@ -568,6 +568,7 @@ class DemandController extends Controller
 
     public function storeDemand(Request $request)
     {
+        // dd($request->all());
         $validator = Validator::make(
             $request->all(),
             [
@@ -594,419 +595,372 @@ class DemandController extends Controller
             ]);
         }
         // dd($request->all());
-        try {
-            return DB::transaction(function () use ($request) {
-                $oldPropertyId = $request->oldPropertyId;
-                // if($oldPropertyId = "10397"){
-                //     dd('Demand called');
-                // }
+        // try {
+        return DB::transaction(function () use ($request) {
+            $oldPropertyId = $request->oldPropertyId;
+            // if($oldPropertyId = "10397"){
+            //     dd('Demand called');
+            // }
 
-                // $manualDemand = null;
-                $flatId = (isset($request->flat_id) && $request->flat_id != '') ? $request->flat_id : null;
-                $demandId = (isset($request->id) && $request->id != "") ? $request->id : null;
-                if ($oldPropertyId || $demandId) {
-                    if (!$demandId) {
-                        $prevDues = $prevDuesDemandId = null; //initiallize to store demand subheads
+            // $manualDemand = null;
+            $flatId = (isset($request->flat_id) && $request->flat_id != '') ? $request->flat_id : null;
+            $demandId = (isset($request->id) && $request->id != "") ? $request->id : null;
+            if ($oldPropertyId || $demandId) {
+                if (!$demandId) {
+                    $prevDues = $prevDuesDemandId = null; //initiallize to store demand subheads
 
-                        //after latest update no need to check Old demad here - 07-04-2025
-                        $existingDemandData = $this->getExistingPropertyDemand($oldPropertyId, $flatId, false, false);
-                        // dd($existingDemandData);
-                        /* if (isset($existingDemandData['dues'])) {
+                    //after latest update no need to check Old demad here - 07-04-2025
+                    $existingDemandData = $this->getExistingPropertyDemand($oldPropertyId, $flatId, false, false);
+                    // dd($existingDemandData);
+                    /* if (isset($existingDemandData['dues'])) {
                             // previous dues logic is to berevised so commented on 26 March 2025
                            
                         } else { */
-                        $oldDemand = $existingDemandData['demand'];
-                        if ($oldDemand && $oldDemand->status_code !== "DEM_DRAFT") {
-                            $carriedAmount = $oldDemand->balance_amount;
-                        }
-                        /* } */
-                        $carriedAmount = (isset($oldDemand) && $oldDemand && $oldDemand->status_code !== "DEM_DRAFT") ? $oldDemand->balance_amount : 0;
-                    } else {
-                        $demand = $oldDemand = Demand::find($demandId);
-                        $carriedAmount = !is_null($demand->carried_amount) ? $demand->carried_amount : 0;
+                    $oldDemand = $existingDemandData['demand'];
+                    if ($oldDemand && $oldDemand->status_code !== "DEM_DRAFT") {
+                        $carriedAmount = $oldDemand->balance_amount;
                     }
-                    // $amounts = $request->amount;
-                    $manualDemandAmounts = 0;
-                    $total = 0;
-                    if (isset($request->demand_amount)) {
-                        $amounts = $request->demand_amount;
-                        $manualDemandAmounts = isset($amounts['DEM_MANUAL']) ? $amounts['DEM_MANUAL'] : false;
-                        $settledAmounts = isset($amounts['DEM_SETTLED_AMOUNT']) ? $amounts['DEM_SETTLED_AMOUNT'] : false;
-                        // dd($demand, $carriedAmount, $manualDemandAmounts);
-                        unset($amounts['DEM_MANUAL']);
-                        unset($amounts['DEM_SETTLED_AMOUNT']);
+                    /* } */
+                    $carriedAmount = (isset($oldDemand) && $oldDemand && $oldDemand->status_code !== "DEM_DRAFT") ? $oldDemand->balance_amount : 0;
+                } else {
+                    $demand = $oldDemand = Demand::find($demandId);
+                    $carriedAmount = !is_null($demand->carried_amount) ? $demand->carried_amount : 0;
+                }
+                // $amounts = $request->amount;
+                $manualDemandAmounts = 0;
+                $total = 0;
+                if (isset($request->demand_amount)) {
+                    $amounts = $request->demand_amount;
+                    $manualDemandAmounts = isset($amounts['DEM_MANUAL']) ? $amounts['DEM_MANUAL'] : false;
+                    $settledAmounts = isset($amounts['DEM_SETTLED_AMOUNT']) ? $amounts['DEM_SETTLED_AMOUNT'] : false;
+                    // dd($demand, $carriedAmount, $manualDemandAmounts);
+                    unset($amounts['DEM_MANUAL']);
+                    unset($amounts['DEM_SETTLED_AMOUNT']);
 
-                        // $total = array_sum($amounts) + ($manualDemandAmounts !== false ? array_sum($manualDemandAmounts) : 0);
+                    // $total = array_sum($amounts) + ($manualDemandAmounts !== false ? array_sum($manualDemandAmounts) : 0);
 
-                        $total = array_sum($amounts)
-                            + ($manualDemandAmounts !== false ? array_sum($manualDemandAmounts) : 0)
-                            + ($settledAmounts !== false ? array_sum($settledAmounts) : 0);
+                    $total = array_sum($amounts)
+                        + ($manualDemandAmounts !== false ? array_sum($manualDemandAmounts) : 0)
+                        + ($settledAmounts !== false ? array_sum($settledAmounts) : 0);
 
 
-                        if ($manualDemandAmounts !== false)
-                            $amounts['DEM_MANUAL'] = $manualDemandAmounts;
+                    if ($manualDemandAmounts !== false)
+                        $amounts['DEM_MANUAL'] = $manualDemandAmounts;
 
-                        if ($settledAmounts !== false) {
-                            $amounts['DEM_SETTLED_AMOUNT'] = $settledAmounts;
-                        }
-                        // dd($total, array_sum($amounts), array_sum($manual));
+                    if ($settledAmounts !== false) {
+                        $amounts['DEM_SETTLED_AMOUNT'] = $settledAmounts;
                     }
-                    if (!isset($amounts)) {
-                        return json_encode(['status' => false, 'details' => "Can not create a demand. Invalid demand amount", 'data' => 0]);
+                    // dd($total, array_sum($amounts), array_sum($manual));
+                }
+                if (!isset($amounts)) {
+                    return json_encode(['status' => false, 'details' => "Can not create a demand. Invalid demand amount", 'data' => 0]);
+                }
+                foreach ($amounts as $k => $am) {
+                    if (!(array_key_exists($k, $request->all()) || in_array($k, ["DEM_MANUAL", "DEM_SETTLED_AMOUNT"]))) {
+                        unset($amounts[$k]);
                     }
-                    foreach ($amounts as $k => $am) {
-                        if (!(array_key_exists($k, $request->all()) || in_array($k, ["DEM_MANUAL", "DEM_SETTLED_AMOUNT"]))) {
-                            unset($amounts[$k]);
-                        }
-                    }
+                }
 
-                    if ($total == 0) {
-                        $response = ['status' => false, 'details' => "Can not create a demand. Invalid demand amount", 'data' => 0];
-                        return json_encode($response);
-                    }
-                    /* if (isset($request->amount)) {
+                if ($total == 0) {
+                    $response = ['status' => false, 'details' => "Can not create a demand. Invalid demand amount", 'data' => 0];
+                    return json_encode($response);
+                }
+                /* if (isset($request->amount)) {
                         $manualDemand = true;
                         $amounts = $request->amount;
                     } */
 
-                    //$total = array_sum($amounts) + (isset($manualDemandAmounts) ? array_sum($manualDemandAmounts) : 0);
-                    $previousDues = 0;
-                    $previousDuesDemand = 0;
-                    $netTotal = $total + $carriedAmount;
-                    //create new demand
-                    $fy = getFinancialYear();
+                //$total = array_sum($amounts) + (isset($manualDemandAmounts) ? array_sum($manualDemandAmounts) : 0);
+                $previousDues = 0;
+                $previousDuesDemand = 0;
+                $netTotal = $total + $carriedAmount;
+                //create new demand
+                $fy = getFinancialYear();
 
 
-                    //For linking the demand with application if application available - SOURAV CHAUHAN (20 Feb 2026)
-                    $propertyId = $oldPropertyId ?? $demand->old_property_id;
-                    $applicationNo = $request->application_no ?? null;
-                    if (!$request->application_no) {
-                        $statusIds = [1487, 1488];
-                        $models = [
-                            ConversionApplication::class,
-                            DeedOfApartmentApplication::class,
-                            LandUseChangeApplication::class,
-                            MutationApplication::class,
-                            NocApplication::class,
-                        ];
-
-                        $applicationNew = null;
-                        //For attaching the application with flats if available else with the property - SOURAV CHAUHAN (01 June 2026)
-                        foreach ($models as $model) {
-                            $query = $model::whereNotIn('status', $statusIds);
-
-                            if (!empty($flatId)) {
-                                // For flats
-                                $query->where('flat_id', $flatId);
-                            } else {
-                                // For properties
-                                $query->where('old_property_id', $propertyId);
-                            }
-                            $applicationNew = $query->latest()->first();
-                            if ($applicationNew) {
-                                break;
-                            }
-                        }
-                        // foreach ($models as $model) {
-                        //     $applicationNew = $model::where('old_property_id', $propertyId)->whereNotIn('status', $statusIds)->first();
-                        //     if ($applicationNew) {
-                        //         break;
-                        //     }
-                        // }
-
-                        $applicationNo = $applicationNew['application_no'] ?? '';
-                    }
-                    $demandData = [
-                        'property_master_id' => $existingDemandData['propertyMasterId'] ?? $demand->property_master_id,
-                        'splited_property_detail_id' =>  $existingDemandData['childId'] ?? $demand->splited_property_detail_id ?? null,
-                        'flat_id' => $flatId, //will be changed later
-                        'old_property_id' => $propertyId,
-                        'app_no' => $applicationNo,
-                        'total' => round($total, 2),
-                        'net_total' => round($netTotal, 2),
-                        'balance_amount' => round($netTotal, 2),
-                        'paid_amount' => 0,
-                        'carried_amount' => $carriedAmount > 0 ? round($carriedAmount, 2) : null,
-                        'fy_prev_demand' => $oldDemand->current_fy ?? $demand->fy_prev_demand ?? null,
-                        'current_fy' => $fy,
-                        'status' => getServiceType('DEM_DRAFT'), //at first demand status is draft
-                        //'is_manual' => $manualDemand,
-                        'created_by' => Auth::id(),
-                        'updated_by' => Auth::id(),
-                        'approved_at' => now()
+                //For linking the demand with application if application available - SOURAV CHAUHAN (20 Feb 2026)
+                $propertyId = $oldPropertyId ?? $demand->old_property_id;
+                $applicationNo = $request->application_no ?? null;
+                if (!$request->application_no) {
+                    $statusIds = [1487, 1488];
+                    $models = [
+                        ConversionApplication::class,
+                        DeedOfApartmentApplication::class,
+                        LandUseChangeApplication::class,
+                        MutationApplication::class,
+                        NocApplication::class,
                     ];
-                    if (!isset($request->id)) {
-                        $demandData['unique_id'] = GeneralFunctions::createUniqueDemandId($oldPropertyId);
-                    }
-                    $newDemand =  Demand::updateOrCreate(['id' => $request->id ?? 0,], $demandData);
-                    if ($newDemand) {
-                        $newDemandId = $newDemand->id;
-                        $idsToKeep = [];
-                        if (isset($request->detail_id)) {
-                            // Removes null values from the array
-                            $notNullIds = array_filter($request->detail_id);
-                            $idsToKeep = Arr::flatten($notNullIds);
+
+                    $applicationNew = null;
+                    //For attaching the application with flats if available else with the property - SOURAV CHAUHAN (01 June 2026)
+                    foreach ($models as $model) {
+                        $query = $model::whereNotIn('status', $statusIds);
+
+                        if (!empty($flatId)) {
+                            // For flats
+                            $query->where('flat_id', $flatId);
+                        } else {
+                            // For properties
+                            $query->where('old_property_id', $propertyId);
                         }
-                        /** If carried amount is not null then data in forwarded from old demand so not avaialble in request */
-                        DemandDetail::where('demand_id', $newDemandId)->where(function ($query) {
-                            return $query->whereNull('carried_amount')->orWhere('carried_amount', 0);
-                        })->whereNotIn('id', $idsToKeep)->delete();
-                        DemandHeadKey::where('demand_id', $newDemandId)->whereNotIn('head_id', $idsToKeep)->delete();
+                        $applicationNew = $query->latest()->first();
+                        if ($applicationNew) {
+                            break;
+                        }
+                    }
+                    // foreach ($models as $model) {
+                    //     $applicationNew = $model::where('old_property_id', $propertyId)->whereNotIn('status', $statusIds)->first();
+                    //     if ($applicationNew) {
+                    //         break;
+                    //     }
+                    // }
 
-                        if (isset($oldDemand) && $oldDemand->status_code !== "DEM_DRAFT") {
-                            $preveiousDemand = Demand::find($oldDemand->id);
-                            if (in_array($preveiousDemand->status, [getServiceType('DEM_PENDING'), getServiceType('DEM_PART_PAID')])) { //check the status of previous demand is pending or partially paid. if yes then forward the demand to new demand, and subheads to new demand, add the remaining amount of old demand to new demand
-                                $preveiousDemand->update(['status' => getServiceType('DEM_CR_FRW'), 'updated_by' => Auth::id()]); //update status of old Demand
+                    $applicationNo = $applicationNew['application_no'] ?? '';
+                }
+                $demandData = [
+                    'property_master_id' => $existingDemandData['propertyMasterId'] ?? $demand->property_master_id,
+                    'splited_property_detail_id' =>  $existingDemandData['childId'] ?? $demand->splited_property_detail_id ?? null,
+                    'flat_id' => $flatId, //will be changed later
+                    'old_property_id' => $propertyId,
+                    'app_no' => $applicationNo,
+                    'total' => round($total, 2),
+                    'net_total' => round($netTotal, 2),
+                    'balance_amount' => round($netTotal, 2),
+                    'paid_amount' => 0,
+                    'carried_amount' => $carriedAmount > 0 ? round($carriedAmount, 2) : null,
+                    'fy_prev_demand' => $oldDemand->current_fy ?? $demand->fy_prev_demand ?? null,
+                    'current_fy' => $fy,
+                    'status' => getServiceType('DEM_DRAFT'), //at first demand status is draft
+                    //'is_manual' => $manualDemand,
+                    'created_by' => Auth::id(),
+                    'updated_by' => Auth::id(),
+                    'approved_at' => now()
+                ];
+                if (!isset($request->id)) {
+                    $demandData['unique_id'] = GeneralFunctions::createUniqueDemandId($oldPropertyId);
+                }
+                $newDemand =  Demand::updateOrCreate(['id' => $request->id ?? 0,], $demandData);
+                if ($newDemand) {
+                    $newDemandId = $newDemand->id;
+                    $idsToKeep = [];
+                    if (isset($request->detail_id)) {
+                        // Removes null values from the array
+                        $notNullIds = array_filter($request->detail_id);
+                        $idsToKeep = Arr::flatten($notNullIds);
+                    }
+                    /** If carried amount is not null then data in forwarded from old demand so not avaialble in request */
+                    DemandDetail::where('demand_id', $newDemandId)->where(function ($query) {
+                        return $query->whereNull('carried_amount')->orWhere('carried_amount', 0);
+                    })->whereNotIn('id', $idsToKeep)->delete();
+                    DemandHeadKey::where('demand_id', $newDemandId)->whereNotIn('head_id', $idsToKeep)->delete();
 
-                                //add data in carried demand Detail Table
-                                CarriedDemandDetail::create([
-                                    'new_demand_id' => $newDemandId,
-                                    'old_demand_id' => $oldDemand->id,
-                                    'carried_amount' => $carriedAmount
-                                ]);
+                    if (isset($oldDemand) && $oldDemand->status_code !== "DEM_DRAFT") {
+                        $preveiousDemand = Demand::find($oldDemand->id);
+                        if (in_array($preveiousDemand->status, [getServiceType('DEM_PENDING'), getServiceType('DEM_PART_PAID')])) { //check the status of previous demand is pending or partially paid. if yes then forward the demand to new demand, and subheads to new demand, add the remaining amount of old demand to new demand
+                            $preveiousDemand->update(['status' => getServiceType('DEM_CR_FRW'), 'updated_by' => Auth::id()]); //update status of old Demand
 
-                                // create subheads for carried demand
-                                $oldSubheads = $preveiousDemand->demandDetails;
-                                foreach ($oldSubheads as $i => $osh) {
-                                    if ($osh->balance_amount > 0) {
-                                        DemandDetail::create([
-                                            'demand_id' => $newDemandId,
-                                            'property_master_id' => $existingDemandData['propertyMasterId'],
-                                            'splited_property_detail_id' => $existingDemandData['childId'],
-                                            'flat_id' => $flatId, //will be changed later
-                                            'subhead_id' => $osh->subhead_id,
-                                            'total' => 0,
-                                            'net_total' => $osh->balance_amount,
-                                            'paid_amount' => null,
-                                            'balance_amount' => $osh->balance_amount,
-                                            'carried_amount' => $osh->balance_amount,
-                                            'duration_from' =>  $osh->duration_from,
-                                            'duration_to' => $osh->duration_to,
-                                            'formula_id' => $osh->formula_id ?? null,
-                                            'fy' => $osh->fy,
-                                            'remarks' => $osh->remark,
-                                            'created_by' => Auth::id(),
-                                            'updated_by' => Auth::id()
-                                        ]);
-                                    }
+                            //add data in carried demand Detail Table
+                            CarriedDemandDetail::create([
+                                'new_demand_id' => $newDemandId,
+                                'old_demand_id' => $oldDemand->id,
+                                'carried_amount' => $carriedAmount
+                            ]);
+
+                            // create subheads for carried demand
+                            $oldSubheads = $preveiousDemand->demandDetails;
+                            foreach ($oldSubheads as $i => $osh) {
+                                if ($osh->balance_amount > 0) {
+                                    DemandDetail::create([
+                                        'demand_id' => $newDemandId,
+                                        'property_master_id' => $existingDemandData['propertyMasterId'],
+                                        'splited_property_detail_id' => $existingDemandData['childId'],
+                                        'flat_id' => $flatId, //will be changed later
+                                        'subhead_id' => $osh->subhead_id,
+                                        'total' => 0,
+                                        'net_total' => $osh->balance_amount,
+                                        'paid_amount' => null,
+                                        'balance_amount' => $osh->balance_amount,
+                                        'carried_amount' => $osh->balance_amount,
+                                        'duration_from' =>  $osh->duration_from,
+                                        'duration_to' => $osh->duration_to,
+                                        'formula_id' => $osh->formula_id ?? null,
+                                        'fy' => $osh->fy,
+                                        'remarks' => $osh->remark,
+                                        'created_by' => Auth::id(),
+                                        'updated_by' => Auth::id()
+                                    ]);
                                 }
                             }
                         }
+                    }
 
-                        //previous dues logic is to be revised - commented on 26-03-2025
-                        /* if (isset($prevDues)) {
-                            if ($prevDues > 0) {
-                                DemandDetail::create([
-                                    'demand_id' => $newDemandId,
-                                    'property_master_id' => $newDemand->property_master_id,
-                                    'splited_property_detail_id' => $newDemand->property_master_id,
-                                    'flat_id' => null, //will be changed later
-                                    'subhead_id' => getServiceType('PREV_DUE'),
-                                    'total' => $prevDues,
-                                    'net_total' => $prevDues,
-                                    'paid_amount' => null,
-                                    'balance_amount' => $prevDues,
-                                    'carried_amount' => null,
-                                    'duration_from' =>  null,
-                                    'duration_to' => null,
-                                    'fy' => null,
-                                    'remarks' => 'previous dues- Demand Id = ' . $prevDuesDemandId,
-                                    'created_by' => Auth::id(),
-                                    'updated_by' => Auth::id()
-                                ]);
-                                Demand::find($newDemandId)->update([
-                                    'total' => $newDemand->total + $prevDues,
-                                    'net_total' => $newDemand->net_total + $prevDues,
-                                    'balance_amount' => $newDemand->balance_amount + $prevDues
-                                ]);
+                    /** If previous demand for the application */
+                    if (isset($request->oldDemandId) && count($request->oldDemandId) > 0) {
+                        foreach ($request->oldDemandId as $oldDemandIndex => $oldDemandId) {
+                            $oldDemandCheck = OldDemand::where('demand_id', $oldDemandId)->first();
+                            if ($oldDemandCheck) {
+                                if ($oldDemandCheck['outstanding'] != '0' || $oldDemandCheck['outstanding'] != '0.0' || $oldDemandCheck['outstanding'] != '0.00') {
+                                    OldDemandSubhead::where('DemandID', $oldDemandId)->update(['is_added_to_new_demand' => 0]);
+                                    $subHeadKeys = $request->oldDemandSubheadkey[$oldDemandIndex];
+                                    if (isset($request->check[$oldDemandIndex])) {
+                                        $selectedSubheads = array_keys($request->check[$oldDemandIndex]);
+                                        foreach ($subHeadKeys as $subheadName => $subheadAmount) {
+
+                                            if (in_array($subheadName, $selectedSubheads)) {
+                                                // echo ($subheadName . '>>>');
+                                                $previousDuesDemand += $subheadAmount;
+                                                // echo ($previousDuesDemand . '>>><br>');
+                                                OldDemandSubhead::where('DemandID', $oldDemandId)
+                                                    ->where('Subhead', $subheadName)
+                                                    ->update(['is_added_to_new_demand' => 1]);
+
+                                                DemandDetail::create([
+                                                    'demand_id' => $newDemandId,
+                                                    'property_master_id' => $newDemand->property_master_id,
+                                                    'splited_property_detail_id' => $newDemand->splited_property_detail_id,
+                                                    'flat_id' => $flatId, //will be changed later
+                                                    'subhead_id' => getServiceType('DEM_PREV_EXTRA_AMT'),
+                                                    'total' => $subheadAmount,
+                                                    'net_total' => $subheadAmount,
+                                                    'paid_amount' => null,
+                                                    'balance_amount' => $subheadAmount,
+                                                    'carried_amount' => null,
+                                                    /* 'duration_from' =>  $request->duration_from[$i],
+                                                                            duration_to' => $request->duration_to[$i], */
+                                                    'fy' => $fy,
+                                                    'remarks' => "Extra amount paid by aplicant in previous demand" . (count($request->oldDemandId) > 1 ? 's -' : ' -') . (implode(', ', $request->oldDemandId)),
+                                                    'created_by' => Auth::id(),
+                                                    'updated_by' => Auth::id()
+                                                ]);
+                                            }
+                                        }
+                                    }
+                                    OldDemand::where('demand_id', $oldDemandId)->update(['new_demand_id' => $newDemandId]);
+                                    $newDemand->update([
+                                        'total' => $newDemand->total + $previousDuesDemand,
+                                        'net_total' => $newDemand->net_total + $previousDuesDemand,
+                                        'balance_amount' => $newDemand->balance_amount + $previousDuesDemand,
+                                    ]);
+                                    $previousDues += $previousDuesDemand;
+                                    $previousDuesDemand = 0;
+                                }
                             }
-
-                            OldDemand::where('demand_id', $prevDuesDemandId)->update(['new_demand_id' => $newDemandId]);
-                        } */
-                        /* foreach ($request->subhead as $i => $sh) {
-
-                            $demandDetail = DemandDetail::updateOrCreate([
-                                'id' => $request->detail_id[$i] ?? 0
-                            ], [
+                        }
+                        DemandDetail::where('demand_id', $newDemandId)->where('subhead_id', getServiceType("PREV_DUE"))->delete();
+                        if ($previousDues > 0) {
+                            $demandDetail = DemandDetail::create([
                                 'demand_id' => $newDemandId,
                                 'property_master_id' => $newDemand->property_master_id,
-                                'splited_property_detail_id' => $newDemand->property_master_id,
-                                'flat_id' => null, //will be changed later
-                                'subhead_id' => $sh,
-                                'total' => $amounts[$i],
-                                'net_total' => $amounts[$i],
+                                'splited_property_detail_id' => $newDemand->splited_property_detail_id,
+                                'flat_id' => $flatId, //will be changed later
+                                'subhead_id' => getServiceType('PREV_DUE'),
+                                'total' => $previousDues,
+                                'net_total' => $previousDues,
                                 'paid_amount' => null,
-                                'balance_amount' => $amounts[$i],
+                                'balance_amount' => $previousDues,
                                 'carried_amount' => null,
-                                'duration_from' =>  $request->duration_from[$i],
-                                'duration_to' => $request->duration_to[$i],
+                                /* 'duration_from' =>  $request->duration_from[$i],
+                                        duration_to' => $request->duration_to[$i], */
                                 'fy' => $fy,
-                                'remarks' => $request->remark[$i],
+                                'remarks' => "Previous pending dues for demand" . (count($request->oldDemandId) > 1 ? 's -' : ' -') . (implode(', ', $request->oldDemandId)),
                                 'created_by' => Auth::id(),
                                 'updated_by' => Auth::id()
                             ]);
-                        } */
-                        // dd($request->all());
-                        /** If previous demand for the application */
-                        if (isset($request->oldDemandId) && count($request->oldDemandId) > 0) {
-                            foreach ($request->oldDemandId as $oldDemandIndex => $oldDemandId) {
-                                $oldDemandCheck = OldDemand::where('demand_id', $oldDemandId)->first();
-                                if ($oldDemandCheck) {
-                                    if ($oldDemandCheck['outstanding'] != '0' || $oldDemandCheck['outstanding'] != '0.0' || $oldDemandCheck['outstanding'] != '0.00') {
-                                        OldDemandSubhead::where('DemandID', $oldDemandId)->update(['is_added_to_new_demand' => 0]);
-                                        $subHeadKeys = $request->oldDemandSubheadkey[$oldDemandIndex];
-                                        if (isset($request->check[$oldDemandIndex])) {
-                                            $selectedSubheads = array_keys($request->check[$oldDemandIndex]);
-                                            foreach ($subHeadKeys as $subheadName => $subheadAmount) {
-
-                                                if (in_array($subheadName, $selectedSubheads)) {
-                                                    // echo ($subheadName . '>>>');
-                                                    $previousDuesDemand += $subheadAmount;
-                                                    // echo ($previousDuesDemand . '>>><br>');
-                                                    OldDemandSubhead::where('DemandID', $oldDemandId)
-                                                        ->where('Subhead', $subheadName)
-                                                        ->update(['is_added_to_new_demand' => 1]);
-
-                                                    DemandDetail::create([
-                                                        'demand_id' => $newDemandId,
-                                                        'property_master_id' => $newDemand->property_master_id,
-                                                        'splited_property_detail_id' => $newDemand->splited_property_detail_id,
-                                                        'flat_id' => $flatId, //will be changed later
-                                                        'subhead_id' => getServiceType('DEM_PREV_EXTRA_AMT'),
-                                                        'total' => $subheadAmount,
-                                                        'net_total' => $subheadAmount,
-                                                        'paid_amount' => null,
-                                                        'balance_amount' => $subheadAmount,
-                                                        'carried_amount' => null,
-                                                        /* 'duration_from' =>  $request->duration_from[$i],
-                                                                            duration_to' => $request->duration_to[$i], */
-                                                        'fy' => $fy,
-                                                        'remarks' => "Extra amount paid by aplicant in previous demand" . (count($request->oldDemandId) > 1 ? 's -' : ' -') . (implode(', ', $request->oldDemandId)),
-                                                        'created_by' => Auth::id(),
-                                                        'updated_by' => Auth::id()
-                                                    ]);
-                                                }
-                                            }
-                                        }
-                                        OldDemand::where('demand_id', $oldDemandId)->update(['new_demand_id' => $newDemandId]);
-                                        $newDemand->update([
-                                            'total' => $newDemand->total + $previousDuesDemand,
-                                            'net_total' => $newDemand->net_total + $previousDuesDemand,
-                                            'balance_amount' => $newDemand->balance_amount + $previousDuesDemand,
-                                        ]);
-                                        $previousDues += $previousDuesDemand;
-                                        $previousDuesDemand = 0;
-                                    }
-                                }
-                            }
-                            DemandDetail::where('demand_id', $newDemandId)->where('subhead_id', getServiceType("PREV_DUE"))->delete();
-                            if ($previousDues > 0) {
-                                $demandDetail = DemandDetail::create([
-                                    'demand_id' => $newDemandId,
-                                    'property_master_id' => $newDemand->property_master_id,
-                                    'splited_property_detail_id' => $newDemand->splited_property_detail_id,
-                                    'flat_id' => $flatId, //will be changed later
-                                    'subhead_id' => getServiceType('PREV_DUE'),
-                                    'total' => $previousDues,
-                                    'net_total' => $previousDues,
-                                    'paid_amount' => null,
-                                    'balance_amount' => $previousDues,
-                                    'carried_amount' => null,
-                                    /* 'duration_from' =>  $request->duration_from[$i],
-                                        duration_to' => $request->duration_to[$i], */
-                                    'fy' => $fy,
-                                    'remarks' => "Previous pending dues for demand" . (count($request->oldDemandId) > 1 ? 's -' : ' -') . (implode(', ', $request->oldDemandId)),
-                                    'created_by' => Auth::id(),
-                                    'updated_by' => Auth::id()
-                                ]);
-                            }
                         }
-                        // dd(__LINE__);
+                    }
+                    // dd(__LINE__);
 
-                        $validationErrors = [];
-                        $subheadKeysConfig = config('demandHeadKeys');
-                        $requestSubheads = array_keys(array_filter($amounts, fn($val) => !is_null($val)));
-                        // dd($amounts, $requestSubheads);
-                        foreach ($subheadKeysConfig as $subheadCode => $inputs) {
-                            if (!in_array($subheadCode, $requestSubheads)) continue;
+                    $validationErrors = [];
+                    $subheadKeysConfig = config('demandHeadKeys');
+                    $requestSubheads = array_keys(array_filter($amounts, fn($val) => !is_null($val)));
+                    // dd($requestSubheads);
+                    foreach ($subheadKeysConfig as $subheadCode => $inputs) {
+                        if (!in_array($subheadCode, $requestSubheads)) continue;
 
-                            // $isManual = $subheadCode === 'DEM_MANUAL';
-                            $isManual = in_array($subheadCode, [
-                                'DEM_MANUAL',
-                                'DEM_SETTLED_AMOUNT'
-                            ]);
-                            // $rows = $isManual ? ($amounts['DEM_MANUAL'] ?? []) : [$amounts[$subheadCode]];
-                            $rows = $isManual
-                                ? ($amounts[$subheadCode] ?? [])
-                                : [$amounts[$subheadCode]];
+                        // $isManual = $subheadCode === 'DEM_MANUAL';
+                        $isManual = in_array($subheadCode, [
+                            'DEM_MANUAL',
+                            'DEM_SETTLED_AMOUNT',
+                            'DEM_ENCH_CHG'
+                        ]);
+                        if ($subheadCode == "DEM_ENCH_CHG") {
+                            $amounts[$subheadCode] = $request->ench_amount;
+                        }
+                        // $rows = $isManual ? ($amounts['DEM_MANUAL'] ?? []) : [$amounts[$subheadCode]];
+                        $rows = $isManual
+                            ? ($amounts[$subheadCode] ?? [])
+                            : [$amounts[$subheadCode]];
+                        // dd($amounts, $rows);
 
-                            foreach ($rows as $ind => $value) {
-                                foreach ($inputs as $input) {
-                                    $key = $input['key'];
 
-                                    // Determine value based on type (manual or regular)
-                                    $inputValue = $isManual
-                                        ? ($request->{$key}[$ind] ?? null)
-                                        : ($request->{$key} ?? null);
-                                    // dd($isManual, $input, $key, $inputValue);
 
-                                    // Required validation
-                                    if (!empty($input['required']) && ($inputValue === null || $inputValue === '')) {
+                        foreach ($rows as $ind => $value) {
+                            foreach ($inputs as $input) {
+                                $key = $input['key'];
+
+                                // Determine value based on type (manual or regular)
+                                $inputValue = $isManual
+                                    ? ($request->{$key}[$ind] ?? null)
+                                    : ($request->{$key} ?? null);
+                                // dd($isManual, $input, $key, $inputValue);
+
+                                // Required validation
+                                if (!empty($input['required']) && ($inputValue === null || $inputValue === '')) {
+                                    $label = $input['label'] ?? str_replace('_', ' ', $key);
+                                    $validationErrors[] = "$label is required" . ($isManual ? " for row " . ($ind + 1) : "");
+                                }
+
+                                // RequiredIf logic
+                                if (!empty($input['requiredIf'])) {
+                                    $reqArray = explode('=', $input['requiredIf']);
+                                    $conditionKey = $reqArray[0];
+                                    $conditionValue = $reqArray[1] ?? null;
+                                    $conditionActualValue = $isManual
+                                        ? ($request->{$conditionKey}[$ind] ?? null)
+                                        : ($request->{$conditionKey} ?? null);
+
+                                    if (
+                                        $conditionActualValue !== null &&
+                                        ($conditionValue === '' || $conditionActualValue == $conditionValue) &&
+                                        ($inputValue === null || $inputValue === '')
+                                    ) {
                                         $label = $input['label'] ?? str_replace('_', ' ', $key);
-                                        $validationErrors[] = "$label is required" . ($isManual ? " for row " . ($ind + 1) : "");
+                                        $conditionLabel = str_replace('_', ' ', $conditionKey);
+                                        $validationErrors[] = "$label is required when $conditionLabel is checked" . ($isManual ? " for row " . ($ind + 1) : "");
                                     }
+                                }
 
-                                    // RequiredIf logic
-                                    if (!empty($input['requiredIf'])) {
-                                        $reqArray = explode('=', $input['requiredIf']);
-                                        $conditionKey = $reqArray[0];
-                                        $conditionValue = $reqArray[1] ?? null;
-                                        $conditionActualValue = $isManual
-                                            ? ($request->{$conditionKey}[$ind] ?? null)
-                                            : ($request->{$conditionKey} ?? null);
-
-                                        if (
-                                            $conditionActualValue !== null &&
-                                            ($conditionValue === '' || $conditionActualValue == $conditionValue) &&
-                                            ($inputValue === null || $inputValue === '')
-                                        ) {
-                                            $label = $input['label'] ?? str_replace('_', ' ', $key);
-                                            $conditionLabel = str_replace('_', ' ', $conditionKey);
-                                            $validationErrors[] = "$label is required when $conditionLabel is checked" . ($isManual ? " for row " . ($ind + 1) : "");
-                                        }
+                                // Type validation
+                                if (!empty($input['type']) && $inputValue !== null && $inputValue !== '') {
+                                    if ($input['type'] === 'date' && !isValidDate($inputValue)) {
+                                        $label = $input['label'] ?? str_replace('_', ' ', $key);
+                                        $validationErrors[] = "Invalid date in $label" . ($isManual ? " for row " . ($ind + 1) : "");
                                     }
-
-                                    // Type validation
-                                    if (!empty($input['type']) && $inputValue !== null && $inputValue !== '') {
-                                        if ($input['type'] === 'date' && !isValidDate($inputValue)) {
-                                            $label = $input['label'] ?? str_replace('_', ' ', $key);
-                                            $validationErrors[] = "Invalid date in $label" . ($isManual ? " for row " . ($ind + 1) : "");
-                                        }
-                                        if ($input['type'] === 'number' && !is_numeric($inputValue)) {
-                                            $label = $input['label'] ?? str_replace('_', ' ', $key);
-                                            $validationErrors[] = "Invalid number in $label" . ($isManual ? " for row " . ($ind + 1) : "");
-                                        }
+                                    if ($input['type'] === 'number' && !is_numeric($inputValue)) {
+                                        $label = $input['label'] ?? str_replace('_', ' ', $key);
+                                        $validationErrors[] = "Invalid number in $label" . ($isManual ? " for row " . ($ind + 1) : "");
                                     }
                                 }
                             }
                         }
+                    }
 
-                        if (!empty($validationErrors)) {
-                            // return response()->json(['status' => false, 'details' => $validationErrors]);
-                            throw new Exception(json_encode([
-                                'status' => false,
-                                'details' => $validationErrors
-                            ]));
-                        }
+                    if (!empty($validationErrors)) {
+                        // return response()->json(['status' => false, 'details' => $validationErrors]);
+                        throw new Exception(json_encode([
+                            'status' => false,
+                            'details' => $validationErrors
+                        ]));
+                    }
 
 
-                        // Delete old keys
-                        DemandHeadKey::where('demand_id', $newDemandId)->delete();
+                    // Delete old keys
+                    DemandHeadKey::where('demand_id', $newDemandId)->delete();
 
-                        // Handle 'no_demand_head' special case
-                        $noDemandHeads = $subheadKeysConfig['no_demand_head'];
-                        // dd($singlePropertyCheck);
-                        /*  $key = $singlePropertyCheck['key'];
+                    // Handle 'no_demand_head' special case
+                    $noDemandHeads = $subheadKeysConfig['no_demand_head'];
+                    // dd($singlePropertyCheck);
+                    /*  $key = $singlePropertyCheck['key'];
                         // if (in_array($key, array_keys((array) $request)) && ($request->{$key} == 0 || $request->{$key} == 1)) {
                         if (isset($request->{$key}) && ($request->{$key} == 0 || $request->{$key} == 1)) {
                             DemandHeadKey::create([
@@ -1016,87 +970,91 @@ class DemandController extends Controller
                             ]);
                             unset($subheadKeysConfig['no_demand_head']);
                         } */
-                        // dd($request->all());
-                        // $counter = 0;
-                        foreach ($noDemandHeads as $key => $head) {
-                            // ++$counter;
-                            if (in_array($head['key'], array_keys((array) $request->all())) && ($request->{$head['key']} != '')) {
-                                // echo ('in request==' . $head['key'] . '...' . $counter . '&val=' . $request->{$head['key']} . '<br>');
-                                $value = $request->input($head['key']);
+                    // dd($request->all());
+                    // $counter = 0;
+                    foreach ($noDemandHeads as $key => $head) {
+                        // ++$counter;
+                        if (in_array($head['key'], array_keys((array) $request->all())) && ($request->{$head['key']} != '')) {
+                            // echo ('in request==' . $head['key'] . '...' . $counter . '&val=' . $request->{$head['key']} . '<br>');
+                            $value = $request->input($head['key']);
 
-                                if ($value !== "" && $value !== null) {
-                                    DemandHeadKey::create([
-                                        'demand_id' => $newDemandId,
-                                        'key' => $head['key'],
-                                        'value' => $value
-                                    ]);
-                                }
-                            } /* else {
+                            if ($value !== "" && $value !== null) {
+                                DemandHeadKey::create([
+                                    'demand_id' => $newDemandId,
+                                    'key' => $head['key'],
+                                    'value' => $value
+                                ]);
+                            }
+                        } /* else {
                                 echo (' not in request--->' . $head['key'] . '%%' . $counter . '<br>');
                             } */
-                        }
-                        // dd('loop completed');
-                        unset($subheadKeysConfig['no_demand_head']);
+                    }
+                    // dd('loop completed');
+                    unset($subheadKeysConfig['no_demand_head']);
 
-                        foreach ($subheadKeysConfig as $subheadCode => $inputs) {
-                            if (!in_array($subheadCode, $requestSubheads)) continue;
+                    foreach ($subheadKeysConfig as $subheadCode => $inputs) {
+                        if (!in_array($subheadCode, $requestSubheads)) continue;
 
-                            /*  $isManual = $subheadCode === 'DEM_MANUAL';
+                        /*  $isManual = $subheadCode === 'DEM_MANUAL';
                             $rows = $isManual ? ($amounts['DEM_MANUAL'] ?? []) : [$amounts[$subheadCode]]; */
 
-                            $isManual = in_array($subheadCode, [
-                                'DEM_MANUAL',
-                                'DEM_SETTLED_AMOUNT'
+                        $isManual = in_array($subheadCode, [
+                            'DEM_MANUAL',
+                            'DEM_SETTLED_AMOUNT',
+                            'DEM_ENCH_CHG'
+                        ]);
+                        if ($subheadCode == "DEM_ENCH_CHG") {
+                            $amounts[$subheadCode] = $request->ench_amount;
+                        }
+                        $rows = $isManual
+                            ? ($amounts[$subheadCode] ?? [])
+                            : [$amounts[$subheadCode]];
+
+                        foreach ($rows as $ind => $amount) {
+                            $demandDetail = DemandDetail::updateOrCreate([
+                                'id' => $isManual
+                                    ? ($request->detail_id[$subheadCode][$ind] ?? 0)
+                                    : ($request->detail_id[$subheadCode] ?? 0),
+                            ], [
+                                'demand_id' => $newDemandId,
+                                'property_master_id' => $newDemand->property_master_id,
+                                'splited_property_detail_id' => $newDemand->splited_property_detail_id,
+                                'flat_id' => $flatId,
+                                'subhead_id' => getServiceType($subheadCode),
+                                'total' => $amount,
+                                'net_total' => $amount,
+                                'paid_amount' => null,
+                                'balance_amount' => $amount,
+                                'carried_amount' => null,
+                                'fy' => $fy,
+                                'formula_id' => $this->getDemandFormula($subheadCode),
+                                'created_by' => Auth::id(),
+                                'updated_by' => Auth::id()
                             ]);
-                            $rows = $isManual
-                                ? ($amounts[$subheadCode] ?? [])
-                                : [$amounts[$subheadCode]];
 
-                            foreach ($rows as $ind => $amount) {
-                                $demandDetail = DemandDetail::updateOrCreate([
-                                    'id' => $isManual
-                                        ? ($request->detail_id[$subheadCode][$ind] ?? 0)
-                                        : ($request->detail_id[$subheadCode] ?? 0),
-                                ], [
-                                    'demand_id' => $newDemandId,
-                                    'property_master_id' => $newDemand->property_master_id,
-                                    'splited_property_detail_id' => $newDemand->splited_property_detail_id,
-                                    'flat_id' => $flatId,
-                                    'subhead_id' => getServiceType($subheadCode),
-                                    'total' => $amount,
-                                    'net_total' => $amount,
-                                    'paid_amount' => null,
-                                    'balance_amount' => $amount,
-                                    'carried_amount' => null,
-                                    'fy' => $fy,
-                                    'formula_id' => $this->getDemandFormula($subheadCode),
-                                    'created_by' => Auth::id(),
-                                    'updated_by' => Auth::id()
-                                ]);
+                            if ($demandDetail) {
+                                $insertData = [];
+                                foreach ($inputs as $input) {
+                                    $key = $input['key'];
+                                    $value = $isManual
+                                        ? ($request->{$key}[$ind] ?? null)
+                                        : ($input['type'] === 'checkbox' ? isset($request->{$key}) : ($request->{$key} ?? null));
 
-                                if ($demandDetail) {
-                                    $insertData = [];
-                                    foreach ($inputs as $input) {
-                                        $key = $input['key'];
-                                        $value = $isManual
-                                            ? ($request->{$key}[$ind] ?? null)
-                                            : ($input['type'] === 'checkbox' ? isset($request->{$key}) : ($request->{$key} ?? null));
-
-                                        $insertData[] = [
-                                            'demand_id' => $newDemandId,
-                                            'head_id' => $demandDetail->id,
-                                            'key' => $key,
-                                            'value' => $value,
-                                        ];
-                                    }
-                                    DemandHeadKey::insert($insertData);
+                                    $insertData[] = [
+                                        'demand_id' => $newDemandId,
+                                        'head_id' => $demandDetail->id,
+                                        'key' => $key,
+                                        'value' => $value,
+                                    ];
                                 }
+                                DemandHeadKey::insert($insertData);
                             }
                         }
+                    }
 
 
-                        // }
-                        /* if ($manualDemand) {
+                    // }
+                    /* if ($manualDemand) {
                             foreach ($amounts as $i => $amount) {
                                 $demandDetail = DemandDetail::updateOrCreate([
                                     'id' => $request->detail_id[$i] ?? 0
@@ -1121,46 +1079,46 @@ class DemandController extends Controller
                             }
                         } */
 
-                        if (!isset($request->id)) {
-                            /** check active applications */
-                            $activeApplication = $this->getActiveApplicationData($oldPropertyId, true);
-                            if (count($activeApplication) > 0) {
-                                $app = $activeApplication[0];
-                                $req = [
-                                    'forwardTo' => 'deputy-lndo',
-                                    'forwardRemark' => 'Created demand for application. Please approve the demand',
-                                    'serviceType' => getServiceCodeById($app->service_type),
-                                    'modalId' => $app->model_id,
-                                    'applicantNo' => $app->application_no,
-                                    'isNewDemand' => 1
-                                ];
-                                $service = new ApplicationForwardService();
-                                $response = $service->forward($req);
-                                $statusCode = $response['code'];
-                                if ($statusCode == 500) {
-                                    return response()->json(['status' => false, 'details' => 'Application can not be forwarded']);
-                                }
+                    if (!isset($request->id)) {
+                        /** check active applications */
+                        $activeApplication = $this->getActiveApplicationData($oldPropertyId, true);
+                        if (count($activeApplication) > 0) {
+                            $app = $activeApplication[0];
+                            $req = [
+                                'forwardTo' => 'deputy-lndo',
+                                'forwardRemark' => 'Created demand for application. Please approve the demand',
+                                'serviceType' => getServiceCodeById($app->service_type),
+                                'modalId' => $app->model_id,
+                                'applicantNo' => $app->application_no,
+                                'isNewDemand' => 1
+                            ];
+                            $service = new ApplicationForwardService();
+                            $response = $service->forward($req);
+                            $statusCode = $response['code'];
+                            if ($statusCode == 500) {
+                                return response()->json(['status' => false, 'details' => 'Application can not be forwarded']);
                             }
                         }
-
-                        $this->updatePropertyContactDetailsDuringDemand($request);
-
-
-                        return response()->json(['status' => true, 'message' => 'Demand created successfully']);
-                    } else {
-                        return response()->json(['status' => false, 'details' => 'Demand not created.']);
                     }
+
+                    $this->updatePropertyContactDetailsDuringDemand($request);
+
+
+                    return response()->json(['status' => true, 'message' => 'Demand created successfully']);
                 } else {
-                    return response()->json(['status' => false, 'details' => config('messages.property.error.notFound')]);
+                    return response()->json(['status' => false, 'details' => 'Demand not created.']);
                 }
-                $this->updatePropertyContactDetailsDuringDemand($request);
-                return response()->json(['status' => true, 'message' => 'Demand created successfully']);
-            });
-        } catch (\Exception $e) {
+            } else {
+                return response()->json(['status' => false, 'details' => config('messages.property.error.notFound')]);
+            }
+            $this->updatePropertyContactDetailsDuringDemand($request);
+            return response()->json(['status' => true, 'message' => 'Demand created successfully']);
+        });
+        /* } catch (\Exception $e) {
             Log::info($e->getMessage());
             $response = ['status' => false, 'details' => $e->getMessage(), 'data' => 0];
             return json_encode($response);
-        }
+        } */
     }
 
 

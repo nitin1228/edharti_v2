@@ -198,7 +198,7 @@ return [
             'required' => true
         ],
         [
-            'key' => 'ench_no_of_days[]',
+            'key' => 'ench_no_of_days',
             'label' => 'No. of Days',
             'type' => 'number',
             'required' => true
