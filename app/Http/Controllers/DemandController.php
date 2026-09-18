@@ -208,6 +208,8 @@ class DemandController extends Controller
         $applicationName = getServiceNameById($demand->application?->service_type);
         $applicationNo = $demand->application?->application_no;
         $applicationDate = $demand->application?->created_at;
+
+        // dd($demandDetails);
         // // Pass demand, name, and address to the view
         // $pdf = Pdf::loadView('demand.demand_letter_pdf', compact('demand', 'name', 'address', 'demandDetails', 'items', 'formulas', 'approvedBy', 'approvedByDesignation'));
         $pdf = Pdf::loadView('demand.demand_letter_pdf', compact('demand', 'name', 'address', 'demandDetails', 'propertyMaster', 'splittedProperty', 'items', 'formulas', 'approvedBy', 'approvedByDesignation', 'flat'));

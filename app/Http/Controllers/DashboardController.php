@@ -1292,8 +1292,21 @@ private function applicantData()
             });
         }
         foreach ($userProperties as $property) {
+            $oldPropertyId = $property->old_property_id;
+
+           $property->oldDemands = OldDemand::with([
+                    'oldDemandSubheads' => function ($query) {
+                        $query->where('Subhead', 'Ground Rent')
+                            ->orWhere('Subhead', 'GR Interest (Balance)')
+                            ->orderBy('DateFrom', 'asc');
+                    }
+                ])
+                ->where('property_id', $oldPropertyId)
+                ->get();
             $property->leaseDetails = PropertyLeaseDetail::where('property_master_id', $property->new_property_id)->first();
         }
+
+        // dd($userProperties);
         $data['userProperties'] = $userProperties;
         $userApplications = Application::where('created_by', $user->id)->get();
         $data['userApplications'] = $userApplications;

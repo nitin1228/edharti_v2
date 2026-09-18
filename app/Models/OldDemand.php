@@ -15,6 +15,11 @@ class OldDemand extends Model
         return $this->hasMany(DemandDetail::class);
     }
 
+    public function oldDemandSubheads(): HasMany
+    {
+        return $this->hasMany(OldDemandSubhead::class, 'DemandID', 'demand_id');
+    }
+
     public function getStatusCodeAttribute()
     {
         return getServiceCodeById($this->status);
