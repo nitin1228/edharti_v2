@@ -259,12 +259,30 @@
                         @endif
                     </td>
                     <td></td>
-                    <td>  {{ isset($dd->subhead_keys['manual_date_from'])
-                            ? date('d-m-Y', strtotime($dd->subhead_keys['manual_date_from']))
+                    @php
+                    /* echo "<pre>";print_r($dd->subhead_keys);
+                        echo"<br>"; print_r($dd->subhead_id);"<br>";
+                        echo"</pre>"; */
+                        switch (getServiceCodeById($dd->subhead_id)) {
+                            case 'DEM_MANUAL':
+                                $dateFromKey = 'manual_date_from';
+                                $dateToKey = 'manual_date_to';
+                                break;
+                            case 'DEM_ENCH_CHG':
+                                $dateFromKey = 'ench_from_date';
+                                $dateToKey = 'ench_to_date';
+                            default:
+                                # code...
+                                break;
+                        }
+                    @endphp
+                    
+                    <td>  {{ isset($dateFromKey) && isset($dd->subhead_keys[$dateFromKey])
+                            ? date('d-m-Y', strtotime($dd->subhead_keys[$dateToKey]))
                             : '' }}
                         - <br>
-                        {{ isset($dd->subhead_keys['manual_date_to'])
-                            ? date('d-m-Y', strtotime($dd->subhead_keys['manual_date_to']))
+                        {{ isset($dateToKey) && isset($dd->subhead_keys[$dateToKey])
+                            ? date('d-m-Y', strtotime($dd->subhead_keys[$dateToKey]))
                             : '' }}</td>
                     <td>₹&nbsp;{{customNumFormat($dd->balance_amount)}}</td>
                     <td>
