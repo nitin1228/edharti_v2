@@ -816,22 +816,25 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
 
 
                                           <!-- Action Buttons -->
-                                          <div class="col-lg-3 col-md-6 mt-2 d-flex align-items-end action-buttons">
-                                            
-                                              @if($loop->last)
+                                          @if (!isset($openInReadOnlyMode))
+                                            <div class="col-lg-3 col-md-6 mt-2 d-flex align-items-end action-buttons">
+                                              
+                                                @if($loop->last)
+                                                  <button
+                                                      type="button"
+                                                      class="btn btn-success me-2 add-encroachment">
+                                                      +
+                                                  </button>
+                                                @endif
                                                 <button
                                                     type="button"
-                                                    class="btn btn-success me-2 add-encroachment">
-                                                    +
+                                                    class="btn btn-danger remove-encroachment">
+                                                    Remove
                                                 </button>
-                                              @endif
-                                              <button
-                                                  type="button"
-                                                  class="btn btn-danger remove-encroachment">
-                                                  Remove
-                                              </button>
 
-                                          </div>
+                                            </div>
+                                              
+                                          @endif
 
                                         </div>
                                       @endforeach
