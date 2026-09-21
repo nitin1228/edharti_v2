@@ -208,8 +208,6 @@ class DemandController extends Controller
         $applicationName = getServiceNameById($demand->application?->service_type);
         $applicationNo = $demand->application?->application_no;
         $applicationDate = $demand->application?->created_at;
-
-        // dd($demandDetails);
         // // Pass demand, name, and address to the view
         // $pdf = Pdf::loadView('demand.demand_letter_pdf', compact('demand', 'name', 'address', 'demandDetails', 'items', 'formulas', 'approvedBy', 'approvedByDesignation'));
         $pdf = Pdf::loadView('demand.demand_letter_pdf', compact('demand', 'name', 'address', 'demandDetails', 'propertyMaster', 'splittedProperty', 'items', 'formulas', 'approvedBy', 'approvedByDesignation', 'flat'));
@@ -262,11 +260,12 @@ class DemandController extends Controller
         $penalties = [];
         $manualDemandSubheadIds = $demand->demandDetails->where('subhead_id', getServiceType('DEM_MANUAL'))->pluck('id')->toArray();
         $settledSubheadIds = $demand->demandDetails->where('subhead_id', getServiceType('DEM_SETTLED_AMOUNT'))->pluck('id')->toArray();
+        $encroachmentSubheadIds = $demand->demandDetails->where('subhead_id', getServiceType('DEM_ENCH_CHG'))->pluck('id')->toArray();
         foreach ($demandDetails as $i => $demandDetail) {
             if (is_null($demandDetail->carried_amount) || $demandDetail->carried_amount == 0) {
                 $headCode = $demandDetail->subhead_code;
                 // if ($headCode != 'DEM_MANUAL') { //specially handle manual demand and settled amounts
-                if (!in_array($headCode, ['DEM_MANUAL', 'DEM_SETTLED_AMOUNT'])) { //specially handle manual demand and settled amounts
+                if (!in_array($headCode, ['DEM_MANUAL', 'DEM_SETTLED_AMOUNT', "DEM_ENCH_CHG"])) { //specially handle manual demand and settled amounts
                     if ($headCode == 'PNL_CHG') {
                         $penalties[] = $demandDetail;
                     } else {
@@ -306,6 +305,8 @@ class DemandController extends Controller
         // $manualDemandSubheadIds = DemandDetail::whereIn('demand_id', $carriedDemands)->where('subhead_id', getServiceType('DEM_MANUAL'))->pluck('id')->toArray();
         $manualDemandKeys = DemandHeadKey::whereIn('head_id', $manualDemandSubheadIds)->get();
         $settledHeadKeys = DemandHeadKey::whereIn('head_id', $settledSubheadIds)->get();
+        $encroachmentHeadKeys = DemandHeadKey::whereIn('head_id', $encroachmentSubheadIds)->get();
+        // dd($encroachmentHeadKeys);
         foreach ($manualDemandKeys as $mdk) {
             $manualTargetIndex = null;
             foreach ($formattedDemandDetails['DEM_MANUAL'] as $ddKey => $demandDetail) {
@@ -334,8 +335,23 @@ class DemandController extends Controller
             }
             //$formattedDemandDetails[getServiceType('DEM_MANUAL')]['values'][$mdk->head_id][$mdk->key] = $mdk->value;
         }
+        foreach ($encroachmentHeadKeys as $ehk) {
+            // dd($formattedDemandDetails['DEM_SETTLED_AMOUNT'], $demandDetail);
+            $encroachmentTargetIndex = null;
+            foreach ($formattedDemandDetails['DEM_ENCH_CHG'] as $ehKey => $demandDetail) {
+                if ($demandDetail['id'] == $ehk->head_id) {
+                    $encroachmentTargetIndex = $ehKey;
+                    break;
+                }
+            }
+            if (!is_null($encroachmentTargetIndex)) {
+                $formattedDemandDetails['DEM_ENCH_CHG'][$encroachmentTargetIndex]['values'][$ehk->key] = $ehk->value;
+            }
+            //$formattedDemandDetails[getServiceType('DEM_MANUAL')]['values'][$mdk->head_id][$mdk->key] = $mdk->value;
+        }
         $data['manualDemandKeys'] = $manualDemandKeys;
         $data['settledHeadKeys'] = $settledHeadKeys;
+        $data['encroachmentHeadKeys'] = $encroachmentHeadKeys;
 
         $data['slectedSubheads'] = $formattedDemandDetails;
         /** get land vlue and land area in advance for displaying calculations */
@@ -1011,7 +1027,6 @@ class DemandController extends Controller
                         $rows = $isManual
                             ? ($amounts[$subheadCode] ?? [])
                             : [$amounts[$subheadCode]];
-
                         foreach ($rows as $ind => $amount) {
                             $demandDetail = DemandDetail::updateOrCreate([
                                 'id' => $isManual
@@ -1941,6 +1956,7 @@ class DemandController extends Controller
 
     private function getDemandFormula($subheadCode, $date = null)
     {
+
         if (is_null($date)) {
             $date = date('Y-m-d');
         }

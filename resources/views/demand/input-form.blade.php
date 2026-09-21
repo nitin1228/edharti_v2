@@ -350,34 +350,34 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
                 <div class="part-details">
                   <div class="container-fluid">
                     @if(isset($carried) && count($carried) > 0)
-                    <div class="row py-2">
-                      <label> Details of carried forward demand id: {{$carriedDemandId}}</label>
-                      <div class="col-lg-12">
-                        <table class="table table-bordered">
-                          <thead>
-                            <tr>
-                              <td>#</td>
-                              <td>Particulars</td>
-                              <td>Finacial Year</td>
-                              <td>Balance Amount</td>
-                            </tr>
-                          </thead>
-                          <tbody>
-                            @foreach($carried as $item)
-                            <tr>
-                              <td>{{$loop->iteration}}</td>
-                              <td>{{getServiceNameById($item->subhead_id)}}</td>
-                              <td>{{$item->fy}}</td>
-                              <td>&#8377; {{customNumFormat($item->net_total)}}</td>
-                              @php
-                              $totalDemandAmount += $item->net_total;
-                              @endphp
-                            </tr>
-                            @endforeach
-                          </tbody>
-                        </table>
+                      <div class="row py-2">
+                        <label> Details of carried forward demand id: {{$carriedDemandId}}</label>
+                        <div class="col-lg-12">
+                          <table class="table table-bordered">
+                            <thead>
+                              <tr>
+                                <td>#</td>
+                                <td>Particulars</td>
+                                <td>Finacial Year</td>
+                                <td>Balance Amount</td>
+                              </tr>
+                            </thead>
+                            <tbody>
+                              @foreach($carried as $item)
+                              <tr>
+                                <td>{{$loop->iteration}}</td>
+                                <td>{{getServiceNameById($item->subhead_id)}}</td>
+                                <td>{{$item->fy}}</td>
+                                <td>&#8377; {{customNumFormat($item->net_total)}}</td>
+                                @php
+                                $totalDemandAmount += $item->net_total;
+                                @endphp
+                              </tr>
+                              @endforeach
+                            </tbody>
+                          </table>
+                        </div>
                       </div>
-                    </div>
                     @endif
                     <div class="row">
                       <div class="col-lg-3"><label>Is it a new allotment?</label></div>
@@ -434,376 +434,587 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
 
                     <div class="col mt-2 mb-2" id="demand-subheads-container">
                       @isset($demand)
-                      @php
-                      $selectedSubheadCodes = array_keys($slectedSubheads);
-                      //dd($penalties);
-                      @endphp
-                      @foreach($subheads as $head)
-                      @if($demand->is_lease_hold || in_array($head->item_code,['DEM_LUC_RC', 'DEM_MANUAL','DEM_SETTLED_AMOUNT']))
-                      <div class="demand-item-container">
-                        <div class="col-lg-12 my-1">
-                          <div class=" form-check">
-                            <input type="checkbox" name="{{$head->item_code}}" class="select-head-check form-check-input" @checked(in_array($head->item_code, $selectedSubheadCodes))>
-                            <h6>{{$head->item_name}}</h6>
-                            <input type="hidden" name="demand_amount[{{$head->item_code}}]" id="include-demand-amount" value="{{isset($slectedSubheads[$head->item_code]) && isset($slectedSubheads[$head->item_code]['amount']) ? $slectedSubheads[$head->item_code]['amount']:0}}">
-                          </div>
-                        </div>
-                        <div class="col-lg-12 user-inputs" id="user-inputs">
-
-                          @if(in_array($head->item_code,$selectedSubheadCodes))
-                          <input type="hidden" name="detail_id[{{$head->item_code}}]" value="{{$slectedSubheads[$head->item_code] ['id'] ?? ''}}">
-                          @switch($head->item_code)
-                          @case('DEM_AF_P')
-                          {{-- <div class="input-block">
-                            <label class="form-label">Start date</label>
-                            <input type="date" class="form-control" name="allotment_fee_date_from" value="{{isset($selectedValues['allotment_fee_date_from']) ? $selectedValues['allotment_fee_date_from']:''}}">
-                          <div class="error" id="allotment_fee_date_from_error"></div>
-                        </div>
-                        <div class="input-block">
-                          <label class="form-label">End date</label>
-                          <input type="date" class="form-control" name="allotment_fee_date_to" value="{{isset($selectedValues['allotment_fee_date_to']) ? $selectedValues['allotment_fee_date_to']:''}}">
-                          <div class="error" id="allotment_fee_date_to_error"></div>
-                        </div> --}}
-                        {{-- <div class="hint-text mb-2">Minimum 15 days of allotment will be charged. Maximum allowed duration will be 50 years.</div> --}}
-                        <div class="calculation-info">&diam; Area of property &nbsp; &nbsp; &rarr; {{isset($selectedValues['allotment_fee_land_area']) ? $selectedValues['allotment_fee_land_area']:''}} </div>
-                        <input type="hidden" name="allotment_fee_land_area" value="{{isset($selectedValues['allotment_fee_land_area']) ? $selectedValues['allotment_fee_land_area']:''}}">
-                        <div class="calculation-info">&diam; Land rate for property &nbsp; &nbsp; &rarr; &#8377; {{isset($selectedValues['allocation_type_land_rate']) ? $selectedValues['allocation_type_land_rate']:''}}</div>
-                        <input type="hidden" name="allocation_type_land_rate" value="{{isset($selectedValues['allocation_type_land_rate']) ? $selectedValues['allocation_type_land_rate']:''}}">
-                          @break
-
-
-                          @case('DEM_LF_GR')
-                            <div class="calculation-info">&diam; Area of property &nbsp; &nbsp; &rarr; {{customNumFormat(round($selectedValues['ground_rent_land_area'],2))}} sq. Mtr </div>
-                            <input type="hidden" name="ground_rent_land_area" value="{{isset($selectedValues['ground_rent_land_area']) ? $selectedValues['ground_rent_land_area']:''}}">
-                            <div class="calculation-info">&diam; Land rate for property &nbsp; &nbsp; &rarr; &#8377; {{customNumFormat($selectedValues['ground_rent_land_rate'] ?? 0)}} per Sq. Mtr</div>
-                            <input type="hidden" name="ground_rent_land_rate" value="{{isset($selectedValues['ground_rent_land_rate']) ? $selectedValues['ground_rent_land_rate']:''}}">
-                            <div class="calculation-info">&diam; Type of property &nbsp; &nbsp; &rarr; {{isset($selectedValues['ground_rent_property_type']) ? getServiceNameById($selectedValues['ground_rent_property_type']) : 'N/A'}} </div>
-                            <input type="hidden" name="ground_rent_property_type" id="" value="{{$selectedValues['ground_rent_property_type'] ??'' }}">
-                          @break
-
-                          {{-- @case('DEM_CONV_CHG')
-                              <div class="input-block">
-                                  <label class="form-label">Land value</label>
-                                  <input type="number" min="0" class="form-control"
-                                      value="{{ $selectedValues['conversion_land_value'] ?? '' }}"
-                                      readOnly id="conversion_land_value"
-                                      name="conversion_land_value">
-                                  <div class="error" id="conversion_land_value_error"></div>
-                              </div>
-                              <div class="col-lg-12">
-                                  {{-- <div class="calculation-info"> &diams; <b>Total coversion charges &rarr;</b> ₹{{customNumFormat(round(0.2*((float)$selectedValues['conversion_land_value'])),2)}} [20% of land value]<br>
-                                      &diams; <b>Applicable remission &rarr;</b> ₹{{customNumFormat(round(0.2*0.4*((float)$selectedValues['conversion_land_value'])),2)}} [40% of converison charges]
-                                  </div> -}}
-                                  <div class="calculation-info"> &diams; <b>Land Rate &rarr;</b>
-                                      ₹{{ customNumFormat(round((float) $selectedValues['conversion_land_rate']), 2) }}<br>
-                                  </div>
-                                  <div class="calculation-info"> &diams; <b>Plot Area &rarr;</b>
-                                      {{ customNumFormat(round((float) $selectedValues['conversion_plot_area']), 2) }}
-                                      Sqm.<br></div>
-                                  <div class="calculation-info"> &diams; <b>Total conversion
-                                          charges</b> [{{ $selectedValues['conversion_formula'] }}]
-                                      &rarr;
-                                      ₹{{ customNumFormat(round((float) $selectedValues['conversion_charges']), 2) }}
-                                      </b><br>
-                                      &diams; <b>Applicable remission &rarr;</b>
-                                      ₹{{ customNumFormat(round((float) $selectedValues['conversion_remission_amount']), 2) }}
-                                      [40% of conversion charges]<br>
-                                      &diams; <b>Applicable surcharge &rarr;</b>
-                                      ₹{{ customNumFormat(round((float) $selectedValues['conversion_surcharge_amount']), 2) }}
-                                      [33.33% of conversion charges]</div>
-                              </div>
-                              <div class="col-lg-12">
-                                  <div class="form-check ">
-                                      <input type="hidden" name="conversion_land_rate"
-                                          id="conversion_land_rate"
-                                          value="{{ $selectedValues['conversion_land_rate'] }}">
-                                      <input type="hidden" name="conversion_plot_area"
-                                          id="conversion_plot_area"
-                                          value="{{ $selectedValues['conversion_plot_area'] }}">
-                                      <input type="hidden" name="conversion_remission_amount"
-                                          id="conversion_remission_amount"
-                                          value="{{ $selectedValues['conversion_remission_amount'] }}">
-                                      <input type="hidden" name="conversion_surcharge_amount"
-                                          id="conversion_surcharge_amount"
-                                          value="{{ $selectedValues['conversion_surcharge_amount'] }}">
-                                      <input type="hidden" name="conversion_formula"
-                                          id="conversion_formula"
-                                          value="{{ $selectedValues['conversion_formula'] }}">
-                                      <input type="hidden" name="conversion_charges"
-                                          id="conversion_charges"
-                                          value="{{ $selectedValues['conversion_charges'] }}">
-                                      <div class="row mt-2">
-                                          <div class="col-lg-3">
-                                              <input class="form-check-input" type="checkbox"
-                                                  name="conversion_remission"
-                                                  id="conversion_remission"
-                                                  @checked(isset($selectedValues['conversion_remission']) && $selectedValues['conversion_remission'] == 1)>
-                                              <label class="form-check-label">Allow Remission</label>
-                                          </div>
-                                          <div class="col-lg-3">
-                                              <input class="form-check-input" type="checkbox"
-                                                  name="conversion_surcharge"
-                                                  id="conversion_surcharge"
-                                                  @checked(isset($selectedValues['conversion_surcharge']) && $selectedValues['conversion_surcharge'] == 1)>
-                                              <label class="form-check-label">Add Surcharge</label>
-                                          </div>
-                                      </div>
-                                  </div>
-                              </div>
-                          @break --}}
-
-                          @case('DEM_CONV_CHG')
-                         
-                              <div class="col-lg-12">
-                                {{-- <div class="calculation-info"> &diams; <b>Total coversion charges &rarr;</b> ₹{{customNumFormat(round(0.2*((float)$selectedValues['conversion_land_value'])),2)}} [20% of land value]<br>
-                                &diams; <b>Applicable remission &rarr;</b> ₹{{customNumFormat(round(0.2*0.4*((float)$selectedValues['conversion_land_value'])),2)}} [40% of converison charges]
-                              </div> --}}
-                              <div class="calculation-info"> &diams; <b>Land Rate &rarr;</b> ₹{{customNumFormat(round((float)$selectedValues['conversion_land_rate']),2)}}<br></div>
-                              <div class="calculation-info"> &diams; <b>Plot Area &rarr;</b> {{customNumFormat(round((float)$selectedValues['conversion_plot_area']),2)}} Sqm.<br></div>
-                              <div class="calculation-info"> &diams; <b>Total conversion charges</b> [{{$selectedValues['conversion_formula']}}] &rarr; ₹{{customNumFormat(round((float)$selectedValues['conversion_charges']),2)}} </b><br>
-                                &diams; <b>Applicable remission &rarr;</b> [40% of conversion charges] <b>₹{{customNumFormat(round((float)$selectedValues['conversion_remission_amount']),2)}}</b><br>
-                                &diams; <b>Applicable surcharge &rarr;</b> [33.33% of conversion charges]  <b>₹{{customNumFormat(round((float)$selectedValues['conversion_surcharge_amount']),2)}}</b></div>
-                            </div>
-                            <div class="col-lg-12">
-                              <div class="form-check ">
-                                <input type="hidden" name="conversion_land_rate" id="conversion_land_rate" value="{{$selectedValues['conversion_land_rate']}}">
-                                <input type="hidden" name="conversion_plot_area" id="conversion_plot_area" value="{{$selectedValues['conversion_plot_area']}}">
-                                <input type="hidden" name="conversion_remission_amount" id="conversion_remission_amount" value="{{$selectedValues['conversion_remission_amount']}}">
-                                <input type="hidden" name="conversion_surcharge_amount" id="conversion_surcharge_amount" value="{{$selectedValues['conversion_surcharge_amount']}}">
-                                <input type="hidden" name="conversion_formula" id="conversion_formula" value="{{$selectedValues['conversion_formula']}}">
-                                <input type="hidden" name="conversion_charges" id="conversion_charges" value="{{$selectedValues['conversion_charges']}}">
-                                <div class="row mt-2">
-                                  <div class="col-lg-3">
-                                    <input class="form-check-input" type="checkbox" name="conversion_remission" id="conversion_remission" @checked(isset($selectedValues['conversion_remission']) && $selectedValues['conversion_remission']==1)>
-                                    <label class="form-check-label">Allow Remission</label>
-                                  </div>
-                                  <div class="col-lg-3">
-                                    <input class="form-check-input" type="checkbox" name="conversion_surcharge" id="conversion_surcharge" @checked(isset($selectedValues['conversion_surcharge']) && $selectedValues['conversion_surcharge']==1)>
-                                    <label class="form-check-label">Add Surcharge</label>
-                                  </div>
+                        @php
+                        $selectedSubheadCodes = array_keys($slectedSubheads);
+                        //dd($slectedSubheads);
+                        @endphp
+                        @foreach($subheads as $head)
+                          @if($demand->is_lease_hold || in_array($head->item_code,['DEM_LUC_RC', 'DEM_MANUAL','DEM_SETTLED_AMOUNT']))
+                            <div class="demand-item-container">
+                              <div class="col-lg-12 my-1">
+                                <div class=" form-check">
+                                  <input type="checkbox" name="{{$head->item_code}}" class="select-head-check form-check-input" @checked(in_array($head->item_code, $selectedSubheadCodes))>
+                                  <h6>{{$head->item_name}}</h6>
+                                  <input type="hidden" name="demand_amount[{{$head->item_code}}]" id="include-demand-amount" value="{{isset($slectedSubheads[$head->item_code]) && isset($slectedSubheads[$head->item_code]['amount']) ? $slectedSubheads[$head->item_code]['amount']:0}}">
                                 </div>
                               </div>
-                            </div>
-                          @break
+                              <div class="col-lg-12 user-inputs" id="user-inputs">
 
-                          @case('DEM_UEI')
-                            <div class="col-lg-12 mt-2">
-                              <div class="form-check form-check-inline custom-check">
-                                  <input class="form-check-input" type="radio" name="is_transfer_done" value="1" onchange="appendUnearnedIncreaseInput(this,3,true)" @if($selectedValues['is_transfer_done'] == 1) checked @endif>
-                                  <label class="form-check-label">Transfer completed</label>
-                              </div>
-                              <div class="form-check form-check-inline custom-check">
-                                  <input class="form-check-input" type="radio" name="is_transfer_done" value="0" onchange="appendUnearnedIncreaseInput(this,2,true)" @if($selectedValues['is_transfer_done'] == 0) checked @endif>
-                                  <label class="form-check-label">Transfer yet to be completed</label>
-                              </div>
-                            </div>
-                            @if($selectedValues['is_transfer_done'] == 1)
-                              <div class="input-block">
-                                  <label class="form-label">Consideration value</label>
-                                  <input type="number" min="0" class="form-control" id="unearned_increase_consideration_value" name="unearned_increase_consideration_value" value="{{$selectedValues['unearned_increase_consideration_value']}}">
-                                  <div class="error" id="unearned_increase_consideration_value_error"></div>
-                              </div>
-                              <div class="input-block">
-                                  <label class="form-label">Last transaction value</label>
-                                  <input type="number" min="0" class="form-control" id="unearned_increase_ltv" name="unearned_increase_ltv" value="{{$selectedValues['unearned_increase_ltv']}}">
-                                  <div class="error" id="unearned_increase_ltv_error"></div>
-                              </div>
-                              <div class="input-block">
-                                  <label class="form-label">Transfer Date</label>
-                                  <input type="date" class="form-control" onblur="getLandValueAtDate(${propertyId}, this.value)" name="unearned_increase_transfer_date" value="{{$selectedValues['unearned_increase_transfer_date']}}">
-                                  <div class="error" id="unearned_increase_transfer_date_error"></div>
-                              </div>
-                            @endif
+                                @if(in_array($head->item_code,$selectedSubheadCodes))
+                                <input type="hidden" name="detail_id[{{$head->item_code}}]" value="{{$slectedSubheads[$head->item_code] ['id'] ?? ''}}">
+                                @switch($head->item_code)
+                                @case('DEM_AF_P')
+                               
+                                  <div class="calculation-info">&diam; Area of property &nbsp; &nbsp; &rarr; {{isset($selectedValues['allotment_fee_land_area']) ? $selectedValues['allotment_fee_land_area']:''}} </div>
+                                  <input type="hidden" name="allotment_fee_land_area" value="{{isset($selectedValues['allotment_fee_land_area']) ? $selectedValues['allotment_fee_land_area']:''}}">
+                                  <div class="calculation-info">&diam; Land rate for property &nbsp; &nbsp; &rarr; &#8377; {{isset($selectedValues['allocation_type_land_rate']) ? $selectedValues['allocation_type_land_rate']:''}}</div>
+                                  <input type="hidden" name="allocation_type_land_rate" value="{{isset($selectedValues['allocation_type_land_rate']) ? $selectedValues['allocation_type_land_rate']:''}}">
+                                @break
 
-                            @if($selectedValues['is_transfer_done'] == 0)
-                              <div class="input-block">
-                                  <label class="form-label">Land value</label>
-                                  <input type="number" min="0" class="form-control" value="{{$selectedValues['unearned_increase_land_value']}}" readOnly id="unearned_increase_land_value" name="unearned_increase_land_value">
-                                  <div class="error" id="unearned_increase_land_value_error"></div>
-                              </div>
-                              <div class="input-block">
-                                  <label class="form-label">Last transaction value</label>
-                                  <input type="number" min="0" class="form-control" id="unearned_increase_ltv" name="unearned_increase_ltv" value="{{$selectedValues['unearned_increase_ltv']}}">
-                                  <div class="error" id="unearned_increase_ltv_error"></div>
-                              </div>
-                            @endif
-                          @break
 
-                          @case('DEM_LUC_RC')
-                          {{-- <div class="col-lg-12 mt-2">
-                            <div class="form-check form-check-inline">
-                              <input class="form-check-input" type="checkbox" name="partial_change" id="partial_change" onchange="toggleBuiltUpAreaInputs(this)" @checked(isset($selectedValues['partial_change']) && $selectedValues['partial_change']==1)>
-                              <label class="form-check-label">Land use change sought under mixed use policy</label>
-                            </div>
-                          </div>
-                          <div class="col-lg-12 mb-2">
-                            <div class="calculation-info">Land value @ commercial land rate &rarr; &#8377;{{customNumFormat(
-                                      round($selectedValues['luc_land_value'] ?? 0))}}</div>
-                          </div>
-                          <div class="input-block">
-                            <label class="form-label">Commercial Land value</label>
-                            <input type="number" min="0" class="form-control" value="{{$selectedValues['luc_land_value']??''}}" readOnly id="luc_land_value" name="luc_land_value">
-                            <div class="error" id="luc_land_value_error"></div>
-                          </div>
-                          {{-- @dd(($selectedValues['partial_change']) && $selectedValues['partial_change'] == 1) --}
-                          @if(isset($selectedValues['partial_change']) && $selectedValues['partial_change'] == 1)
-                          <div class="input-block builtUpAreaInputs">
-                            <label class="form-label">Total built up area</label>
-                            <input type="number" min="0" class="form-control" id="luc_TBUA" name="luc_TBUA" value="{{$selectedValues['luc_TBUA'] ?? ''}}">
-                            <div class="error" id="luc_TBUA_error"></div>
-                          </div>
-                          <div class="input-block builtUpAreaInputs">
-                            <label class="form-label">Area to be used as commercial</label>
-                            <input type="number" min="0" class="form-control" id="luc_BUAC" name="luc_BUAC" value="{{$selectedValues['luc_BUAC'] ?? ''}}">
-                            <div class="error" id="luc_BUAC_error"></div>
-                          </div>
-                          @endif --}}
-                          <div class="col-lg-12 mt-2">
-                            <div class="form-check form-check-inline">
-                                <input class="form-check-input" type="checkbox" name="partial_change" id="partial_change" checked="${applicationData.mixed_use == 1}" disabled">
-                                <input type="hidden" name="partial_change" value="${applicationData.mixed_use}">
-                                <label class="form-check-label">Land use change sought under mixed use policy</label>
-                            </div>
-                          </div>
-                          <div class="calculation-info">&diam; Total built up area as per Application &nbsp; &nbsp; &rarr;{{$selectedValues['luc_TBUA']}}(Sqm) </div>
-                          <input type="hidden" name="luc_TBUA" value="{{$selectedValues['luc_TBUA']}}">
-                          <div class="calculation-info">&diam; Land use change sought &nbsp; &nbsp; &rarr; {{getServiceNameById($selectedValues['land_use_change_to'])}}</div>
-                          <input type="hidden" name="land_use_change_to" value="{{$selectedValues['land_use_change_to']}}">
-                          <div class="calculation-info">&diam; Area sought for land use change &nbsp; &nbsp; &rarr; {{$selectedValues['luc_BUAC']}}(Sqm) </div>
-                          {{-- @dd($demand->propertyMaster) --}}
-                          <input type="hidden" name="luc_BUAC" value="{{$selectedValues['luc_BUAC']}}">
-                          <div class="calculation-info">&diam; Land rate for {{strtolower(getServiceNameById($selectedValues['land_use_change_to']))}} properties in {{$demand->propertyMaster->newColony->name}} &nbsp; &nbsp; &rarr; {{$selectedValues['luc_land_rate']}}/sqm </div>
-                          <input type="hidden" name="luc_land_rate" value="{{$selectedValues['luc_land_rate']}}">
+                                @case('DEM_LF_GR')
+                                  <div class="calculation-info">&diam; Area of property &nbsp; &nbsp; &rarr; {{customNumFormat(round($selectedValues['ground_rent_land_area'],2))}} sq. Mtr </div>
+                                  <input type="hidden" name="ground_rent_land_area" value="{{isset($selectedValues['ground_rent_land_area']) ? $selectedValues['ground_rent_land_area']:''}}">
+                                  <div class="calculation-info">&diam; Land rate for property &nbsp; &nbsp; &rarr; &#8377; {{customNumFormat($selectedValues['ground_rent_land_rate'] ?? 0)}} per Sq. Mtr</div>
+                                  <input type="hidden" name="ground_rent_land_rate" value="{{isset($selectedValues['ground_rent_land_rate']) ? $selectedValues['ground_rent_land_rate']:''}}">
+                                  <div class="calculation-info">&diam; Type of property &nbsp; &nbsp; &rarr; {{isset($selectedValues['ground_rent_property_type']) ? getServiceNameById($selectedValues['ground_rent_property_type']) : 'N/A'}} </div>
+                                  <input type="hidden" name="ground_rent_property_type" id="" value="{{$selectedValues['ground_rent_property_type'] ??'' }}">
+                                @break
+
+                                {{-- @case('DEM_CONV_CHG')
+                                    <div class="input-block">
+                                        <label class="form-label">Land value</label>
+                                        <input type="number" min="0" class="form-control"
+                                            value="{{ $selectedValues['conversion_land_value'] ?? '' }}"
+                                            readOnly id="conversion_land_value"
+                                            name="conversion_land_value">
+                                        <div class="error" id="conversion_land_value_error"></div>
+                                    </div>
+                                    <div class="col-lg-12">
+                                        {{-- <div class="calculation-info"> &diams; <b>Total coversion charges &rarr;</b> ₹{{customNumFormat(round(0.2*((float)$selectedValues['conversion_land_value'])),2)}} [20% of land value]<br>
+                                            &diams; <b>Applicable remission &rarr;</b> ₹{{customNumFormat(round(0.2*0.4*((float)$selectedValues['conversion_land_value'])),2)}} [40% of converison charges]
+                                        </div> -}}
+                                        <div class="calculation-info"> &diams; <b>Land Rate &rarr;</b>
+                                            ₹{{ customNumFormat(round((float) $selectedValues['conversion_land_rate']), 2) }}<br>
+                                        </div>
+                                        <div class="calculation-info"> &diams; <b>Plot Area &rarr;</b>
+                                            {{ customNumFormat(round((float) $selectedValues['conversion_plot_area']), 2) }}
+                                            Sqm.<br></div>
+                                        <div class="calculation-info"> &diams; <b>Total conversion
+                                                charges</b> [{{ $selectedValues['conversion_formula'] }}]
+                                            &rarr;
+                                            ₹{{ customNumFormat(round((float) $selectedValues['conversion_charges']), 2) }}
+                                            </b><br>
+                                            &diams; <b>Applicable remission &rarr;</b>
+                                            ₹{{ customNumFormat(round((float) $selectedValues['conversion_remission_amount']), 2) }}
+                                            [40% of conversion charges]<br>
+                                            &diams; <b>Applicable surcharge &rarr;</b>
+                                            ₹{{ customNumFormat(round((float) $selectedValues['conversion_surcharge_amount']), 2) }}
+                                            [33.33% of conversion charges]</div>
+                                    </div>
+                                    <div class="col-lg-12">
+                                        <div class="form-check ">
+                                            <input type="hidden" name="conversion_land_rate"
+                                                id="conversion_land_rate"
+                                                value="{{ $selectedValues['conversion_land_rate'] }}">
+                                            <input type="hidden" name="conversion_plot_area"
+                                                id="conversion_plot_area"
+                                                value="{{ $selectedValues['conversion_plot_area'] }}">
+                                            <input type="hidden" name="conversion_remission_amount"
+                                                id="conversion_remission_amount"
+                                                value="{{ $selectedValues['conversion_remission_amount'] }}">
+                                            <input type="hidden" name="conversion_surcharge_amount"
+                                                id="conversion_surcharge_amount"
+                                                value="{{ $selectedValues['conversion_surcharge_amount'] }}">
+                                            <input type="hidden" name="conversion_formula"
+                                                id="conversion_formula"
+                                                value="{{ $selectedValues['conversion_formula'] }}">
+                                            <input type="hidden" name="conversion_charges"
+                                                id="conversion_charges"
+                                                value="{{ $selectedValues['conversion_charges'] }}">
+                                            <div class="row mt-2">
+                                                <div class="col-lg-3">
+                                                    <input class="form-check-input" type="checkbox"
+                                                        name="conversion_remission"
+                                                        id="conversion_remission"
+                                                        @checked(isset($selectedValues['conversion_remission']) && $selectedValues['conversion_remission'] == 1)>
+                                                    <label class="form-check-label">Allow Remission</label>
+                                                </div>
+                                                <div class="col-lg-3">
+                                                    <input class="form-check-input" type="checkbox"
+                                                        name="conversion_surcharge"
+                                                        id="conversion_surcharge"
+                                                        @checked(isset($selectedValues['conversion_surcharge']) && $selectedValues['conversion_surcharge'] == 1)>
+                                                    <label class="form-check-label">Add Surcharge</label>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                @break --}}
+
+                                @case('DEM_CONV_CHG')
+                              
+                                    <div class="col-lg-12">
+                                      {{-- <div class="calculation-info"> &diams; <b>Total coversion charges &rarr;</b> ₹{{customNumFormat(round(0.2*((float)$selectedValues['conversion_land_value'])),2)}} [20% of land value]<br>
+                                      &diams; <b>Applicable remission &rarr;</b> ₹{{customNumFormat(round(0.2*0.4*((float)$selectedValues['conversion_land_value'])),2)}} [40% of converison charges]
+                                    </div> --}}
+                                    <div class="calculation-info"> &diams; <b>Land Rate &rarr;</b> ₹{{customNumFormat(round((float)$selectedValues['conversion_land_rate']),2)}}<br></div>
+                                    <div class="calculation-info"> &diams; <b>Plot Area &rarr;</b> {{customNumFormat(round((float)$selectedValues['conversion_plot_area']),2)}} Sqm.<br></div>
+                                    <div class="calculation-info"> &diams; <b>Total conversion charges</b> [{{$selectedValues['conversion_formula']}}] &rarr; ₹{{customNumFormat(round((float)$selectedValues['conversion_charges']),2)}} </b><br>
+                                      &diams; <b>Applicable remission &rarr;</b> [40% of conversion charges] <b>₹{{customNumFormat(round((float)$selectedValues['conversion_remission_amount']),2)}}</b><br>
+                                      &diams; <b>Applicable surcharge &rarr;</b> [33.33% of conversion charges]  <b>₹{{customNumFormat(round((float)$selectedValues['conversion_surcharge_amount']),2)}}</b></div>
+                                  </div>
+                                  <div class="col-lg-12">
+                                    <div class="form-check ">
+                                      <input type="hidden" name="conversion_land_rate" id="conversion_land_rate" value="{{$selectedValues['conversion_land_rate']}}">
+                                      <input type="hidden" name="conversion_plot_area" id="conversion_plot_area" value="{{$selectedValues['conversion_plot_area']}}">
+                                      <input type="hidden" name="conversion_remission_amount" id="conversion_remission_amount" value="{{$selectedValues['conversion_remission_amount']}}">
+                                      <input type="hidden" name="conversion_surcharge_amount" id="conversion_surcharge_amount" value="{{$selectedValues['conversion_surcharge_amount']}}">
+                                      <input type="hidden" name="conversion_formula" id="conversion_formula" value="{{$selectedValues['conversion_formula']}}">
+                                      <input type="hidden" name="conversion_charges" id="conversion_charges" value="{{$selectedValues['conversion_charges']}}">
+                                      <div class="row mt-2">
+                                        <div class="col-lg-3">
+                                          <input class="form-check-input" type="checkbox" name="conversion_remission" id="conversion_remission" @checked(isset($selectedValues['conversion_remission']) && $selectedValues['conversion_remission']==1)>
+                                          <label class="form-check-label">Allow Remission</label>
+                                        </div>
+                                        <div class="col-lg-3">
+                                          <input class="form-check-input" type="checkbox" name="conversion_surcharge" id="conversion_surcharge" @checked(isset($selectedValues['conversion_surcharge']) && $selectedValues['conversion_surcharge']==1)>
+                                          <label class="form-check-label">Add Surcharge</label>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                @break
+
+                                @case('DEM_UEI')
+                                  <div class="col-lg-12 mt-2">
+                                    <div class="form-check form-check-inline custom-check">
+                                        <input class="form-check-input" type="radio" name="is_transfer_done" value="1" onchange="appendUnearnedIncreaseInput(this,3,true)" @if($selectedValues['is_transfer_done'] == 1) checked @endif>
+                                        <label class="form-check-label">Transfer completed</label>
+                                    </div>
+                                    <div class="form-check form-check-inline custom-check">
+                                        <input class="form-check-input" type="radio" name="is_transfer_done" value="0" onchange="appendUnearnedIncreaseInput(this,2,true)" @if($selectedValues['is_transfer_done'] == 0) checked @endif>
+                                        <label class="form-check-label">Transfer yet to be completed</label>
+                                    </div>
+                                  </div>
+                                  @if($selectedValues['is_transfer_done'] == 1)
+                                    <div class="input-block">
+                                        <label class="form-label">Consideration value</label>
+                                        <input type="number" min="0" class="form-control" id="unearned_increase_consideration_value" name="unearned_increase_consideration_value" value="{{$selectedValues['unearned_increase_consideration_value']}}">
+                                        <div class="error" id="unearned_increase_consideration_value_error"></div>
+                                    </div>
+                                    <div class="input-block">
+                                        <label class="form-label">Last transaction value</label>
+                                        <input type="number" min="0" class="form-control" id="unearned_increase_ltv" name="unearned_increase_ltv" value="{{$selectedValues['unearned_increase_ltv']}}">
+                                        <div class="error" id="unearned_increase_ltv_error"></div>
+                                    </div>
+                                    <div class="input-block">
+                                        <label class="form-label">Transfer Date</label>
+                                        <input type="date" class="form-control" onblur="getLandValueAtDate(${propertyId}, this.value)" name="unearned_increase_transfer_date" value="{{$selectedValues['unearned_increase_transfer_date']}}">
+                                        <div class="error" id="unearned_increase_transfer_date_error"></div>
+                                    </div>
+                                  @endif
+
+                                  @if($selectedValues['is_transfer_done'] == 0)
+                                    <div class="input-block">
+                                        <label class="form-label">Land value</label>
+                                        <input type="number" min="0" class="form-control" value="{{$selectedValues['unearned_increase_land_value']}}" readOnly id="unearned_increase_land_value" name="unearned_increase_land_value">
+                                        <div class="error" id="unearned_increase_land_value_error"></div>
+                                    </div>
+                                    <div class="input-block">
+                                        <label class="form-label">Last transaction value</label>
+                                        <input type="number" min="0" class="form-control" id="unearned_increase_ltv" name="unearned_increase_ltv" value="{{$selectedValues['unearned_increase_ltv']}}">
+                                        <div class="error" id="unearned_increase_ltv_error"></div>
+                                    </div>
+                                  @endif
+                                @break
+
+                                @case('DEM_ENCH_CHG')
+                                    @isset($slectedSubheads['DEM_ENCH_CHG'])
+
+                                      <div class="encroachment-formula-card border rounded p-2 m-1 bg-light">
+                                          <div class="d-flex flex-wrap gap-4 small">
+
+                                              <!-- Charges Per Annum Formula -->
+                                              <div class="d-flex align-items-center">
+
+                                                  <span style="
+                                                      width: 10px;
+                                                      height: 10px;
+                                                      background-color: #0d6efd;
+                                                      border-radius: 50%;
+                                                      display: inline-block;
+                                                      margin-right: 7px;
+                                                      flex-shrink: 0;
+                                                  "></span>
+
+                                                  <span>
+                                                      <strong>Charges Per Annum:</strong>
+                                                      10% of (Encroached Area × Land Rate)
+                                                  </span>
+
+                                              </div>
+
+
+                                              <!-- Amount Formula -->
+                                              <div class="d-flex align-items-center">
+
+                                                  <span style="
+                                                      width: 10px;
+                                                      height: 10px;
+                                                      background-color: #fd7e14;
+                                                      border-radius: 50%;
+                                                      display: inline-block;
+                                                      margin-right: 7px;
+                                                      flex-shrink: 0;
+                                                  "></span>
+
+                                                  <span>
+                                                      <strong>Amount:</strong>
+                                                      (Charges Per Annum ÷ 365) × No. of Days
+                                                  </span>
+
+                                              </div>
+
+                                          </div>
+
+                                      </div>
+                                      @foreach ($slectedSubheads['DEM_ENCH_CHG'] as $i=>$ench)
+                                      
+                                      {{-- <pre>{{print_r($ench)}}</pre> --}}
+                                        <div class="row encroachment-row border rounded p-2 pb-3 m-1" style="background-color: #f1ffe7;">
+                                          <input type="hidden" name="detail_id[DEM_ENCH_CHG][{{$i}}]" value="{{$ench['id'] ?? 0}}">
+                                          <!-- Encroached Area -->
+                                          <div class="col-lg-3 col-md-6 mt-2">
+
+                                              <label class="form-label">
+                                                  Encroached Area (in Sqm)
+                                              </label>
+
+                                              <input class="form-control ench-manual-input" type="number" name="ench_area[{{$i}}]" value="{{$ench['values']['ench_area']}}" placeholder="Enter area" step="0.01">
+                                          </div>
+
+
+                                          <!-- From Date -->
+                                          <div class="col-lg-3 col-md-6 mt-2">
+                                              <label class="form-label">From Date</label>
+
+                                              <input
+                                                  class="form-control ench-manual-input"
+                                                  type="date"
+                                                  name="ench_from_date[{{$i}}]"
+                                                  value="{{$ench['values']['ench_from_date']}}"
+                                              >
+
+                                          </div>
+
+
+                                          <!-- To Date -->
+                                          <div class="col-lg-3 col-md-6 mt-2">
+
+                                              <label class="form-label">
+                                                  To Date
+                                              </label>
+
+                                              <input
+                                                  class="form-control ench-manual-input"
+                                                  type="date"
+                                                  name="ench_to_date[{{$i}}]"
+                                                  value="{{$ench['values']['ench_to_date']}}"
+                                              >
+
+                                          </div>
+
+
+                                          <!-- Number of Days -->
+                                          <div class="col-lg-3 col-md-6 mt-2">
+
+                                              <label class="form-label">
+                                                  No. of Days
+                                              </label>
+
+                                              <input
+                                                  class="form-control bg-light"
+                                                  type="number"
+                                                  name="ench_no_of_days[{{$i}}]"
+                                                  placeholder="Auto calculated"
+                                                  readonly
+                                                  value="{{$ench['values']['ench_no_of_days']}}"
+                                              >
+
+                                          </div>
+
+
+                                          <!-- Land Rate -->
+                                          <div class="col-lg-3 col-md-6 mt-2">
+
+                                              <label class="form-label">
+                                                  Land Rate per Sqm
+                                              </label>
+
+                                              <input
+                                                  class="form-control ench-manual-input"
+                                                  type="number"
+                                                  name="ench_land_rate[{{$i}}]"
+                                                  placeholder="Enter land rate"
+                                                  step="0.01"
+                                                  value="{{$ench['values']['ench_land_rate']}}"
+                                              >
+
+                                          </div>
+
+
+                                          <!-- Charges Per Annum -->
+                                          <div class="col-lg-3 col-md-6 mt-2">
+
+                                              <label class="form-label">
+
+                                                  <span style="
+                                                      width: 9px;
+                                                      height: 9px;
+                                                      background-color: #0d6efd;
+                                                      border-radius: 50%;
+                                                      display: inline-block;
+                                                      margin-right: 4px;
+                                                  "></span>
+
+                                                  Charges Per Annum
+
+                                              </label>
+
+                                              <input
+                                                  class="form-control bg-light"
+                                                  type="number"
+                                                  name="ench_rate_per_annum[{{$i}}]"
+                                                  placeholder="Auto calculated"
+                                                  readonly
+                                                  value="{{$ench['values']['ench_rate_per_annum']}}"
+                                              >
+
+                                          </div>
+
+
+                                          <!-- Amount -->
+                                          <div class="col-lg-3 col-md-6 mt-2">
+
+                                              <label class="form-label">
+
+                                                  <span style="
+                                                      width: 9px;
+                                                      height: 9px;
+                                                      background-color: #fd7e14;
+                                                      border-radius: 50%;
+                                                      display: inline-block;
+                                                      margin-right: 4px;
+                                                  "></span>
+
+                                                  Amount
+
+                                              </label>
+
+                                              <input
+                                                  class="form-control bg-light ench_amount"
+                                                  type="number"
+                                                  name="ench_amount[{{$i}}]"
+                                                  placeholder="Auto calculated"
+                                                  readonly
+                                                  value="{{$ench['values']['ench_amount']}}"
+                                              >
+                                              <span class="error"></span>
+
+                                          </div>
+
+
+                                          <!-- Action Buttons -->
+                                          <div class="col-lg-3 col-md-6 mt-2 d-flex align-items-end action-buttons">
+                                            
+                                              @if($loop->last)
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-success me-2 add-encroachment">
+                                                    +
+                                                </button>
+                                              @endif
+                                              <button
+                                                  type="button"
+                                                  class="btn btn-danger remove-encroachment">
+                                                  Remove
+                                              </button>
+
+                                          </div>
+
+                                        </div>
+                                      @endforeach
+                                    @else
+                                    @endisset
+
+                                @break
+
+                                @case('DEM_LUC_RC')
+                                  {{-- <div class="col-lg-12 mt-2">
+                                    <div class="form-check form-check-inline">
+                                      <input class="form-check-input" type="checkbox" name="partial_change" id="partial_change" onchange="toggleBuiltUpAreaInputs(this)" @checked(isset($selectedValues['partial_change']) && $selectedValues['partial_change']==1)>
+                                      <label class="form-check-label">Land use change sought under mixed use policy</label>
+                                    </div>
+                                  </div>
+                                  <div class="col-lg-12 mb-2">
+                                    <div class="calculation-info">Land value @ commercial land rate &rarr; &#8377;{{customNumFormat(
+                                              round($selectedValues['luc_land_value'] ?? 0))}}</div>
+                                  </div>
+                                  <div class="input-block">
+                                    <label class="form-label">Commercial Land value</label>
+                                    <input type="number" min="0" class="form-control" value="{{$selectedValues['luc_land_value']??''}}" readOnly id="luc_land_value" name="luc_land_value">
+                                    <div class="error" id="luc_land_value_error"></div>
+                                  </div>
+                                  {{-- @dd(($selectedValues['partial_change']) && $selectedValues['partial_change'] == 1) --}
+                                  @if(isset($selectedValues['partial_change']) && $selectedValues['partial_change'] == 1)
+                                  <div class="input-block builtUpAreaInputs">
+                                    <label class="form-label">Total built up area</label>
+                                    <input type="number" min="0" class="form-control" id="luc_TBUA" name="luc_TBUA" value="{{$selectedValues['luc_TBUA'] ?? ''}}">
+                                    <div class="error" id="luc_TBUA_error"></div>
+                                  </div>
+                                  <div class="input-block builtUpAreaInputs">
+                                    <label class="form-label">Area to be used as commercial</label>
+                                    <input type="number" min="0" class="form-control" id="luc_BUAC" name="luc_BUAC" value="{{$selectedValues['luc_BUAC'] ?? ''}}">
+                                    <div class="error" id="luc_BUAC_error"></div>
+                                  </div>
+                                  @endif --}}
+                                  <div class="col-lg-12 mt-2">
+                                    <div class="form-check form-check-inline">
+                                        <input class="form-check-input" type="checkbox" name="partial_change" id="partial_change" checked="${applicationData.mixed_use == 1}" disabled">
+                                        <input type="hidden" name="partial_change" value="${applicationData.mixed_use}">
+                                        <label class="form-check-label">Land use change sought under mixed use policy</label>
+                                    </div>
+                                  </div>
+                                  <div class="calculation-info">&diam; Total built up area as per Application &nbsp; &nbsp; &rarr;{{$selectedValues['luc_TBUA']}}(Sqm) </div>
+                                  <input type="hidden" name="luc_TBUA" value="{{$selectedValues['luc_TBUA']}}">
+                                  <div class="calculation-info">&diam; Land use change sought &nbsp; &nbsp; &rarr; {{getServiceNameById($selectedValues['land_use_change_to'])}}</div>
+                                  <input type="hidden" name="land_use_change_to" value="{{$selectedValues['land_use_change_to']}}">
+                                  <div class="calculation-info">&diam; Area sought for land use change &nbsp; &nbsp; &rarr; {{$selectedValues['luc_BUAC']}}(Sqm) </div>
+                                  {{-- @dd($demand->propertyMaster) --}}
+                                  <input type="hidden" name="luc_BUAC" value="{{$selectedValues['luc_BUAC']}}">
+                                  <div class="calculation-info">&diam; Land rate for {{strtolower(getServiceNameById($selectedValues['land_use_change_to']))}} properties in {{$demand->propertyMaster->newColony->name}} &nbsp; &nbsp; &rarr; {{$selectedValues['luc_land_rate']}}/sqm </div>
+                                  <input type="hidden" name="luc_land_rate" value="{{$selectedValues['luc_land_rate']}}">
+                                
                         
-                
-                          <div class="input-block">
-                                <label class="form-label">Last Transaction Value</label>
-                                <input type="number" min="0" class="form-control" id="luc_ltv" name="luc_ltv" value="{{$selectedValues['luc_ltv']}}">
-                                <div class="error" id="luc_ltv_error"></div>
-                          </div>
+                                  <div class="input-block">
+                                        <label class="form-label">Last Transaction Value</label>
+                                        <input type="number" min="0" class="form-control" id="luc_ltv" name="luc_ltv" value="{{$selectedValues['luc_ltv']}}">
+                                        <div class="error" id="luc_ltv_error"></div>
+                                  </div>
 
 
 
-                          @break
+                                @break
 
-                          @case('DEM_SLET_CHG')
-                          <div class="col-lg-12 mt-2">
-                            <div class="form-check form-check-inline">
-                              <input class="form-check-input" type="checkbox" name="penal_subletting" id="penal_subletting" onchange="togglePenalSublettingInputs(this)" @checked(isset($selectedValues['penal_subletting']) && $selectedValues['penal_subletting']==1)>
-                              <label class="form-check-label">Add Penalty</label>
+                                @case('DEM_SLET_CHG')
+                                  <div class="col-lg-12 mt-2">
+                                    <div class="form-check form-check-inline">
+                                      <input class="form-check-input" type="checkbox" name="penal_subletting" id="penal_subletting" onchange="togglePenalSublettingInputs(this)" @checked(isset($selectedValues['penal_subletting']) && $selectedValues['penal_subletting']==1)>
+                                      <label class="form-check-label">Add Penalty</label>
+                                    </div>
+                                  </div>
+                                  <div class="input-block">
+                                    <label class="form-label">Annual income from subletting</label>
+                                    <input type="number" min="0" class="form-control" id="annual_subletting_income" name="annual_subletting_income" value="{{$selectedValues['annual_subletting_income'] ?? ''}}">
+                                    <div class="error" id="annual_subletting_income_error"></div>
+                                  </div>
+                                  @if (isset($selectedValues['penal_subletting']) && $selectedValues['penal_subletting'] == 1)
+                                  <div class="input-block panalSublettingInputs">
+                                    <label class="form-label">Date of start of subletting</label>
+                                    <input type="date" class="form-control" id="subletting_start_date" name="subletting_start_date" value="{{$selectedValues['subletting_start_date'] ?? '' }}">
+                                    <div class="error" id="subletting_start_date_error"></div>
+                                  </div>
+                                  <div class="input-block panalSublettingInputs">
+                                    <label class="form-label">Date of confirmation of subletting</label>
+                                    <input type="date" class="form-control" id="subletting_confirmation_date" name="subletting_confirmation_date" value="{{$selectedValues['subletting_confirmation_date'] ?? '' }}">
+                                    <div class="error" id="subletting_confirmation_date_error"></div>
+                                  </div>
+                                  @endif
+                                @break
+
+                                @case('DEM_PENAL_STANDARD')
+                                  <div class="input-block">
+                                    <label class="form-label">Land Value</label>
+                                    <input type="number" min="0" class="form-control" value="{{$selectedValues['standard_penalty_land_value']}}" readOnly id="standard_penalty_land_value" name="standard_penalty_land_value">
+                                    <div class="error" id="standard_penalty_land_value_error"></div>
+                                  </div>
+                                  <div class="col-lg-12">
+                                    <div class="calculation-info">Standard penalty is 1% of land value (&#8377;{{customNumFormat(round($selectedValues['standard_penalty_land_value'],2 ))}}) &approx; &#8377;{{customNumFormat(round(0.01*$selectedValues['standard_penalty_land_value'],2))}}</div>
+                                  </div>
+                                  <div class="col-lg-12">
+                                    <div class="input-block">
+                                      <label class="form-label">Description</label>
+                                      <textarea class="form-control" name="standard_penalty_description" id="standard_penalty_description" rows="5" placeholder="Add description of penalty (min. 50 characters)">{{$selectedValues['standard_penalty_description'] ?? '' }}</textarea>
+                                      <div class="error" id="standard_penalty_description_error"></div>
+                                    </div>
+                                  </div>
+                                @break
+
+                                @case("DEM_MANUAL")
+                                <!-- code moved -->
+                                @break
+
+                                @case('DEM_OTHER')
+                                <div class="input-block">
+                                  <label class="form-label">Demand Amount</label>
+                                  <input type="number" min="0" class="form-control" id="others_deamnd_amount" step="0.01" value="{{$slectedSubheads['DEM_OTHER']['amount']}}">
+                                  <div class="error" id="others_deamnd_amount_error"></div>
+                                </div>
+                                <div class="input-block">
+                                  <label class="form-label">Description</label>
+                                  <textarea class="form-control" name="others_description" id="others_description" rows="2" placeholder="Add description of penalty (min. 50 characters)">{{$selectedValues['others_description'] ??''}}</textarea>
+                                  <div class="error" id="others_description_error"></div>
+                                </div>
+                                @break
+                                @default
+
+                                @endswitch
+
+                                @endif
+                              </div>
+                              @if(in_array($head->item_code,$selectedSubheadCodes))
+                              <div class="col-lg-12 my-3" id="calculation-div">
+                                <button type="button" class="btn btn-sm btn-primary btn-calculate me-auto" style="display: none">{{($head->item_code == "DEM_PENAL_STANDARD" || $head->item_code == "DEM_OTHER" || $head->item_code == "DEM_ENCH_CHG")?'Add to Demand':'Calculate'}}</button>
+                              </div>
+                              @endif
                             </div>
-                          </div>
-                          <div class="input-block">
-                            <label class="form-label">Annual income from subletting</label>
-                            <input type="number" min="0" class="form-control" id="annual_subletting_income" name="annual_subletting_income" value="{{$selectedValues['annual_subletting_income'] ?? ''}}">
-                            <div class="error" id="annual_subletting_income_error"></div>
-                          </div>
-                          @if (isset($selectedValues['penal_subletting']) && $selectedValues['penal_subletting'] == 1)
-                          <div class="input-block panalSublettingInputs">
-                            <label class="form-label">Date of start of subletting</label>
-                            <input type="date" class="form-control" id="subletting_start_date" name="subletting_start_date" value="{{$selectedValues['subletting_start_date'] ?? '' }}">
-                            <div class="error" id="subletting_start_date_error"></div>
-                          </div>
-                          <div class="input-block panalSublettingInputs">
-                            <label class="form-label">Date of confirmation of subletting</label>
-                            <input type="date" class="form-control" id="subletting_confirmation_date" name="subletting_confirmation_date" value="{{$selectedValues['subletting_confirmation_date'] ?? '' }}">
-                            <div class="error" id="subletting_confirmation_date_error"></div>
-                          </div>
                           @endif
-                          @break
-
-                          @case('DEM_PENAL_STANDARD')
-                          <div class="input-block">
-                            <label class="form-label">Land Value</label>
-                            <input type="number" min="0" class="form-control" value="{{$selectedValues['standard_penalty_land_value']}}" readOnly id="standard_penalty_land_value" name="standard_penalty_land_value">
-                            <div class="error" id="standard_penalty_land_value_error"></div>
-                          </div>
-                          <div class="col-lg-12">
-                            <div class="calculation-info">Standard penalty is 1% of land value (&#8377;{{customNumFormat(round($selectedValues['standard_penalty_land_value'],2 ))}}) &approx; &#8377;{{customNumFormat(round(0.01*$selectedValues['standard_penalty_land_value'],2))}}</div>
-                          </div>
-                          <div class="col-lg-12">
-                            <div class="input-block">
-                              <label class="form-label">Description</label>
-                              <textarea class="form-control" name="standard_penalty_description" id="standard_penalty_description" rows="5" placeholder="Add description of penalty (min. 50 characters)">{{$selectedValues['standard_penalty_description'] ?? '' }}</textarea>
-                              <div class="error" id="standard_penalty_description_error"></div>
-                            </div>
-                          </div>
-                          @break
-
-                          @case("DEM_MANUAL")
-                          <!-- code moved -->
-                          @break
-
-                          @case('DEM_OTHER')
-                          <div class="input-block">
-                            <label class="form-label">Demand Amount</label>
-                            <input type="number" min="0" class="form-control" id="others_deamnd_amount" step="0.01" value="{{$slectedSubheads['DEM_OTHER']['amount']}}">
-                            <div class="error" id="others_deamnd_amount_error"></div>
-                          </div>
-                          <div class="input-block">
-                            <label class="form-label">Description</label>
-                            <textarea class="form-control" name="others_description" id="others_description" rows="2" placeholder="Add description of penalty (min. 50 characters)">{{$selectedValues['others_description'] ??''}}</textarea>
-                            <div class="error" id="others_description_error"></div>
-                          </div>
-                          @break
-                          @default
-
-                          @endswitch
-
-                          @endif
-                        </div>
-                        @if(in_array($head->item_code,$selectedSubheadCodes))
-                        <div class="col-lg-12 my-3" id="calculation-div">
-                          <button type="button" class="btn btn-sm btn-primary btn-calculate me-auto" style="display: none">{{($head->item_code == "DEM_PENAL_STANDARD" || $head->item_code == "DEM_OTHER" || $head->item_code == "DEM_ENCH_CHG")?'Add to Demand':'Calculate'}}</button>
-                        </div>
-                        @endif
-                      </div>
-                      @endif
                       @endforeach
                       @isset($slectedSubheads['DEM_MANUAL'])
                       @foreach ($slectedSubheads['DEM_MANUAL'] as $counter=>$manualDemand)
-                      <div class="demand-item-container manual-demand-input">
-                        <div class="col-lg-12 my-1">
-                          <div class=" form-check">
-                            <h6>Others</h6>
-                            <input type="hidden" name="detail_id[DEM_MANUAL][{{$counter}}]" value="{{$manualDemand['id'] ?? ''}}">
-                            <input type="hidden" name="demand_amount[DEM_MANUAL][{{$counter}}]" id="include-demand-amount" value="{{$manualDemand['amount'] ?? 0}}">
-                          </div>
-                        </div>
-                        <div class="col-lg-12 user-inputs" id="user-inputs">
-                          <div class="input-block">
-                            <label for="" class="form-label">Head</label>
-                            <input type="text" name="manual_title[{{$counter}}]" id="manual_title" class="form-control" value="{{$manualDemand['values']['manual_title']}}">
-                            <div class="error" id="manual_title_error"></div>
-                          </div>
-                          <div class="input-block">
-                            <label class="form-label">Amount</label>
-                            <input type="number" min="0" name="manual_amount[{{$counter}}]" id="manual_amount" class="form-control" step="0.01" value="{{$manualDemand['values']['manual_amount']}}">
-                            <div class="error" id="manual_amount_error"></div>
-                          </div>
-                          <div class="input-block">
-                            <label for="" class="form-label">Date From</label>
-                            <input type="date" name="manual_date_from[{{$counter}}]" id="manual_date_from" class="form-control" value="{{$manualDemand['values']['manual_date_from']}}">
-                            <div class="error" id="manual_date_from_error"></div>
-                          </div>
-                          <div class="input-block">
-                            <label for="" class="form-label">Date To</label>
-                            <input type="date" name="manual_date_to[{{$counter}}]" id="manual_date_to" class="form-control" value="{{$manualDemand['values']['manual_date_to']}}">
-                            <div class="error" id="manual_date_to_error"></div>
-                          </div>
-                          <div class="col-lg-12 mt-2">
-                            <label class="form-label">Description</label>
-                            <textarea class="form-control" name="manual_description[{{$counter}}]" id="manual_description" rows="2" placeholder="Add description of demand (min. 50 characters)">{{$manualDemand['values']['manual_description']}}</textarea>
-                            <div class="error" id="manual_description_error"></div>
-                          </div>
-                            <div class="col-lg-12 d-flex mt-2 justify-content-between">
-                              <button type="button" class="btn btn-sm btn-primary btn-calculate me-auto">Add</button>
-                              @if(!isset($openInReadOnlyMode))
-                                <button type="button" class="btn btn-danger ms-auto" onclick="removerOthers(this)">Remove</button>
-                              @endif
+                        <div class="demand-item-container manual-demand-input">
+                          <div class="col-lg-12 my-1">
+                            <div class=" form-check">
+                              <h6>Others</h6>
+                              <input type="hidden" name="detail_id[DEM_MANUAL][{{$counter}}]" value="{{$manualDemand['id'] ?? ''}}">
+                              <input type="hidden" name="demand_amount[DEM_MANUAL][{{$counter}}]" id="include-demand-amount" value="{{$manualDemand['amount'] ?? 0}}">
                             </div>
+                          </div>
+                          <div class="col-lg-12 user-inputs" id="user-inputs">
+                            <div class="input-block">
+                              <label for="" class="form-label">Head</label>
+                              <input type="text" name="manual_title[{{$counter}}]" id="manual_title" class="form-control" value="{{$manualDemand['values']['manual_title']}}">
+                              <div class="error" id="manual_title_error"></div>
+                            </div>
+                            <div class="input-block">
+                              <label class="form-label">Amount</label>
+                              <input type="number" min="0" name="manual_amount[{{$counter}}]" id="manual_amount" class="form-control" step="0.01" value="{{$manualDemand['values']['manual_amount']}}">
+                              <div class="error" id="manual_amount_error"></div>
+                            </div>
+                            <div class="input-block">
+                              <label for="" class="form-label">Date From</label>
+                              <input type="date" name="manual_date_from[{{$counter}}]" id="manual_date_from" class="form-control" value="{{$manualDemand['values']['manual_date_from']}}">
+                              <div class="error" id="manual_date_from_error"></div>
+                            </div>
+                            <div class="input-block">
+                              <label for="" class="form-label">Date To</label>
+                              <input type="date" name="manual_date_to[{{$counter}}]" id="manual_date_to" class="form-control" value="{{$manualDemand['values']['manual_date_to']}}">
+                              <div class="error" id="manual_date_to_error"></div>
+                            </div>
+                            <div class="col-lg-12 mt-2">
+                              <label class="form-label">Description</label>
+                              <textarea class="form-control" name="manual_description[{{$counter}}]" id="manual_description" rows="2" placeholder="Add description of demand (min. 50 characters)">{{$manualDemand['values']['manual_description']}}</textarea>
+                              <div class="error" id="manual_description_error"></div>
+                            </div>
+                              <div class="col-lg-12 d-flex mt-2 justify-content-between">
+                                <button type="button" class="btn btn-sm btn-primary btn-calculate me-auto">Add</button>
+                                @if(!isset($openInReadOnlyMode))
+                                  <button type="button" class="btn btn-danger ms-auto" onclick="removerOthers(this)">Remove</button>
+                                @endif
+                              </div>
+                          </div>
                         </div>
-                      </div>
 
                       @endforeach
                       @endisset
@@ -2526,7 +2737,7 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
                 </label>
 
                 <input
-                    class="form-control"
+                    class="form-control ench-manual-input"
                     type="number"
                     name="ench_area[]"
                     placeholder="Enter area"
@@ -2544,7 +2755,7 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
                 </label>
 
                 <input
-                    class="form-control"
+                    class="form-control ench-manual-input"
                     type="date"
                     name="ench_from_date[]"
                 >
@@ -2560,7 +2771,7 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
                 </label>
 
                 <input
-                    class="form-control"
+                    class="form-control ench-manual-input"
                     type="date"
                     name="ench_to_date[]"
                 >
@@ -2594,7 +2805,7 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
                 </label>
 
                 <input
-                    class="form-control"
+                    class="form-control ench-manual-input"
                     type="number"
                     name="ench_land_rate[]"
                     placeholder="Enter land rate"
@@ -2735,14 +2946,7 @@ $(document).on('click', '.remove-encroachment', function () {
 
 
 // Recalculate encroachment whenever any editable field changes
-$(document).on(
-    'input change',
-    '.encroachment-row input[name="ench_area[]"], ' +
-    '.encroachment-row input[name="ench_from_date[]"], ' +
-    '.encroachment-row input[name="ench_to_date[]"], ' +
-    '.encroachment-row input[name="ench_land_rate[]"]',
-    function () {
-
+$(document).on('input change', '.ench-manual-input',function () {
         // Get ONLY the card/row where the value changed
         let row = $(this).closest('.encroachment-row');
 
@@ -2752,27 +2956,25 @@ $(document).on(
 
 
 function calculateEncroachment(row) {
-
     /*
     |--------------------------------------------------------------------------
     | Get values from THIS card only
     |--------------------------------------------------------------------------
     */
-
     let area = parseFloat(
-        row.find('input[name="ench_area[]"]').val()
+        row.find('input[name^="ench_area"]').val()
     ) || 0;
 
     let fromDate = row.find(
-        'input[name="ench_from_date[]"]'
+        'input[name^="ench_from_date"]'
     ).val();
 
     let toDate = row.find(
-        'input[name="ench_to_date[]"]'
+        'input[name^="ench_to_date"]'
     ).val();
 
     let landRate = parseFloat(
-        row.find('input[name="ench_land_rate[]"]').val()
+        row.find('input[name^="ench_land_rate"]').val()
     ) || 0;
 
 
@@ -2798,16 +3000,16 @@ function calculateEncroachment(row) {
                     difference / (1000 * 60 * 60 * 24)
                 ) + 1;
 
-            row.find('input[name="ench_no_of_days[]"]')
+            row.find('input[name^="ench_no_of_days"]')
                 .val(numberOfDays);
 
         } else {
 
             // Invalid date range
-            row.find('input[name="ench_no_of_days[]"]')
+            row.find('input[name^="ench_no_of_days"]')
                 .val('');
 
-            row.find('input[name="ench_amount[]"]')
+            row.find('input[name^="ench_amount"]')
                 .val('');
 
             numberOfDays = 0;
@@ -2815,7 +3017,7 @@ function calculateEncroachment(row) {
 
     } else {
 
-        row.find('input[name="ench_no_of_days[]"]')
+        row.find('input[name^="ench_no_of_days"]')
             .val('');
     }
 
@@ -2845,12 +3047,12 @@ function calculateEncroachment(row) {
         chargesPerAnnum =
             (area * landRate) * (10 / 100);
 
-        row.find('input[name="ench_rate_per_annum[]"]')
+        row.find('input[name^="ench_rate_per_annum"]')
             .val(chargesPerAnnum.toFixed(2));
 
     } else {
 
-        row.find('input[name="ench_rate_per_annum[]"]')
+        row.find('input[name^="ench_rate_per_annum"]')
             .val('');
     }
 
@@ -2876,12 +3078,12 @@ function calculateEncroachment(row) {
         amount =
             (chargesPerAnnum / 365) * numberOfDays;
 
-        row.find('input[name="ench_amount[]"]')
+        row.find('input[name^="ench_amount"]')
             .val(amount.toFixed(2));
 
     } else {
 
-        row.find('input[name="ench_amount[]"]')
+        row.find('input[name^="ench_amount"]')
             .val('');
     }
 
@@ -3509,7 +3711,7 @@ function calculateEncroachment(row) {
         }
 
         const displayStatement =
-            `Total ${customNumFormat(addedEncroachmentCharges)} added to demand`;
+            `Total &#8377;${customNumFormat(addedEncroachmentCharges.toFixed(2))} added to demand`;
 
         displayDemandCalculationResult(
             inputElements,
