@@ -1291,20 +1291,186 @@ private function applicantData()
                 return $up;
             });
         }
-        foreach ($userProperties as $property) {
-            $oldPropertyId = $property->old_property_id;
+      
 
-           $property->oldDemands = OldDemand::with([
-                    'oldDemandSubheads' => function ($query) {
-                        $query->where('Subhead', 'Ground Rent')
-                            ->orWhere('Subhead', 'GR Interest (Balance)')
-                            ->orderBy('DateFrom', 'asc');
-                    }
+foreach ($userProperties as $property) {
+
+    $oldPropertyId = $property->old_property_id;
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | NEW DEMANDS
+    |--------------------------------------------------------------------------
+    */
+
+    // $newDemands = Demand::leftJoin(
+    //         'demand_details as dd',
+    //         'demands.id',
+    //         '=',
+    //         'dd.demand_id'
+    //     )
+    //     ->where('demands.old_property_id', $oldPropertyId)
+    //     ->whereIn('dd.subhead_id', [
+    //         getServiceType('DEM_MANUAL'),
+    //     ])
+    //     ->select(
+    //         'demands.*',
+    //         'dd.id as demand_detail_id'
+    //     )
+    //     ->get();
+
+
+
+    $newDemands = Demand::leftJoin(
+        'demand_details as dd',
+        'demands.id',
+        '=',
+        'dd.demand_id'
+    )
+    ->where('demands.old_property_id', $oldPropertyId)
+    ->whereIn('dd.subhead_id', [
+        getServiceType('DEM_MANUAL'),
+    ])
+    ->select(
+        'demands.*',
+
+        'dd.id as demand_detail_id',
+
+        // Payment details for this particular head
+        'dd.total as head_total',
+        'dd.net_total as head_net_total',
+        'dd.paid_amount as head_paid_amount',
+        'dd.balance_amount as head_balance_amount'
+    )
+    ->get();
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | GET DYNAMIC HEAD KEYS
+    |--------------------------------------------------------------------------
+    */
+
+    if ($newDemands->isNotEmpty()) {
+
+        $headKeys = DB::table('demand_head_keys')
+            ->whereIn(
+                'head_id',
+                $newDemands->pluck('demand_detail_id')
+            )
+            ->get()
+            ->groupBy('head_id');
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | ADD KEY/VALUE AS ATTRIBUTES
+        |--------------------------------------------------------------------------
+        |
+        | Example:
+        |
+        | manual_title       => Ground Rent
+        | manual_amount      => 5678
+        | manual_date_from   => 2026-07-27
+        | manual_date_to     => 2026-09-10
+        | manual_description => ...
+        |
+        */
+
+        $newDemands->transform(function ($demand) use ($headKeys) {
+
+            $keys = $headKeys->get(
+                $demand->demand_detail_id,
+                collect()
+            );
+
+            foreach ($keys as $item) {
+
+                $demand->{$item->key} = $item->value;
+
+            }
+
+            return $demand;
+        });
+
+
+
+         /*
+    |--------------------------------------------------------------------------
+    | KEEP ONLY GROUND RENT RELATED DEMANDS
+    |--------------------------------------------------------------------------
+    */
+
+    $newDemands = $newDemands
+        ->filter(function ($demand) {
+
+            $title = strtolower(
+                trim($demand->manual_title ?? '')
+            );
+
+            return str_contains($title, 'ground rent')
+                || str_contains($title, 'rgr')
+                || str_contains($title, 'ground')
+                || preg_match('/\bgr\b/i', $title);
+
+        })
+        ->values();
+    }
+
+
+    
+
+    /*
+    |--------------------------------------------------------------------------
+    | DECIDE NEW OR OLD DEMAND
+    |--------------------------------------------------------------------------
+    */
+
+    if ($newDemands->isNotEmpty()) {
+
+        $property->newDemands = $newDemands;
+
+        $property->oldDemands = collect();
+
+    } else {
+
+        /*
+        |--------------------------------------------------------------------------
+        | OLD DEMANDS
+        |--------------------------------------------------------------------------
+        */
+
+        $property->oldDemands = OldDemand::with([
+            'oldDemandSubheads' => function ($query) {
+
+                $query->whereIn('Subhead', [
+                    'Ground Rent',
+                    'GR Interest (Balance)',
                 ])
-                ->where('property_id', $oldPropertyId)
-                ->get();
-            $property->leaseDetails = PropertyLeaseDetail::where('property_master_id', $property->new_property_id)->first();
-        }
+                ->orderBy('DateFrom', 'asc');
+
+            }
+        ])
+        ->where('property_id', $oldPropertyId)
+        ->get();
+
+
+        $property->newDemands = collect();
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | LEASE DETAILS
+    |--------------------------------------------------------------------------
+    */
+
+    $property->leaseDetails = PropertyLeaseDetail::where(
+        'property_master_id',
+        $property->new_property_id
+    )->first();
+}
 
         // dd($userProperties);
         $data['userProperties'] = $userProperties;
