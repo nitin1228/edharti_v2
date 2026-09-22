@@ -260,9 +260,6 @@
                     </td>
                     <td></td>
                     @php
-                    /* echo "<pre>";print_r($dd->subhead_keys);
-                        echo"<br>"; print_r($dd->subhead_id);"<br>";
-                        echo"</pre>"; */
                         switch (getServiceCodeById($dd->subhead_id)) {
                             case 'DEM_MANUAL':
                                 $dateFromKey = 'manual_date_from';
@@ -278,7 +275,7 @@
                     @endphp
                     
                     <td>  {{ isset($dateFromKey) && isset($dd->subhead_keys[$dateFromKey])
-                            ? date('d-m-Y', strtotime($dd->subhead_keys[$dateToKey]))
+                            ? date('d-m-Y', strtotime($dd->subhead_keys[$dateFromKey]))
                             : '' }}
                         - <br>
                         {{ isset($dateToKey) && isset($dd->subhead_keys[$dateToKey])
@@ -343,8 +340,8 @@
                 <td></td>
             </tr> --}}
             <tr>
-                <td colspan="5">Total Charges:</td>
-                <td>₹&nbsp;{{customNumFormat($demand->balance_amount)}}</td>
+                <th colspan="4">Total Charges:</th>
+                <th colspan="2">₹&nbsp;{{customNumFormat($demand->balance_amount)}}</th>
             </tr>
         </tbody>
     </table>
