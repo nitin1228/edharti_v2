@@ -843,6 +843,10 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
 
                                 @break
 
+                                @case('DEM_UNAUTHCONS_CHG')
+                                  
+                                @break
+
                                 @case('DEM_LUC_RC')
                                   {{-- <div class="col-lg-12 mt-2">
                                     <div class="form-check form-check-inline">
@@ -2150,7 +2154,7 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
         appendUserInputs($(this))
         let demandCode = $(this).attr('name');
         if (container.find('.btn-calculate').length == 0) {
-          container.append(`<div class="col-lg-12 my-3" id="calculation-div"><button type="button" class="btn btn-sm btn-primary btn-calculate me-auto">${(demandCode == "DEM_PENAL_STANDARD" || demandCode == "DEM_OTHER" || demandCode == "DEM_MANUAL" || demandCode == "DEM_ENCH_CHG")?'Add to Demand':'Calculate'}</button></div>`)
+          container.append(`<div class="col-lg-12 my-3" id="calculation-div"><button type="button" class="btn btn-sm btn-primary btn-calculate me-auto">${(demandCode == "DEM_PENAL_STANDARD" || demandCode == "DEM_OTHER" || demandCode == "DEM_MANUAL" || demandCode == "DEM_ENCH_CHG" || demandCode == "DEM_UNAUTHCONS_CHG")?'Add to Demand':'Calculate'}</button></div>`)
         }
       } else {
         $(this).closest('.demand-item-container').find('#user-inputs').empty();
@@ -2189,6 +2193,9 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
           break;
         case "DEM_ENCH_CHG":
           appendEnchroachmentInput(targetElement);
+          break;
+          case "DEM_UNAUTHCONS_CHG":
+          appendUnauthorizedConstructionInput(targetElement);
           break;
         case "DEM_PENAL_STANDARD":
           appendStandatdPenaltyInput(targetElement);
@@ -2647,6 +2654,497 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
       </div>`
       targetElement.append(html);
     }
+
+
+
+
+
+
+
+
+
+
+
+    function appendUnauthorizedConstructionInput(targetElement) {
+
+    // Remove + button from previous rows
+    targetElement.find('.add-unauthorized-construction').remove();
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Add Formula Card ONLY ONCE
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+        targetElement.find('.unauthorized-construction-formula-card').length === 0
+    ) {
+
+        let formulaHtml = `
+            <div class="unauthorized-construction-formula-card border rounded p-2 m-1 bg-light">
+
+                <div class="d-flex flex-wrap gap-4 small">
+
+                    <!-- WPL Formula -->
+                    <div class="d-flex align-items-center">
+
+                        <span>
+                            <strong>
+                                Within Permissible Limit (WPL):
+                            </strong>
+
+                            5% of
+                            (Area of Unauthorised Construction × Land Rate)
+                            ÷ FAR
+                        </span>
+
+                    </div>
+
+
+                    <!-- BPL Formula -->
+                    <div class="d-flex align-items-center">
+
+                        <span>
+                            <strong>
+                                Beyond Permissible Limit (BPL):
+                            </strong>
+
+                            10% of
+                            (Area of Unauthorised Construction × Land Rate)
+                            ÷ FAR
+                        </span>
+
+                    </div>
+
+                </div>
+
+            </div>
+        `;
+
+        targetElement.append(formulaHtml);
+    }
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Unauthorized Construction Repeater Card
+    |--------------------------------------------------------------------------
+    */
+
+    let html = `
+
+        <div class="row unauthorized-construction-row border rounded p-2 pb-3 m-1"
+             style="background-color: #f1ffe7;">
+
+
+            <!-- WPL / BPL -->
+            <div class="col-lg-3 col-md-6 mt-2">
+
+                <label class="form-label">
+                    Permissible Limit
+                </label>
+
+                <select
+                    class="form-select unauthorized-manual-input"
+                    name="unauthorized_type[]"
+                >
+
+                    <option value="">
+                        Select
+                    </option>
+
+                    <option value="WPL">
+                        Within Permissible Limit (WPL)
+                    </option>
+
+                    <option value="BPL">
+                        Beyond Permissible Limit (BPL)
+                    </option>
+
+                </select>
+
+            </div>
+
+
+            <!-- Area of Unauthorized Construction -->
+            <div class="col-lg-3 col-md-6 mt-2">
+
+                <label class="form-label">
+                    Area of Unauthorized Construction (in Sqm)
+                </label>
+
+                <input
+                    class="form-control unauthorized-manual-input"
+                    type="number"
+                    name="unauthorized_area[]"
+                    placeholder="Enter area"
+                    min="0"
+                    step="0.01"
+                >
+
+            </div>
+
+
+            <!-- Land Rate -->
+            <div class="col-lg-3 col-md-6 mt-2">
+
+                <label class="form-label">
+                    Land Rate per Sqm
+                </label>
+
+                <input
+                    class="form-control unauthorized-manual-input"
+                    type="number"
+                    name="unauthorized_land_rate[]"
+                    placeholder="Enter land rate"
+                    min="0"
+                    step="0.01"
+                >
+
+            </div>
+
+
+            <!-- FAR -->
+            <div class="col-lg-3 col-md-6 mt-2">
+
+                <label class="form-label">
+                    FAR
+                </label>
+
+                <input
+                    class="form-control unauthorized-manual-input"
+                    type="number"
+                    name="unauthorized_far[]"
+                    placeholder="Enter FAR"
+                    min="0"
+                    step="0.01"
+                >
+
+            </div>
+
+
+            <!-- Calculated Amount -->
+            <div class="col-lg-3 col-md-6 mt-2">
+
+                <label class="form-label">
+                    Unauthorized Construction Charges
+
+                </label>
+
+                <input
+                    class="form-control bg-light unauthorized_amount"
+                    type="number"
+                    name="unauthorized_amount[]"
+                    placeholder="Auto calculated"
+                    readonly
+                >
+
+                <span class="error"></span>
+
+            </div>
+
+
+            <!-- Action Buttons -->
+            <div class="col-lg-3 col-md-6 mt-2 d-flex align-items-end action-buttons">
+
+                <button
+                    type="button"
+                    class="btn btn-success me-2 add-unauthorized-construction">
+                    +
+                </button>
+
+                <button
+                    type="button"
+                    class="btn btn-danger remove-unauthorized-construction">
+                    Remove
+                </button>
+
+            </div>
+
+
+        </div>
+    `;
+
+
+    targetElement.append(html);
+}
+
+
+
+/*
+|--------------------------------------------------------------------------
+| Add More Unauthorized Construction
+|--------------------------------------------------------------------------
+*/
+
+$(document).on(
+    'click',
+    '.add-unauthorized-construction',
+    function () {
+
+        let container = $(this)
+            .closest('.unauthorized-construction-row')
+            .parent();
+
+        const demandContainer = $(this)
+            .closest('.demand-item-container');
+
+        appendUnauthorizedConstructionInput(container);
+
+        markAmountNotIncluded(demandContainer);
+    }
+);
+
+
+
+/*
+|--------------------------------------------------------------------------
+| Remove Unauthorized Construction
+|--------------------------------------------------------------------------
+*/
+
+$(document).on(
+    'click',
+    '.remove-unauthorized-construction',
+    function () {
+
+        let container = $(this)
+            .closest('.unauthorized-construction-row')
+            .parent();
+
+        const demandContainer = $(this)
+            .closest('.demand-item-container');
+
+
+        $(this)
+            .closest('.unauthorized-construction-row')
+            .remove();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Add + button to last remaining row
+        |--------------------------------------------------------------------------
+        */
+
+        let lastRow = container
+            .find('.unauthorized-construction-row')
+            .last();
+
+
+        if (
+            lastRow.length &&
+            lastRow.find('.add-unauthorized-construction').length === 0
+        ) {
+
+            lastRow.find('.action-buttons').prepend(`
+
+                <button
+                    type="button"
+                    class="btn btn-success me-2 add-unauthorized-construction">
+                    +
+                </button>
+
+            `);
+        }
+
+
+        markAmountNotIncluded(demandContainer);
+    }
+);
+
+
+
+/*
+|--------------------------------------------------------------------------
+| Recalculate Whenever Any Editable Field Changes
+|--------------------------------------------------------------------------
+*/
+
+$(document).on(
+    'input change',
+    '.unauthorized-manual-input',
+    function () {
+
+        // Get ONLY the card/row where value changed
+        let row = $(this)
+            .closest('.unauthorized-construction-row');
+
+
+        calculateUnauthorizedConstruction(row);
+    }
+);
+
+
+
+/*
+|--------------------------------------------------------------------------
+| Calculate Unauthorized Construction Charges
+|--------------------------------------------------------------------------
+*/
+
+function calculateUnauthorizedConstruction(row) {
+
+    /*
+    |--------------------------------------------------------------------------
+    | Get values from THIS card only
+    |--------------------------------------------------------------------------
+    */
+
+    let type = row.find(
+        'select[name^="unauthorized_type"]'
+    ).val();
+
+
+    let area = parseFloat(
+        row.find(
+            'input[name^="unauthorized_area"]'
+        ).val()
+    ) || 0;
+
+
+    let landRate = parseFloat(
+        row.find(
+            'input[name^="unauthorized_land_rate"]'
+        ).val()
+    ) || 0;
+
+
+    let far = parseFloat(
+        row.find(
+            'input[name^="unauthorized_far"]'
+        ).val()
+    ) || 0;
+
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Calculate Unauthorized Construction Charges
+    |--------------------------------------------------------------------------
+    |
+    | WPL Formula:
+    |
+    | 5% of
+    | (Area of Unauthorized Construction × Land Rate) / FAR
+    |
+    |
+    | BPL Formula:
+    |
+    | 10% of
+    | (Area of Unauthorized Construction × Land Rate) / FAR
+    |
+    |--------------------------------------------------------------------------
+    */
+
+
+    let amount = 0;
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Validate Required Values
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+        type &&
+        area > 0 &&
+        landRate > 0 &&
+        far > 0
+    ) {
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Within Permissible Limit (WPL)
+        |--------------------------------------------------------------------------
+        */
+
+        if (type === 'WPL') {
+
+            amount =
+                ((area * landRate) / far)
+                * (5 / 100);
+
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Beyond Permissible Limit (BPL)
+        |--------------------------------------------------------------------------
+        */
+
+        else if (type === 'BPL') {
+
+            amount =
+                ((area * landRate) / far)
+                * (10 / 100);
+
+        }
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Set Calculated Amount
+        |--------------------------------------------------------------------------
+        */
+
+        row.find(
+            'input[name^="unauthorized_amount"]'
+        ).val(
+            amount.toFixed(2)
+        );
+
+    } else {
+
+        /*
+        |--------------------------------------------------------------------------
+        | Clear Amount if Required Value Missing
+        |--------------------------------------------------------------------------
+        */
+
+        row.find(
+            'input[name^="unauthorized_amount"]'
+        ).val('');
+
+    }
+
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Debug - Optional
+    |--------------------------------------------------------------------------
+    */
+
+    console.log({
+
+        type: type,
+
+        area: area,
+
+        landRate: landRate,
+
+        far: far,
+
+        amount: amount
+
+    });
+
+}
+
+
+    
+
+
+
+
+
+
+
 
 
 

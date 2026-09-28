@@ -87,6 +87,15 @@ class DemandFormulaSeeder extends Seeder
                 'parent_head_code' => null,
             ],
             [
+                'head_code' => 'DEM_UNAUTHCONS_CHG',
+                'date_from' => date('Y-m-d', strtotime('2025-01-01')),
+                'date_to' => null,
+                'formula' => 'UACC = 5% of (AUC x LR) / FAR',
+                'description' => 'UACC = Unauthorized Construction Charges, AUC = Area of Unauthorized Construction, LR = Land Rate, FAR = Floor Area Ratio ',
+                'for_allotment_type' => 0,
+                'parent_head_code' => null,
+            ],
+            [
                 'head_code' => 'DEM_PENAL_STANDARD',
                 'date_from' => date('Y-m-d', strtotime('2025-01-01')),
                 'date_to' => null,

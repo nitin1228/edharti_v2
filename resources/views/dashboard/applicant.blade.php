@@ -210,34 +210,38 @@
 
 
 
+            @forelse($userProperties as $property)
 
- @forelse($userProperties as $property)
-
+    {{-- ====================================================== --}}
+    {{-- PROPERTY CARD --}}
+    {{-- ====================================================== --}}
     <div class="card border-0 shadow-sm mb-4">
 
         {{-- Property Header --}}
         <div class="card-header bg-white border-bottom py-3">
-            <div class="d-flex justify-content-between align-items-center">
+
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
 
                 <div>
                     <span class="fw-bold">
                         <i class="bi bi-house-door text-primary me-1"></i>
-                        Property ID: {{ $property->old_property_id }}
+                        Property ID: {{ $property->old_property_id ?? '-' }}
                     </span>
                 </div>
 
-                <span class="badge bg-primary-subtle text-primary">
+                <span class="badge bg-primary-subtle text-primary px-3 py-2">
                     Ground Rent
                 </span>
 
             </div>
+
         </div>
 
 
         <div class="card-body p-3">
 
             {{-- ====================================================== --}}
-            {{-- GROUND RENT AS PER LEASE --}}
+            {{-- GROUND RENT DETAILS AS PER LEASE --}}
             {{-- ====================================================== --}}
 
             <div class="mb-3">
@@ -246,6 +250,7 @@
                     <i class="bi bi-file-earmark-text text-primary me-1"></i>
                     Ground Rent Details as per Lease
                 </h6>
+
 
                 <div class="row g-2">
 
@@ -273,7 +278,9 @@
                                     ) }}
 
                                 @else
+
                                     -
+
                                 @endif
 
                             </span>
@@ -283,7 +290,7 @@
                     </div>
 
 
-                    {{-- Start Date --}}
+                    {{-- Ground Rent Start Date --}}
                     <div class="col-lg-3 col-md-6">
 
                         <div class="bg-light rounded p-3 h-100">
@@ -308,7 +315,7 @@
                     </div>
 
 
-                    {{-- First RGR --}}
+                    {{-- First RGR Due On --}}
                     <div class="col-lg-3 col-md-6">
 
                         <div class="bg-light rounded p-3 h-100">
@@ -360,171 +367,323 @@
             </div>
 
 
-            <hr class="my-4">
+            <hr class="my-3">
 
 
             {{-- ====================================================== --}}
             {{-- GROUND RENT DEMAND DETAILS --}}
             {{-- ====================================================== --}}
 
-            <div>
+           {{-- ====================================================== --}}
+{{-- GROUND RENT DEMAND DETAILS --}}
+{{-- ====================================================== --}}
 
-                <h6 class="fw-bold mb-3">
+<div>
 
-                    <i class="bi bi-receipt text-primary me-1"></i>
-
-                    Ground Rent Demand Details
-
-                </h6>
-
-
-                @php
-                    $hasGroundRent = false;
-                @endphp
+    <h6 class="fw-bold mb-2">
+        <i class="bi bi-receipt text-primary me-1"></i>
+        Ground Rent Demand Details
+    </h6>
 
 
-                @foreach($property->oldDemands as $demand)
-
-                    @foreach($demand->oldDemandSubheads as $subhead)
-
-
-                            @php
-                                $hasGroundRent = true;
-                                $paymentStatus = strtoupper(trim($subhead->PaymentStatus));
-                            @endphp
+    @php
+        $hasGroundRent = false;
+    @endphp
 
 
-                            <div class="border rounded p-3 mb-2">
+    {{-- ====================================================== --}}
+    {{-- NEW DEMANDS --}}
+    {{-- ====================================================== --}}
 
-                                <div class="row g-3 align-items-center">
+    @if($property->newDemands->isNotEmpty())
 
-
-                                    {{-- Period --}}
-                                    <div class="col-lg-3 col-md-6">
-<div>{{$subhead->Subhead}}</div>
-                                        <small class="text-muted d-block">
-                                            Period
-                                        </small>
-
-                                        <span class="fw-semibold">
-
-                                            {{ $subhead->DateFrom
-                                                ? \Carbon\Carbon::parse(
-                                                    $subhead->DateFrom
-                                                )->format('d-m-Y')
-                                                : '-'
-                                            }}
-
-                                            <span class="text-muted mx-1">
-                                                to
-                                            </span>
-
-                                            {{ $subhead->DateTo
-                                                ? \Carbon\Carbon::parse(
-                                                    $subhead->DateTo
-                                                )->format('d-m-Y')
-                                                : '-'
-                                            }}
-
-                                        </span>
-
-                                    </div>
+        @php
+            $hasGroundRent = true;
+        @endphp
 
 
-                                    {{-- Rate --}}
-                                    <div class="col-lg-3 col-md-6">
+        @foreach($property->newDemands->groupBy('id') as $demandId => $demands)
 
-                                        <small class="text-muted d-block">
-                                            Rate
-                                        </small>
-
-                                        <span class="fw-semibold">
-
-                                            ₹{{ number_format(
-                                                $subhead->Rate ?? 0,
-                                                2
-                                            ) }}
-
-                                        </span>
-
-                                    </div>
+            @php
+                $mainDemand = $demands->first();
+            @endphp
 
 
-                                    {{-- Amount --}}
-                                    <div class="col-lg-3 col-md-6">
-
-                                        <small class="text-muted d-block">
-                                            Amount
-                                        </small>
-
-                                        <span class="fw-bold text-primary">
-
-                                            ₹{{ number_format(
-                                                $subhead->Amount ?? 0,
-                                                2
-                                            ) }}
-
-                                        </span>
-
-                                    </div>
+            {{-- Single Demand --}}
+            <div class="border rounded mb-2 overflow-hidden">
 
 
-                                    {{-- Payment Status --}}
-                                    <div class="col-lg-3 col-md-6">
+                {{-- Demand Header --}}
+                <div class="bg-light border-bottom px-3 py-2">
 
-                                        <small class="text-muted d-block">
-                                            Payment Status
-                                        </small>
+                    <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
 
+                        <div class="d-flex align-items-center gap-2">
 
-                                        @if($paymentStatus === 'Y')
+                            <i class="bi bi-receipt text-primary"></i>
 
-                                            <span class="badge bg-success-subtle text-success">
-                                                <i class="bi bi-check-circle me-1"></i>
-                                                Paid
-                                            </span>
+                            <small class="text-muted">
+                                Demand ID:
+                            </small>
 
-                                        @else
+                            <span class="fw-bold text-primary">
+                                {{ $mainDemand->unique_id ?? '-' }}
+                            </span>
 
-                                            <span class="badge bg-danger-subtle text-danger">
-                                                <i class="bi bi-exclamation-circle me-1"></i>
-                                                Unpaid
-                                            </span>
-
-                                        @endif
-
-                                    </div>
+                        </div>
 
 
-                                    
+                        <small class="text-muted">
+
+                            {{ $demands->count() }}
+
+                            {{ $demands->count() == 1
+                                ? 'Item'
+                                : 'Items'
+                            }}
+
+                        </small>
+
+                    </div>
+
+                </div>
 
 
-                                </div>
+                {{-- Demand Items --}}
+@foreach($demands as $demand)
+
+    @php
+        $totalAmount   = (float) ($demand->head_net_total ?? 0);
+        $paidAmount    = (float) ($demand->head_paid_amount ?? 0);
+        $balanceAmount = (float) ($demand->head_balance_amount ?? 0);
+
+        if ($paidAmount > 0 && abs($balanceAmount) < 0.01) {
+            $paymentStatus = 'paid';
+        } elseif ($paidAmount > 0) {
+            $paymentStatus = 'partial';
+        } else {
+            $paymentStatus = 'unpaid';
+        }
+    @endphp
+
+
+    <div class="border rounded-2 mb-2 bg-white">
+
+        <div class="px-3 py-2">
+
+            <div class="row align-items-center g-2">
+
+
+                {{-- ================================================= --}}
+                {{-- DEMAND TYPE + DESCRIPTION --}}
+                {{-- ================================================= --}}
+                <div class="col-lg-4 col-md-12">
+
+                    <div class="d-flex align-items-center gap-2">
+
+                       
+
+
+                        <div class="overflow-hidden">
+
+                            {{-- Title --}}
+                            <div class="d-flex align-items-center gap-1">
+
+                                <span
+                                    class="fw-semibold text-dark"
+                                    style="font-size: 13px;"
+                                >
+                                    {{ $demand->manual_title ?? '-' }}
+                                </span>
 
                             </div>
 
 
-                    @endforeach
+                            {{-- Description --}}
+                            @if(!empty($demand->manual_description))
 
-                @endforeach
+                                <div
+                                    class="text-muted text-truncate"
+                                    style="
+                                        font-size: 11px;
+                                        max-width: 330px;
+                                    "
+                                    title="{{ $demand->manual_description }}"
+                                >
+                                    {{ $demand->manual_description }}
+                                </div>
 
+                            @endif
 
-                {{-- No Ground Rent --}}
-                @if(!$hasGroundRent)
-
-                    <div class="bg-light rounded p-3 text-center">
-
-                        <span class="text-muted">
-
-                            <i class="bi bi-info-circle me-1"></i>
-
-                            No previous Ground Rent demand details available.
-
-                        </span>
+                        </div>
 
                     </div>
 
-                @endif
+                </div>
+
+
+
+                {{-- ================================================= --}}
+                {{-- PERIOD --}}
+                {{-- ================================================= --}}
+                <div class="col-lg-2 col-md-4">
+
+                    <div class="border-start ps-2">
+
+                        <div
+                            class="text-muted"
+                            style="font-size: 10px;"
+                        >
+                            Period
+                        </div>
+
+                        <div
+                            class="fw-semibold text-nowrap"
+                            style="font-size: 11px;"
+                        >
+
+                            {{ $demand->manual_date_from
+                                ? \Carbon\Carbon::parse(
+                                    $demand->manual_date_from
+                                )->format('d-m-Y')
+                                : '-'
+                            }}
+
+                            <span class="text-muted mx-1">→</span>
+
+                            {{ $demand->manual_date_to
+                                ? \Carbon\Carbon::parse(
+                                    $demand->manual_date_to
+                                )->format('d-m-Y')
+                                : '-'
+                            }}
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+
+                {{-- ================================================= --}}
+                {{-- AMOUNT --}}
+                {{-- ================================================= --}}
+                <div class="col-lg-1 col-md-2">
+
+                    <div class="border-start ps-2">
+
+                        <div
+                            class="text-muted"
+                            style="font-size: 10px;"
+                        >
+                            Amount
+                        </div>
+
+                        <div
+                            class="fw-bold text-primary text-nowrap"
+                            style="font-size: 12px;"
+                        >
+                            ₹{{ number_format(
+                                (float) ($demand->manual_amount ?? 0),
+                                2
+                            ) }}
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+
+                {{-- ================================================= --}}
+                {{-- PAID --}}
+                {{-- ================================================= --}}
+                <div class="col-lg-1 col-md-2">
+
+                    <div class="border-start ps-2">
+
+                        <div
+                            class="text-muted"
+                            style="font-size: 10px;"
+                        >
+                            Paid
+                        </div>
+
+                        <div
+                            class="fw-semibold text-success text-nowrap"
+                            style="font-size: 12px;"
+                        >
+                            ₹{{ number_format($paidAmount, 2) }}
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+
+                {{-- ================================================= --}}
+                {{-- BALANCE --}}
+                {{-- ================================================= --}}
+                <div class="col-lg-2 col-md-2">
+
+                    <div class="border-start ps-2">
+
+                        <div
+                            class="text-muted"
+                            style="font-size: 10px;"
+                        >
+                            Balance
+                        </div>
+
+                        <div
+                            class="fw-semibold text-nowrap
+                            {{ $balanceAmount > 0
+                                ? 'text-danger'
+                                : 'text-success'
+                            }}"
+                            style="font-size: 12px;"
+                        >
+                            ₹{{ number_format($balanceAmount, 2) }}
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+
+                {{-- ================================================= --}}
+                {{-- STATUS --}}
+                {{-- ================================================= --}}
+                <div class="col-lg-2 col-md-2 text-lg-end">
+
+                    @if($paymentStatus === 'paid')
+                        <span class="badge bg-success-subtle text-success">
+                            <i class="bi bi-check-circle me-1"></i>
+                            Paid
+                        </span>
+
+                    @elseif($paymentStatus === 'partial')
+
+                        <span class="badge bg-warning-subtle text-warning">
+                            <i class="bi bi-clock-fill me-1"></i>
+                            Partial
+                        </span>
+
+                    @else
+
+                        <span
+                            class="badge bg-danger-subtle text-danger">
+                            <i class="bi bi-exclamation-circle-fill me-1"></i>
+                            Unpaid
+                        </span>
+
+                    @endif
+
+                </div>
+
 
             </div>
 
@@ -532,8 +691,274 @@
 
     </div>
 
+@endforeach
+
+
+            </div>
+
+        @endforeach
+
+
+    {{-- ====================================================== --}}
+    {{-- OLD DEMANDS --}}
+    {{-- ====================================================== --}}
+
+    @elseif($property->oldDemands->isNotEmpty())
+
+
+        @foreach($property->oldDemands as $demand)
+
+            @if($demand->oldDemandSubheads->count() > 0)
+
+                @php
+                    $hasGroundRent = true;
+                @endphp
+
+
+                {{-- Single Demand --}}
+                <div class="border rounded mb-2 overflow-hidden">
+
+
+                    {{-- Demand Header --}}
+                    <div class="bg-light border-bottom px-3 py-2">
+
+                        <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+
+                            <div class="d-flex align-items-center gap-2">
+
+                                <i class="bi bi-receipt text-primary"></i>
+
+                                <small class="text-muted">
+                                    Demand ID:
+                                </small>
+
+                                <span class="fw-bold text-primary">
+
+                                    {{ $demand->demand_id ?? '-' }}
+
+                                </span>
+
+                            </div>
+
+
+                            <small class="text-muted">
+
+                                {{ $demand->oldDemandSubheads->count() }}
+
+                                {{ $demand->oldDemandSubheads->count() == 1
+                                    ? 'Item'
+                                    : 'Items'
+                                }}
+
+                            </small>
+
+                        </div>
+
+                    </div>
+
+
+                    {{-- Demand Subheads --}}
+                    @foreach($demand->oldDemandSubheads as $subhead)
+
+                        @php
+
+                            $paymentStatus = strtoupper(
+                                trim($subhead->PaymentStatus ?? '')
+                            );
+
+                        @endphp
+
+
+                        <div class="px-3 py-2 border-bottom">
+
+                            <div class="row align-items-center g-2">
+
+
+                                {{-- Demand Type --}}
+                                <div class="col-lg-3 col-md-6">
+
+                                    <small
+                                        class="text-muted d-block"
+                                        style="font-size:11px;"
+                                    >
+                                        Demand Type
+                                    </small>
+
+                                    <span class="fw-semibold small">
+
+                                        {{ $subhead->Subhead ?? '-' }}
+
+                                    </span>
+
+                                </div>
+
+
+                                {{-- Period --}}
+                                <div class="col-lg-3 col-md-6">
+
+                                    <small
+                                        class="text-muted d-block"
+                                        style="font-size:11px;"
+                                    >
+                                        Period
+                                    </small>
+
+                                    <span class="small fw-semibold">
+
+                                        {{ $subhead->DateFrom
+                                            ? \Carbon\Carbon::parse(
+                                                $subhead->DateFrom
+                                            )->format('d-m-Y')
+                                            : '-'
+                                        }}
+
+                                        <span class="text-muted mx-1">
+                                            to
+                                        </span>
+
+                                        {{ $subhead->DateTo
+                                            ? \Carbon\Carbon::parse(
+                                                $subhead->DateTo
+                                            )->format('d-m-Y')
+                                            : '-'
+                                        }}
+
+                                    </span>
+
+                                </div>
+
+
+                                {{-- Rate --}}
+                                <div class="col-lg-2 col-md-4">
+
+                                    <small
+                                        class="text-muted d-block"
+                                        style="font-size:11px;"
+                                    >
+                                        Rate
+                                    </small>
+
+                                    <span class="small fw-semibold">
+
+                                        ₹{{ number_format(
+                                            (float) ($subhead->Rate ?? 0),
+                                            2
+                                        ) }}
+
+                                    </span>
+
+                                </div>
+
+
+                                {{-- Amount --}}
+                                <div class="col-lg-2 col-md-4">
+
+                                    <small
+                                        class="text-muted d-block"
+                                        style="font-size:11px;"
+                                    >
+                                        Amount
+                                    </small>
+
+                                    <span class="fw-bold text-primary small">
+
+                                        ₹{{ number_format(
+                                            (float) ($subhead->Amount ?? 0),
+                                            2
+                                        ) }}
+
+                                    </span>
+
+                                </div>
+
+
+                                {{-- Status --}}
+                                <div class="col-lg-2 col-md-4 text-lg-end">
+
+                                    <small
+                                        class="text-muted d-block mb-1"
+                                        style="font-size:11px;"
+                                    >
+                                        Status
+                                    </small>
+
+
+                                    @if($paymentStatus === 'Y')
+
+                                        <span class="badge bg-success-subtle text-success">
+
+                                            <i class="bi bi-check-circle me-1"></i>
+
+                                            Paid
+
+                                        </span>
+
+                                    @else
+
+                                        <span class="badge bg-danger-subtle text-danger">
+
+                                            <i class="bi bi-exclamation-circle me-1"></i>
+
+                                            Unpaid
+
+                                        </span>
+
+                                    @endif
+
+                                </div>
+
+
+                            </div>
+
+                        </div>
+
+                    @endforeach
+
+
+                </div>
+
+            @endif
+
+        @endforeach
+
+    @endif
+
+
+
+    {{-- ====================================================== --}}
+    {{-- NO DEMAND --}}
+    {{-- ====================================================== --}}
+
+    @if(!$hasGroundRent)
+
+        <div class="bg-light rounded p-2 text-center">
+
+            <small class="text-muted">
+
+                <i class="bi bi-info-circle me-1"></i>
+
+                No previous Ground Rent demand details available.
+
+            </small>
+
+        </div>
+
+    @endif
+
+
+</div>
+
+        </div>
+
+    </div>
+
 
 @empty
+
+
+    {{-- ====================================================== --}}
+    {{-- NO PROPERTY FOUND --}}
+    {{-- ====================================================== --}}
 
     <div class="card border-0 shadow-sm">
 
@@ -546,12 +971,15 @@
             </h6>
 
             <p class="text-muted mb-0">
+
                 No property is currently associated with your account.
+
             </p>
 
         </div>
 
     </div>
+
 
 @endforelse
 
