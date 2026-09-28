@@ -2684,12 +2684,23 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
 
                 <div class="d-flex flex-wrap gap-4 small">
 
+
                     <!-- WPL Formula -->
                     <div class="d-flex align-items-center">
 
+                        <span style="
+                            width: 10px;
+                            height: 10px;
+                            background-color: #0d6efd;
+                            border-radius: 50%;
+                            display: inline-block;
+                            margin-right: 7px;
+                            flex-shrink: 0;
+                        "></span>
+
                         <span>
                             <strong>
-                                Within Permissible Limit (WPL):
+                                WPL Charges Per Annum:
                             </strong>
 
                             5% of
@@ -2703,14 +2714,48 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
                     <!-- BPL Formula -->
                     <div class="d-flex align-items-center">
 
+                        <span style="
+                            width: 10px;
+                            height: 10px;
+                            background-color: #dc3545;
+                            border-radius: 50%;
+                            display: inline-block;
+                            margin-right: 7px;
+                            flex-shrink: 0;
+                        "></span>
+
                         <span>
                             <strong>
-                                Beyond Permissible Limit (BPL):
+                                BPL Charges Per Annum:
                             </strong>
 
                             10% of
                             (Area of Unauthorised Construction × Land Rate)
                             ÷ FAR
+                        </span>
+
+                    </div>
+
+
+                    <!-- Final Amount Formula -->
+                    <div class="d-flex align-items-center">
+
+                        <span style="
+                            width: 10px;
+                            height: 10px;
+                            background-color: #fd7e14;
+                            border-radius: 50%;
+                            display: inline-block;
+                            margin-right: 7px;
+                            flex-shrink: 0;
+                        "></span>
+
+                        <span>
+                            <strong>
+                                Amount:
+                            </strong>
+
+                            (Charges Per Annum ÷ 365) × No. of Days
                         </span>
 
                     </div>
@@ -2765,7 +2810,57 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
             </div>
 
 
-            <!-- Area of Unauthorized Construction -->
+            <!-- From Date -->
+            <div class="col-lg-3 col-md-6 mt-2">
+
+                <label class="form-label">
+                    From Date
+                </label>
+
+                <input
+                    class="form-control unauthorized-manual-input"
+                    type="date"
+                    name="unauthorized_from_date[]"
+                >
+
+            </div>
+
+
+            <!-- To Date -->
+            <div class="col-lg-3 col-md-6 mt-2">
+
+                <label class="form-label">
+                    To Date
+                </label>
+
+                <input
+                    class="form-control unauthorized-manual-input"
+                    type="date"
+                    name="unauthorized_to_date[]"
+                >
+
+            </div>
+
+
+            <!-- Number of Days -->
+            <div class="col-lg-3 col-md-6 mt-2">
+
+                <label class="form-label">
+                    No. of Days
+                </label>
+
+                <input
+                    class="form-control bg-light"
+                    type="number"
+                    name="unauthorized_no_of_days[]"
+                    placeholder="Auto calculated"
+                    readonly
+                >
+
+            </div>
+
+
+            <!-- Area -->
             <div class="col-lg-3 col-md-6 mt-2">
 
                 <label class="form-label">
@@ -2822,11 +2917,50 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
             </div>
 
 
-            <!-- Calculated Amount -->
+            <!-- Charges Per Annum -->
             <div class="col-lg-3 col-md-6 mt-2">
 
                 <label class="form-label">
-                    Unauthorized Construction Charges
+
+                    <span style="
+                        width: 9px;
+                        height: 9px;
+                        background-color: #0d6efd;
+                        border-radius: 50%;
+                        display: inline-block;
+                        margin-right: 4px;
+                    "></span>
+
+                    Charges Per Annum
+
+                </label>
+
+                <input
+                    class="form-control bg-light"
+                    type="number"
+                    name="unauthorized_rate_per_annum[]"
+                    placeholder="Auto calculated"
+                    readonly
+                >
+
+            </div>
+
+
+            <!-- Final Amount -->
+            <div class="col-lg-3 col-md-6 mt-2">
+
+                <label class="form-label">
+
+                    <span style="
+                        width: 9px;
+                        height: 9px;
+                        background-color: #fd7e14;
+                        border-radius: 50%;
+                        display: inline-block;
+                        margin-right: 4px;
+                    "></span>
+
+                    Amount
 
                 </label>
 
@@ -2860,7 +2994,6 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
 
             </div>
 
-
         </div>
     `;
 
@@ -2888,7 +3021,9 @@ $(document).on(
         const demandContainer = $(this)
             .closest('.demand-item-container');
 
+
         appendUnauthorizedConstructionInput(container);
+
 
         markAmountNotIncluded(demandContainer);
     }
@@ -2920,11 +3055,7 @@ $(document).on(
             .remove();
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | Add + button to last remaining row
-        |--------------------------------------------------------------------------
-        */
+        // Add + button to last remaining row
 
         let lastRow = container
             .find('.unauthorized-construction-row')
@@ -2965,7 +3096,7 @@ $(document).on(
     '.unauthorized-manual-input',
     function () {
 
-        // Get ONLY the card/row where value changed
+        // Get ONLY the row where value changed
         let row = $(this)
             .closest('.unauthorized-construction-row');
 
@@ -2978,7 +3109,7 @@ $(document).on(
 
 /*
 |--------------------------------------------------------------------------
-| Calculate Unauthorized Construction Charges
+| Calculate Unauthorized Construction
 |--------------------------------------------------------------------------
 */
 
@@ -2986,12 +3117,22 @@ function calculateUnauthorizedConstruction(row) {
 
     /*
     |--------------------------------------------------------------------------
-    | Get values from THIS card only
+    | Get Values From THIS Card Only
     |--------------------------------------------------------------------------
     */
 
     let type = row.find(
         'select[name^="unauthorized_type"]'
+    ).val();
+
+
+    let fromDate = row.find(
+        'input[name^="unauthorized_from_date"]'
+    ).val();
+
+
+    let toDate = row.find(
+        'input[name^="unauthorized_to_date"]'
     ).val();
 
 
@@ -3019,16 +3160,84 @@ function calculateUnauthorizedConstruction(row) {
 
     /*
     |--------------------------------------------------------------------------
-    | Calculate Unauthorized Construction Charges
+    | 1. Calculate Number of Days
+    |--------------------------------------------------------------------------
+    */
+
+    let numberOfDays = 0;
+
+
+    if (fromDate && toDate) {
+
+        let start = new Date(
+            fromDate + 'T00:00:00'
+        );
+
+        let end = new Date(
+            toDate + 'T00:00:00'
+        );
+
+
+        if (end >= start) {
+
+            let difference =
+                end.getTime() - start.getTime();
+
+
+            numberOfDays =
+                Math.floor(
+                    difference /
+                    (1000 * 60 * 60 * 24)
+                ) + 1;
+
+
+            row.find(
+                'input[name^="unauthorized_no_of_days"]'
+            ).val(numberOfDays);
+
+        } else {
+
+            /*
+            |--------------------------------------------------------------------------
+            | Invalid Date Range
+            |--------------------------------------------------------------------------
+            */
+
+            row.find(
+                'input[name^="unauthorized_no_of_days"]'
+            ).val('');
+
+
+            row.find(
+                'input[name^="unauthorized_amount"]'
+            ).val('');
+
+
+            numberOfDays = 0;
+        }
+
+    } else {
+
+        row.find(
+            'input[name^="unauthorized_no_of_days"]'
+        ).val('');
+
+    }
+
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | 2. Calculate Charges Per Annum
     |--------------------------------------------------------------------------
     |
-    | WPL Formula:
+    | WPL:
     |
     | 5% of
     | (Area of Unauthorized Construction × Land Rate) / FAR
     |
     |
-    | BPL Formula:
+    | BPL:
     |
     | 10% of
     | (Area of Unauthorized Construction × Land Rate) / FAR
@@ -3036,15 +3245,8 @@ function calculateUnauthorizedConstruction(row) {
     |--------------------------------------------------------------------------
     */
 
+    let chargesPerAnnum = 0;
 
-    let amount = 0;
-
-
-    /*
-    |--------------------------------------------------------------------------
-    | Validate Required Values
-    |--------------------------------------------------------------------------
-    */
 
     if (
         type &&
@@ -3056,13 +3258,13 @@ function calculateUnauthorizedConstruction(row) {
 
         /*
         |--------------------------------------------------------------------------
-        | Within Permissible Limit (WPL)
+        | WPL
         |--------------------------------------------------------------------------
         */
 
         if (type === 'WPL') {
 
-            amount =
+            chargesPerAnnum =
                 ((area * landRate) / far)
                 * (5 / 100);
 
@@ -3071,24 +3273,59 @@ function calculateUnauthorizedConstruction(row) {
 
         /*
         |--------------------------------------------------------------------------
-        | Beyond Permissible Limit (BPL)
+        | BPL
         |--------------------------------------------------------------------------
         */
 
         else if (type === 'BPL') {
 
-            amount =
+            chargesPerAnnum =
                 ((area * landRate) / far)
                 * (10 / 100);
 
         }
 
 
-        /*
-        |--------------------------------------------------------------------------
-        | Set Calculated Amount
-        |--------------------------------------------------------------------------
-        */
+        row.find(
+            'input[name^="unauthorized_rate_per_annum"]'
+        ).val(
+            chargesPerAnnum.toFixed(2)
+        );
+
+    } else {
+
+        row.find(
+            'input[name^="unauthorized_rate_per_annum"]'
+        ).val('');
+
+    }
+
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | 3. Calculate Final Amount
+    |--------------------------------------------------------------------------
+    |
+    | Formula:
+    |
+    | (Charges Per Annum / 365) × No. of Days
+    |
+    |--------------------------------------------------------------------------
+    */
+
+    let amount = 0;
+
+
+    if (
+        chargesPerAnnum > 0 &&
+        numberOfDays > 0
+    ) {
+
+        amount =
+            (chargesPerAnnum / 365)
+            * numberOfDays;
+
 
         row.find(
             'input[name^="unauthorized_amount"]'
@@ -3097,12 +3334,6 @@ function calculateUnauthorizedConstruction(row) {
         );
 
     } else {
-
-        /*
-        |--------------------------------------------------------------------------
-        | Clear Amount if Required Value Missing
-        |--------------------------------------------------------------------------
-        */
 
         row.find(
             'input[name^="unauthorized_amount"]'
@@ -3122,11 +3353,19 @@ function calculateUnauthorizedConstruction(row) {
 
         type: type,
 
+        fromDate: fromDate,
+
+        toDate: toDate,
+
+        numberOfDays: numberOfDays,
+
         area: area,
 
         landRate: landRate,
 
         far: far,
+
+        chargesPerAnnum: chargesPerAnnum,
 
         amount: amount
 
