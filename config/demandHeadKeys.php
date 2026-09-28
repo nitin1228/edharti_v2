@@ -222,6 +222,62 @@ return [
             'required' => true
         ],
     ],
+    'DEM_UNAUTHCONS_CHG' => [
+        [
+            'key' => 'unauthorized_type',
+            'label' => 'Permissible Limit',
+            'type' => 'select',
+            'required' => true
+        ],
+        [
+            'key' => 'unauthorized_from_date',
+            'label' => 'From Date',
+            'type' => 'date',
+            'required' => true
+        ],
+        [
+            'key' => 'unauthorized_to_date',
+            'label' => 'To Date',
+            'type' => 'date',
+            'required' => true
+        ],
+        [
+            'key' => 'unauthorized_no_of_days',
+            'label' => 'No. of Days',
+            'type' => 'number',
+            'required' => true
+        ],
+        [
+            'key' => 'unauthorized_area',
+            'label' => 'Area of Unauthorized Construction (in Sqm)',
+            'type' => 'number',
+            'required' => true
+        ],
+        [
+            'key' => 'unauthorized_land_rate',
+            'label' => 'Land Rate per Sqm',
+            'type' => 'number',
+            'required' => true
+        ],
+        [
+            'key' => 'unauthorized_far',
+            'label' => 'FAR',
+            'type' => 'number',
+            'required' => true
+        ],
+         [
+            'key' => 'unauthorized_rate_per_annum',
+            'label' => 'Charges Per Annum',
+            'type' => 'number',
+            'required' => true
+        ],
+        [
+            'key' => 'unauthorized_amount',
+            'label' => 'Amount',
+            'type' => 'number',
+            'required' => true
+        ],
+    ],
     'DEM_PENAL_STANDARD' => [
         [
             'key' => 'standard_penalty_land_value',
