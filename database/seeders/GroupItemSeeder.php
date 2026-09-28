@@ -278,8 +278,8 @@ class GroupItemSeeder extends Seeder
             ],
             [
                 'group_id' => 7003,
-                'item_code' => 'DEM_ENCH_CHG',
-                'item_name' => 'Encroachment Charges',
+                'item_code' => 'DEM_UNAUTHCONS_CHG',
+                'item_name' => 'Unauthorized Construction Charges',
                 'item_order' => 1,
             ],
             [
