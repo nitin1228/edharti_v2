@@ -1690,6 +1690,7 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
           type: "get",
           url:responseUrl,
           success: function(response) {
+            
             if (response.status) {
               /** Active application details */
               if (response.data.applicationData && response.data.applicationData.length > 0) {
@@ -1738,8 +1739,8 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
                 }
 
               /** pending demand details */
-              // if (response.data && (response.data.demand || (response.data.dues && response.data.dues > 0))) {
-              if (response.data && (response.data.demand || (response.data.dues != 0))) {
+              if (response.data && (response.data.demand || (response.data.dues && response.data.dues > 0))) {
+              // if (response.data && (response.data.demand || (response.data.dues != 0))) {
                 if (response.data.demand) {
                   var oldDemand = response.data.demand;
                   var confirmationMessage = oldDemand.status_code == 'DEM_DRAFT' ? "There is already an unpaid demand with status DRAFT against the selected property. If you continue then new data will be added to the previously saved demand." : "There is already an unpaid demand against this property. All unpaid subheads will be carried forward to new demand."
@@ -1825,6 +1826,7 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
 
               } else {
                 $("#input-form-container").removeClass("d-none");
+                $('#demandTotalAmount').text('0');
               }
             } else {
               showError(response.details);

@@ -133,7 +133,7 @@ class ApplicationController extends Controller
         return view('admin.applications.my-applicatons', compact('items', 'getStatusId', 'user'));
     }
 
-     public function forwardedApplications(Request $request)
+    public function forwardedApplications(Request $request)
     {
         $getStatusId = '';
         if ($request->query('status')) {
@@ -149,1393 +149,712 @@ class ApplicationController extends Controller
     public function getApplications(Request $request)
     {
         $applicationType = $request->input('applicationType');
-        $itemsIdArr = [];
-        $items = getApplicationStatusList(true, true);
-        if (count($items) > 0) {
-            foreach ($items as $key => $item) {
-                $itemsIdArr[] = $item->id;
-            }
-        }
 
+        /*
+     * Get all application statuses which should be visible.
+     */
+        $items = getApplicationStatusList(true, true);
+        $itemsIdArr = collect($items)->pluck('id')->toArray();
+
+        /*
+     * filterByApplication takes precedence over applicationType.
+     */
         if ($request->filterByApplication) {
             $applicationItemCode = getServiceCodeById($request->filterByApplication);
-            if (!empty($applicationItemCode) && $applicationItemCode == 'SUB_MUT') {
-                $applicationType = 'mutation';
-            } else if (!empty($applicationItemCode) && $applicationItemCode == 'NOC') {
-                $applicationType = 'noc';
-            } else if (!empty($applicationItemCode) && $applicationItemCode == 'LUC') {
-                $applicationType = 'luc';
-            } else if (!empty($applicationItemCode) && $applicationItemCode == 'DOA') {
-                $applicationType = 'doa';
-            } else if (!empty($applicationItemCode) && $applicationItemCode == 'CONVERSION') {
-                $applicationType = 'conversion';
+
+            $applicationTypeMap = [
+                'SUB_MUT'     => 'mutation',
+                'NOC'         => 'noc',
+                'LUC'         => 'luc',
+                'DOA'         => 'doa',
+                'CONVERSION'  => 'conversion',
+            ];
+
+            if (!empty($applicationItemCode) && isset($applicationTypeMap[$applicationItemCode])) {
+                $applicationType = $applicationTypeMap[$applicationItemCode];
             }
         }
 
         $user = Auth::user();
         $sections = $user->sections->pluck('id');
-        // dd($sections);
+
+        /*
+     * DataTables column mapping.
+     */
         $columns = [
-            'id', // index 0
-            'application_no', // index 1
-            'old_property_id', // index 2
-            'new_colony_name', // index 3
-            'block_no', // index 4
-            'plot_or_property_no', // index 5
-            'flat_id', // index 6
-            'presently_known_as', // index 7
-            'section_code', // index 8
-            'model_name', // index 9
-            '', // index 10
-            '', // index 11
-            'created_at', // index 12
-            'latest_moved_at', // index 13
+            'id',                    // index 0
+            'application_no',       // index 1
+            'old_property_id',      // index 2
+            'new_colony_name',      // index 3
+            'block_no',             // index 4
+            'plot_or_property_no',  // index 5
+            'flat_id',              // index 6
+            'presently_known_as',   // index 7
+            'section_code',         // index 8
+            'model_name',           // index 9
+            '',                     // index 10
+            '',                     // index 11
+            'created_at',            // index 12
+            'latest_moved_at',      // index 13
         ];
 
-        switch ($applicationType) {
-            case 'mutation':
-                $serviceType1 = getServiceType('SUB_MUT'); // Ensure this function is defined and works properly.
+        /*
+     * Configuration for each application type.
+     *
+     * The purpose of this array is only to describe the differences
+     * between application tables. The common query construction is
+     * handled below.
+     */
+        $applicationConfigs = [
+            'mutation' => [
+                'table'              => 'mutation_applications',
+                'alias'              => 'ma',
+                'service_type'       => 'SUB_MUT',
+                'model_name'         => 'MutationApplication',
+                'application_no'     => 'ma.application_no',
+                'property_master_id' => 'ma.property_master_id',
+                'split_id'           => 'ma.splitted_id',
+                'section_id'         => 'ma.section_id',
+                'flat_join'          => false,
+                'flat_search'        => false,
+                'coalesce_app_no'    => false,
+            ],
 
-                $query1 = DB::table('mutation_applications as ma')
-                    ->where('ma.status', '<>', getServiceType('APP_WD')) //check added by nitin withdrawn applications should nnot be visibale to officials -- Nitin 21-02-2025
-                    ->leftJoin('property_masters as pm', 'ma.property_master_id', '=', 'pm.id')
-                    ->leftJoin('splited_property_details as spd', 'ma.splitted_id', '=', 'spd.id')
+            'luc' => [
+                'table'              => 'land_use_change_applications',
+                'alias'              => 'lca',
+                'service_type'       => 'LUC',
+                'model_name'         => 'LandUseChangeApplication',
+                'application_no'     => 'lca.application_no',
+                'property_master_id' => 'lca.property_master_id',
+                'split_id'           => 'lca.splited_property_detail_id',
+                'section_id'         => 'lca.section_id',
+                'flat_join'          => false,
+                'flat_search'        => false,
+                'coalesce_app_no'    => true,
+            ],
 
-                    ->join('property_section_mappings as psm', function ($join) {
-                        $join->on('pm.new_colony_name', '=', 'psm.colony_id')
-                            ->whereColumn('pm.property_type', 'psm.property_type')
-                            ->whereColumn('pm.property_sub_type', 'psm.property_subtype');
-                    })
-                    ->join('sections', 'psm.section_id', '=', 'sections.id')
-                    ->leftJoin('old_colonies as oc', 'pm.new_colony_name', '=', 'oc.id')
-                    ->leftJoin('property_lease_details as pld', 'pm.id', '=', 'pld.property_master_id')
-                    ->leftJoin('applications as app', 'ma.application_no', '=', 'app.application_no')
-                    ->leftJoinSub(
-                        DB::table('application_movements')
-                            ->select('application_no', DB::raw('MAX(id) as latest_created_at'))
-                            ->groupBy('application_no'),
-                        'latest_apm',
-                        function ($join) {
-                            $join->on('ma.application_no', '=', 'latest_apm.application_no');
-                        }
-                    )
-                    ->leftJoin('application_movements as apm', function ($join) {
-                        $join->on('ma.application_no', '=', 'apm.application_no')
-                            ->on('apm.id', '=', 'latest_apm.latest_created_at');
-                    })
-                    ->leftJoinSub(
-                        DB::table('application_statuses')
-                            ->select(
-                                'id',
-                                'model_id',
-                                'reg_app_no',
-                                'service_type',
-                                'is_mis_checked',
-                                'is_scan_file_checked',
-                                'is_uploaded_doc_checked',
-                                'mis_checked_by',
-                                'scan_file_checked_by',
-                                'uploaded_doc_checked_by',
-                                'created_at',
-                                DB::raw('ROW_NUMBER() OVER (PARTITION BY model_id ORDER BY created_at DESC) as row_num')
-                            )
-                            ->where('service_type', $serviceType1),
-                        'latest_statuses',
-                        function ($join) {
-                            $join->on('ma.id', '=', 'latest_statuses.model_id')
-                                ->where('latest_statuses.row_num', '=', 1); // Ensures only the latest record
-                        }
-                    )
-                    ->whereIn('ma.section_id', $sections) // Verify $sections is an array
-                    ->select(
-                        'ma.id',
-                        'ma.created_at',
-                        'ma.application_no',
-                        'ma.status',
-                        'sections.section_code',
-                        'latest_statuses.is_mis_checked',
-                        'latest_statuses.is_scan_file_checked',
-                        'latest_statuses.is_uploaded_doc_checked',
-                        'latest_statuses.mis_checked_by',
-                        'latest_statuses.scan_file_checked_by',
-                        'latest_statuses.uploaded_doc_checked_by',
-                        // 'pm.old_propert_id as old_property_id', // Fixed alias
-                        DB::raw('case when pm.is_joint_property = 1 then spd.old_property_id else pm.old_propert_id end as old_property_id'),
+            'doa' => [
+                'table'              => 'deed_of_apartment_applications',
+                'alias'              => 'doa',
+                'service_type'       => 'DOA',
+                'model_name'         => 'DeedOfApartmentApplication',
+                'application_no'     => 'doa.application_no',
+                'property_master_id' => 'doa.property_master_id',
+                'split_id'           => 'doa.splited_property_detail_id',
+                'section_id'         => 'doa.section_id',
+                'flat_join'          => true,
+                'flat_search'        => true,
+                'coalesce_app_no'    => false,
+            ],
+
+            'conversion' => [
+                'table'              => 'conversion_applications',
+                'alias'              => 'ca',
+                'service_type'       => 'CONVERSION',
+                'model_name'         => 'ConversionApplication',
+                'application_no'     => 'ca.application_no',
+                'property_master_id' => 'ca.property_master_id',
+                'split_id'           => 'ca.splited_property_detail_id',
+                'section_id'         => 'ca.section_id',
+                'flat_join'          => false,
+                'flat_search'        => false,
+                'coalesce_app_no'    => false,
+            ],
+
+            'noc' => [
+                'table'              => 'noc_applications',
+                'alias'              => 'noc',
+                'service_type'       => 'NOC',
+                'model_name'         => 'NocApplication',
+                'application_no'     => 'noc.application_no',
+                'property_master_id' => 'noc.property_master_id',
+                'split_id'           => 'noc.splitted_id',
+                'section_id'         => 'noc.section_id',
+                'flat_join'          => true,
+                'flat_search'        => false,
+                'coalesce_app_no'    => false,
+            ],
+        ];
+
+        /*
+     * Common CASE expressions used by every application type.
+     */
+        $oldPropertyExpression = "
+        CASE
+            WHEN pm.is_joint_property = 1
+            THEN spd.old_property_id
+            ELSE pm.old_propert_id
+        END
+    ";
+
+        $plotPropertyExpression = "
+        CASE
+            WHEN pm.is_joint_property = 1
+            THEN spd.plot_flat_no
+            ELSE pm.plot_or_property_no
+        END
+    ";
+
+        $presentlyKnownAsExpression = "
+        CASE
+            WHEN pm.is_joint_property = 1
+            THEN spd.presently_known_as
+            ELSE pld.presently_known_as
+        END
+    ";
+
+        /*
+     * Apply the common DataTables search.
+     *
+     * A couple of differences from the original implementation are
+     * intentionally controlled by the configuration above:
+     *
+     * - DOA searches flat_id and flat_number.
+     * - NOC keeps the original behavior and does not search flats.
+     * - Non-flat application types continue to search NULL for flat_id.
+     */
+        $applySearch = function ($query, array $config) use (
+            $request,
+            $oldPropertyExpression,
+            $plotPropertyExpression,
+            $presentlyKnownAsExpression
+        ) {
+            $searchValue = $request->input('search.value');
+
+            if (!$searchValue) {
+                return $query;
+            }
+
+            $alias = $config['alias'];
+            $modelName = $config['model_name'];
+
+            $query->where(function ($query) use (
+                $alias,
+                $modelName,
+                $searchValue,
+                $config,
+                $oldPropertyExpression,
+                $plotPropertyExpression,
+                $presentlyKnownAsExpression
+            ) {
+                $search = "%{$searchValue}%";
+
+                /*
+             * Application number.
+             */
+                $query->where(
+                    "{$alias}.application_no",
+                    'like',
+                    $search
+                );
+
+                /*
+             * Old property ID.
+             */
+                $query->orWhereRaw(
+                    "{$oldPropertyExpression} LIKE ?",
+                    [$search]
+                );
+
+                /*
+             * Colony.
+             */
+                $query->orWhere(
+                    DB::raw('LOWER(oc.name)'),
+                    'like',
+                    '%' . strtolower($searchValue) . '%'
+                );
+
+                /*
+             * Block.
+             */
+                $query->orWhere(
+                    'pm.block_no',
+                    'like',
+                    $search
+                );
+
+                /*
+             * Plot / property number.
+             */
+                $query->orWhereRaw(
+                    "{$plotPropertyExpression} LIKE ?",
+                    [$search]
+                );
+
+                /*
+             * Section.
+             */
+                $query->orWhere(
+                    'sections.section_code',
+                    'like',
+                    $search
+                );
+
+                /*
+             * Flat.
+             *
+             * DOA has actual flat fields.
+             * The other application types retain the original NULL
+             * search condition.
+             */
+                if ($config['flat_search']) {
+                    $query->orWhere(
+                        'flats.unique_flat_id',
+                        'like',
+                        $search
+                    );
+
+                    $query->orWhere(
+                        'flats.flat_number',
+                        'like',
+                        $search
+                    );
+                } else {
+                    $query->orWhere(
+                        DB::raw('NULL'),
+                        'like',
+                        $search
+                    );
+                }
+
+                /*
+             * Presently known as.
+             */
+                $query->orWhereRaw(
+                    "{$presentlyKnownAsExpression} LIKE ?",
+                    [$search]
+                );
+
+                /*
+             * Model name.
+             */
+                $query->orWhere(
+                    DB::raw("'" . $modelName . "'"),
+                    'like',
+                    $search
+                );
+
+                /*
+             * Created date.
+             */
+                $query->orWhere(
+                    "{$alias}.created_at",
+                    'like',
+                    $search
+                );
+            });
+
+            return $query;
+        };
+
+        /*
+     * Build one application query.
+     *
+     * This replaces the almost identical query blocks which previously
+     * existed for Mutation, LUC, DOA, Conversion and NOC.
+     */
+        $buildApplicationQuery = function (array $config) use (
+            $request,
+            $sections,
+            $itemsIdArr,
+            $oldPropertyExpression,
+            $plotPropertyExpression,
+            $presentlyKnownAsExpression,
+            $applySearch
+        ) {
+            $table = $config['table'];
+            $alias = $config['alias'];
+            $serviceType = getServiceType($config['service_type']);
+            $modelName = $config['model_name'];
+
+            /*
+         * All application tables contain a status.
+         * Withdrawn applications are never displayed.
+         */
+            $query = DB::table("{$table} as {$alias}")
+                ->where(
+                    "{$alias}.status",
+                    '<>',
+                    getServiceType('APP_WD')
+                )
+
+                ->leftJoin(
+                    'property_masters as pm',
+                    $config['property_master_id'],
+                    '=',
+                    'pm.id'
+                )
+
+                ->leftJoin(
+                    'splited_property_details as spd',
+                    $config['split_id'],
+                    '=',
+                    'spd.id'
+                )
+
+                /*
+             * Property -> Section mapping.
+             */
+                ->join('property_section_mappings as psm', function ($join) {
+                    $join->on(
                         'pm.new_colony_name',
-                        'oc.name as colony_name',
-                        'pm.block_no',
-                        // 'pm.plot_or_property_no',
-                        // 'pld.presently_known_as',
-                        DB::raw('case when pm.is_joint_property = 1 then spd.plot_flat_no else pm.plot_or_property_no end as plot_or_property_no'),
-                        DB::raw('case when pm.is_joint_property = 1 then spd.presently_known_as else pld.presently_known_as end as presently_known_as'),
-                        'app.is_objected',
-                        'apm.updated_at as latest_moved_at',
-                        DB::raw('NULL as flat_id'), // Add NULL for flat_id on dated 07/01/25 By Lalit Tiwari
-                        DB::raw('NULL as flat_number'), // Add NULL for flat_number on dated 07/01/25 By Lalit Tiwari
-                        DB::raw("'MutationApplication' as model_name"), // Add model_name for the first query
-                        // DB::raw("$serviceType1 as serviceType") // Added by Nitin 
-                    );
-                if ($request->status) {
-                    $query1 = $query1->where('ma.status', ($request->status));
-                } else {
-                    $query1 = $query1->whereIn('ma.status', ($itemsIdArr));
-                }
-
-                // Add search filter if search.value is present
-                if ($request->input('search.value')) {
-                    $searchValue = $request->input('search.value');
-                    $query1->where(function ($query) use ($searchValue) {
-                        $query->where('ma.application_no', 'like', "%$searchValue%")
-                            // ->orWhere('pm.old_propert_id', 'like', "%$searchValue%")  // Use the correct column alias here
-                            ->orWhereRaw("CASE WHEN pm.is_joint_property = 1 THEN spd.old_property_id ELSE pm.old_propert_id END LIKE ?", ["%$searchValue%"]) 
-                            ->orWhere(DB::raw('LOWER(oc.name)'), 'like', '%' . strtolower($searchValue) . '%')  // Use the correct column alias
-                            ->orWhere('pm.block_no', 'like', "%$searchValue%")  // Correctly reference block
-                            // ->orWhere('pm.plot_or_property_no', 'like', "%$searchValue%")  // Correctly reference plot
-                            ->orWhereRaw("CASE WHEN pm.is_joint_property = 1 THEN spd.plot_flat_no ELSE pm.plot_or_property_no END LIKE ?", ["%$searchValue%"])
-
-                            ->orWhere('sections.section_code', 'like', "%$searchValue%")  // Correctly reference plot
-                            ->orWhere(DB::raw('NULL'), 'like', "%$searchValue%")  // flat_id is NULL in this query
-                            // ->orWhere('pld.presently_known_as', 'like', "%$searchValue%")  // flat_id is NULL in this query
-                            ->orWhereRaw("CASE WHEN pm.is_joint_property = 1 THEN spd.presently_known_as ELSE pld.presently_known_as END LIKE ?", ["%$searchValue%"])
-                            ->orWhere(DB::raw("'MutationApplication'"), 'like', "%$searchValue%") // Search by model_name
-                            ->orWhere('ma.created_at', 'like', "%$searchValue%");
-                    });
-                }
-                $clonedQuery1 = (clone $query1);
-                $combinedQuery = $clonedQuery1;
-                break;
-            case 'luc':
-                // Query for land use changed applications
-                $serviceType2 = getServiceType('LUC');
-                $query2 = DB::table('land_use_change_applications as lca')
-                    ->where('lca.status', '<>', getServiceType('APP_WD')) //check added by nitin withdrawn applications should nnot be visibale to officials -- Nitin 21-02-2025
-                    ->leftJoin('property_masters', 'lca.property_master_id', '=', 'property_masters.id')
-                    ->leftJoin('splited_property_details as spd', 'lca.splited_property_detail_id', '=', 'spd.id')
-
-                    ->join('property_section_mappings as psm', function ($join) {
-                        $join->on('property_masters.new_colony_name', 'psm.colony_id');
-                        $join->whereColumn('property_masters.property_type', 'psm.property_type');
-                        $join->whereColumn('property_masters.property_sub_type', 'psm.property_subtype');
-                    })
-                    ->join('sections', 'psm.section_id', 'sections.id')
-                    ->leftJoin('old_colonies', 'property_masters.new_colony_name', '=', 'old_colonies.id')
-                    ->leftJoin('property_lease_details', 'property_masters.id', '=', 'property_lease_details.property_master_id')
-                    ->leftJoin('applications as app', 'lca.application_no', '=', 'app.application_no')
-                    ->leftJoinSub(
-                        DB::table('application_movements')
-                            ->select('application_no', DB::raw('MAX(id) as latest_created_at'))
-                            ->groupBy('application_no'),
-                        'latest_apm',
-                        function ($join) {
-                            $join->on('lca.application_no', '=', 'latest_apm.application_no');
-                        }
-                    )
-                    ->leftJoin('application_movements as apm', function ($join) {
-                        $join->on('lca.application_no', '=', 'apm.application_no')
-                            ->on('apm.id', '=', 'latest_apm.latest_created_at');
-                    })
-                    ->leftJoinSub(
-                        DB::table('application_statuses')
-                            ->select(
-                                'id',
-                                'model_id',
-                                'reg_app_no',
-                                'service_type',
-                                'is_mis_checked',
-                                'is_scan_file_checked',
-                                'is_uploaded_doc_checked',
-                                'mis_checked_by',
-                                'scan_file_checked_by',
-                                'uploaded_doc_checked_by',
-                                'created_at',
-                                DB::raw('ROW_NUMBER() OVER (PARTITION BY model_id ORDER BY created_at DESC) as row_num')
-                            )
-                            ->where('service_type', $serviceType2),
-                        'latest_statuses',
-                        function ($join) {
-                            $join->on('lca.id', '=', 'latest_statuses.model_id')
-                                ->where('latest_statuses.row_num', '=', 1); // Ensures only the latest record
-                        }
-                    )
-                    ->whereIn('lca.section_id', $sections) //need to add secton id in all queries
-                    ->select(
-                        'lca.id',
-                        'lca.created_at',
-                        DB::raw('coalesce(lca.application_no,"0") as application_no'),
-                        'lca.status',
-                        'sections.section_code',
-                        'latest_statuses.is_mis_checked',
-                        'latest_statuses.is_scan_file_checked',
-                        'latest_statuses.is_uploaded_doc_checked',
-                        'latest_statuses.mis_checked_by',
-                        'latest_statuses.scan_file_checked_by',
-                        'latest_statuses.uploaded_doc_checked_by',
-                        // 'property_masters.old_propert_id as old_property_id',
-                        DB::raw('case when property_masters.is_joint_property = 1 then spd.old_property_id else property_masters.old_propert_id end as old_property_id'),
-
-                        'property_masters.new_colony_name',
-                        'old_colonies.name as colony_name',
-                        'property_masters.block_no',
-                        // 'property_masters.plot_or_property_no',
-                        // 'property_lease_details.presently_known_as',
-                        DB::raw('case when property_masters.is_joint_property = 1 then spd.plot_flat_no else property_masters.plot_or_property_no end as plot_or_property_no'),
-                        DB::raw('case when property_masters.is_joint_property = 1 then spd.presently_known_as else property_lease_details.presently_known_as end as presently_known_as'),
-
-                        'app.is_objected',
-                        'apm.updated_at as latest_moved_at',
-                        DB::raw('NULL as flat_id'), // Add NULL for flat_id on dated 07/01/25 By Lalit Tiwari
-                        DB::raw('NULL as flat_number'), // Add NULL for flat_number on dated 07/01/25 By Lalit Tiwari
-                        DB::raw("'LandUseChangeApplication' as model_name"), // Add model_name for the first query
-                        // DB::raw("$serviceType2 as serviceType") // Added by Nitin 
+                        '=',
+                        'psm.colony_id'
                     );
 
-                if ($request->status) {
-                    $query2 = $query2->where('lca.status', ($request->status));
-                } else {
-                    $query2 = $query2->whereIn('lca.status', ($itemsIdArr));
-                }
-
-                // Add search filter if search.value is present
-                if ($request->input('search.value')) {
-                    $searchValue = $request->input('search.value');
-                    $query2->where(function ($query) use ($searchValue) {
-                        $query->where('lca.application_no', 'like', "%$searchValue%")
-                            // ->orWhere('property_masters.old_propert_id', 'like', "%$searchValue%")  // Use the correct column alias here
-                            ->orWhereRaw("CASE WHEN property_masters.is_joint_property = 1 THEN spd.old_property_id ELSE property_masters.old_propert_id END LIKE ?", ["%$searchValue%"])
-                            ->orWhere(DB::raw('LOWER(old_colonies.name)'), 'like', '%' . strtolower($searchValue) . '%')  // Use the correct column alias
-                            ->orWhere('property_masters.block_no', 'like', "%$searchValue%")  // Correctly reference block
-                            // ->orWhere('property_masters.plot_or_property_no', 'like', "%$searchValue%")  // Correctly reference plot
-                            ->orWhereRaw("CASE WHEN property_masters.is_joint_property = 1 THEN spd.plot_flat_no ELSE property_masters.plot_or_property_no END LIKE ?", ["%$searchValue%"])
-
-                            ->orWhere('sections.section_code', 'like', "%$searchValue%")  // Correctly reference plot
-                            ->orWhere(DB::raw('NULL'), 'like', "%$searchValue%")  // flat_id is NULL in this query
-                            // ->orWhere('property_lease_details.presently_known_as', 'like', "%$searchValue%")  // flat_id is NULL in this query
-                            // ->orWhereRaw("CASE WHEN property_masters.is_joint_property = 1 THEN spd.presently_known_as ELSE pld.presently_known_as END LIKE ?", ["%$searchValue%"])
-                            ->orWhereRaw(
-                            "CASE WHEN property_masters.is_joint_property = 1 THEN spd.presently_known_as ELSE property_lease_details.presently_known_as END LIKE ?",
-                            ["%$searchValue%"]
-                            )
-
-                            ->orWhere(DB::raw("'LandUseChangeApplication'"), 'like', "%$searchValue%") // Search by model_name
-                            ->orWhere('lca.created_at', 'like', "%$searchValue%");
-                    });
-                }
-                $clonedQuery2 = (clone $query2);
-                $combinedQuery = $clonedQuery2;
-                break;
-            case 'doa':
-                //Query for Deed Of Apartment applications
-                $serviceType3 = getServiceType('DOA');
-                $query3 = DB::table('deed_of_apartment_applications as doa')
-                    ->where('doa.status', '<>', getServiceType('APP_WD')) //check added by nitin withdrawn applications should nnot be visibale to officials -- Nitin 21-02-2025
-                    ->leftJoin('property_masters', 'doa.property_master_id', '=', 'property_masters.id')
-                    ->leftJoin('splited_property_details as spd', 'doa.splited_property_detail_id', '=', 'spd.id')
-                    ->join('property_section_mappings as psm', function ($join) {
-                        $join->on('property_masters.new_colony_name', 'psm.colony_id');
-                        $join->whereColumn('property_masters.property_type', 'psm.property_type');
-                        $join->whereColumn('property_masters.property_sub_type', 'psm.property_subtype');
-                    })
-                    ->join('sections', 'psm.section_id', 'sections.id')
-                    ->leftJoin('old_colonies', 'property_masters.new_colony_name', '=', 'old_colonies.id')
-                    ->leftJoin('property_lease_details', 'property_masters.id', '=', 'property_lease_details.property_master_id')
-                    ->leftJoin('flats', 'doa.flat_id', '=', 'flats.id')
-                    ->leftJoin('applications as app', 'doa.application_no', '=', 'app.application_no')
-                    ->leftJoinSub(
-                        DB::table('application_movements')
-                            ->select('application_no', DB::raw('MAX(id) as latest_created_at'))
-                            ->groupBy('application_no'),
-                        'latest_apm',
-                        function ($join) {
-                            $join->on('doa.application_no', '=', 'latest_apm.application_no');
-                        }
-                    )
-                    ->leftJoin('application_movements as apm', function ($join) {
-                        $join->on('doa.application_no', '=', 'apm.application_no')
-                            ->on('apm.id', '=', 'latest_apm.latest_created_at');
-                    })
-                    ->leftJoinSub(
-                        DB::table('application_statuses')
-                            ->select(
-                                'id',
-                                'model_id',
-                                'reg_app_no',
-                                'service_type',
-                                'is_mis_checked',
-                                'is_scan_file_checked',
-                                'is_uploaded_doc_checked',
-                                'mis_checked_by',
-                                'scan_file_checked_by',
-                                'uploaded_doc_checked_by',
-                                'created_at',
-                                DB::raw('ROW_NUMBER() OVER (PARTITION BY model_id ORDER BY created_at DESC) as row_num')
-                            )
-                            ->where('service_type', $serviceType3),
-                        'latest_statuses',
-                        function ($join) {
-                            $join->on('doa.id', '=', 'latest_statuses.model_id')
-                                ->where('latest_statuses.row_num', '=', 1); // Ensures only the latest record
-                        }
-                    )
-                    ->whereIn('doa.section_id', $sections) //need to add secton id in all queries
-                    ->select(
-                        'doa.id',
-                        'doa.created_at',
-                        'doa.application_no',
-                        'doa.status',
-                        'sections.section_code',
-                        'latest_statuses.is_mis_checked',
-                        'latest_statuses.is_scan_file_checked',
-                        'latest_statuses.is_uploaded_doc_checked',
-                        'latest_statuses.mis_checked_by',
-                        'latest_statuses.scan_file_checked_by',
-                        'latest_statuses.uploaded_doc_checked_by',
-                        // 'property_masters.old_propert_id as old_property_id',
-                        DB::raw('case when property_masters.is_joint_property = 1 then spd.old_property_id else property_masters.old_propert_id end as old_property_id'),
-
-                        'property_masters.new_colony_name',
-                        'old_colonies.name as colony_name',
-                        'property_masters.block_no',
-                        // 'property_masters.plot_or_property_no',
-                        // 'property_lease_details.presently_known_as',
-                        DB::raw('case when property_masters.is_joint_property = 1 then spd.plot_flat_no else property_masters.plot_or_property_no end as plot_or_property_no'),
-                        DB::raw('case when property_masters.is_joint_property = 1 then spd.presently_known_as else property_lease_details.presently_known_as end as presently_known_as'),
-
-                        'app.is_objected',
-                        'apm.updated_at as latest_moved_at',
-                        'flats.unique_flat_id as flat_id', // Add NULL for flat_id on dated 07/01/25 By Lalit Tiwari
-                        'flats.flat_number as flat_number', // Add NULL for flat_id on dated 07/01/25 By Lalit Tiwari
-                        DB::raw("'DeedOfApartmentApplication' as model_name"), // Add model_name for the first query
-                        // DB::raw("$serviceType3 as serviceType") // Added by Nitin 
-                    );
-                if ($request->status) {
-                    $query3 = $query3->where('doa.status', ($request->status));
-                } else {
-                    $query3 = $query3->whereIn('doa.status', ($itemsIdArr));
-                }
-
-                // Add search filter if search.value is present
-                if ($request->input('search.value')) {
-                    $searchValue = $request->input('search.value');
-                    $query3->where(function ($query) use ($searchValue) {
-                        $query->where('doa.application_no', 'like', "%$searchValue%")
-                            // ->orWhere('property_masters.old_propert_id', 'like', "%$searchValue%")  // Use the correct column alias here
-                            ->orWhereRaw("
-                            CASE 
-                                WHEN property_masters.is_joint_property = 1 
-                                THEN spd.old_property_id 
-                                ELSE property_masters.old_propert_id 
-                            END LIKE ?
-                        ", ["%$searchValue%"])  // Use the correct column alias here
-
-                            ->orWhere(DB::raw('LOWER(old_colonies.name)'), 'like', '%' . strtolower($searchValue) . '%')  // Use the correct column alias
-                            ->orWhere('property_masters.block_no', 'like', "%$searchValue%")  // Correctly reference block
-                            // ->orWhere('property_masters.plot_or_property_no', 'like', "%$searchValue%")  // Correctly reference plot
-                            ->orWhereRaw("
-                            CASE 
-                                WHEN property_masters.is_joint_property = 1 
-                                THEN spd.plot_flat_no 
-                                ELSE property_masters.plot_or_property_no 
-                            END LIKE ?
-                        ", ["%$searchValue%"])  // Correctly reference plot
-                            ->orWhere('sections.section_code', 'like', "%$searchValue%")  // Correctly reference plot
-                            ->orWhere('flats.unique_flat_id', 'like', "%$searchValue%")  // Search by flat_id
-                            ->orWhere('flats.flat_number', 'like', "%$searchValue%")    // Search by flat_number
-                            // ->orWhere('property_lease_details.presently_known_as', 'like', "%$searchValue%")  // flat_id is NULL in this query
-                            ->orWhereRaw("
-                            CASE 
-                                WHEN property_masters.is_joint_property = 1 
-                                THEN spd.presently_known_as 
-                                ELSE property_lease_details.presently_known_as 
-                            END LIKE ?
-                        ", ["%$searchValue%"])
-                            ->orWhere(DB::raw("'DeedOfApartmentApplication'"), 'like', "%$searchValue%") // Search by model_name
-                            ->orWhere('doa.created_at', 'like', "%$searchValue%");
-                    });
-                }
-                $clonedQuery3 = (clone $query3);
-                $combinedQuery = $clonedQuery3;
-                break;
-            case 'conversion':
-                //Query for Conversion applications added by Nitin
-                $serviceType4 = getServiceType('CONVERSION');
-                $query4 = DB::table('conversion_applications as ca')
-                    ->where('ca.status', '<>', getServiceType('APP_WD')) //check added by nitin withdrawn applications should nnot be visibale to officials -- Nitin 21-02-2025
-                    ->leftJoin('property_masters', 'ca.property_master_id', '=', 'property_masters.id')
-                    ->leftJoin('splited_property_details as spd', 'ca.splited_property_detail_id', '=', 'spd.id')
-                    ->join('property_section_mappings as psm', function ($join) {
-                        $join->on('property_masters.new_colony_name', 'psm.colony_id');
-                        $join->whereColumn('property_masters.property_type', 'psm.property_type');
-                        $join->whereColumn('property_masters.property_sub_type', 'psm.property_subtype');
-                    })
-                    ->join('sections', 'psm.section_id', 'sections.id')
-                    ->leftJoin('old_colonies', 'property_masters.new_colony_name', '=', 'old_colonies.id')
-                    ->leftJoin('property_lease_details', 'property_masters.id', '=', 'property_lease_details.property_master_id')
-                    ->leftJoin('applications as app', 'ca.application_no', '=', 'app.application_no')
-                    ->leftJoinSub(
-                        DB::table('application_movements')
-                            ->select('application_no', DB::raw('MAX(id) as latest_created_at'))
-                            ->groupBy('application_no'),
-                        'latest_apm',
-                        function ($join) {
-                            $join->on('ca.application_no', '=', 'latest_apm.application_no');
-                        }
-                    )
-                    ->leftJoin('application_movements as apm', function ($join) {
-                        $join->on('ca.application_no', '=', 'apm.application_no')
-                            ->on('apm.id', '=', 'latest_apm.latest_created_at');
-                    })
-                    ->leftJoinSub(
-                        DB::table('application_statuses')
-                            ->select(
-                                'id',
-                                'model_id',
-                                'reg_app_no',
-                                'service_type',
-                                'is_mis_checked',
-                                'is_scan_file_checked',
-                                'is_uploaded_doc_checked',
-                                'mis_checked_by',
-                                'scan_file_checked_by',
-                                'uploaded_doc_checked_by',
-                                'created_at',
-                                DB::raw('ROW_NUMBER() OVER (PARTITION BY model_id ORDER BY created_at DESC) as row_num')
-                            )
-                            ->where('service_type', $serviceType4),
-                        'latest_statuses',
-                        function ($join) {
-                            $join->on('ca.id', '=', 'latest_statuses.model_id')
-                                ->where('latest_statuses.row_num', '=', 1); // Ensures only the latest record
-                        }
-                    )
-                    ->whereIn('ca.section_id', $sections) //need to add secton id in all queries
-                    ->select(
-                        'ca.id',
-                        'ca.created_at',
-                        'ca.application_no',
-                        'ca.status',
-                        'sections.section_code',
-                        'latest_statuses.is_mis_checked',
-                        'latest_statuses.is_scan_file_checked',
-                        'latest_statuses.is_uploaded_doc_checked',
-                        'latest_statuses.mis_checked_by',
-                        'latest_statuses.scan_file_checked_by',
-                        'latest_statuses.uploaded_doc_checked_by',
-                        // 'property_masters.old_propert_id as old_property_id',
-                        DB::raw('case when property_masters.is_joint_property = 1 then spd.old_property_id else property_masters.old_propert_id end as old_property_id'),
-
-                        'property_masters.new_colony_name',
-                        'old_colonies.name as colony_name',
-                        'property_masters.block_no',
-                        // 'property_masters.plot_or_property_no',
-                        // 'property_lease_details.presently_known_as',
-                        DB::raw('case when property_masters.is_joint_property = 1 then spd.plot_flat_no else property_masters.plot_or_property_no end as plot_or_property_no'),
-                        DB::raw('case when property_masters.is_joint_property = 1 then spd.presently_known_as else property_lease_details.presently_known_as end as presently_known_as'),
-
-                        'app.is_objected',
-                        'apm.updated_at as latest_moved_at',
-                        DB::raw('NULL as flat_id'), // Add NULL for flat_id
-                        DB::raw('NULL as flat_number'), // Add NULL for flat_number on dated 07/01/25 By Lalit Tiwari
-                        DB::raw("'ConversionApplication' as model_name"), // Add model_name for the first query
-                        // DB::raw("$serviceType4 as serviceType") // Added by Nitin 
+                    $join->whereColumn(
+                        'pm.property_type',
+                        'psm.property_type'
                     );
 
-                if ($request->status) {
-                    $query4 = $query4->where('ca.status', ($request->status));
-                } else {
-                    $query4 = $query4->whereIn('ca.status', ($itemsIdArr));
-                }
-
-                // Add search filter if search.value is present
-                if ($request->input('search.value')) {
-                    $searchValue = $request->input('search.value');
-                    $query4->where(function ($query) use ($searchValue) {
-                        $query->where('ca.application_no', 'like', "%$searchValue%")
-                            // ->orWhere('property_masters.old_propert_id', 'like', "%$searchValue%")  // Use the correct column alias here
-                            ->orWhereRaw("
-                            CASE 
-                                WHEN property_masters.is_joint_property = 1 
-                                THEN spd.old_property_id 
-                                ELSE property_masters.old_propert_id 
-                            END LIKE ?
-                            ", ["%$searchValue%"])  // Use the correct column alias here
-
-                            ->orWhere(DB::raw('LOWER(old_colonies.name)'), 'like', '%' . strtolower($searchValue) . '%')  // Use the correct column alias
-                            ->orWhere('property_masters.block_no', 'like', "%$searchValue%")  // Correctly reference block
-                            // ->orWhere('property_masters.plot_or_property_no', 'like', "%$searchValue%")  // Correctly reference plot
-                            ->orWhereRaw("
-                            CASE 
-                                WHEN property_masters.is_joint_property = 1 
-                                THEN spd.plot_flat_no 
-                                ELSE property_masters.plot_or_property_no 
-                            END LIKE ?
-                            ", ["%$searchValue%"])  // Correctly reference plot
-
-                            ->orWhere('sections.section_code', 'like', "%$searchValue%")  // Correctly reference plot
-                            ->orWhere(DB::raw('NULL'), 'like', "%$searchValue%")  // flat_id is NULL in this query
-                            // ->orWhere('property_lease_details.presently_known_as', 'like', "%$searchValue%")  // flat_id is NULL in this query
-                            ->orWhereRaw("
-                            CASE 
-                                WHEN property_masters.is_joint_property = 1 
-                                THEN spd.presently_known_as 
-                                ELSE property_lease_details.presently_known_as 
-                            END LIKE ?
-                        ", ["%$searchValue%"])
-                            ->orWhere(DB::raw("'ConversionApplication'"), 'like', "%$searchValue%") // Search by model_name
-                            ->orWhere('ca.created_at', 'like', "%$searchValue%");
-                    });
-                }
-                $clonedQuery4 = (clone $query4);
-                $combinedQuery = $clonedQuery4;
-                break;
-            case 'noc':
-                // Query added for NOC application - Lalit Tiwari (20/March/2025)
-                $serviceType5 = getServiceType('NOC');
-                $query5 = DB::table('noc_applications as noc')
-                    ->where('noc.status', '<>', getServiceType('APP_WD')) //check added by nitin withdrawn applications should nnot be visibale to officials -- Nitin 21-02-2025
-                    ->leftJoin('property_masters as pm', 'noc.property_master_id', '=', 'pm.id')
-                    ->leftJoin('splited_property_details as spd', 'noc.splitted_id', '=', 'spd.id')
-                    ->leftJoin('flats', 'noc.flat_id', '=', 'flats.id')
-                    ->join('property_section_mappings as psm', function ($join) {
-                        $join->on('pm.new_colony_name', '=', 'psm.colony_id')
-                            ->whereColumn('pm.property_type', 'psm.property_type')
-                            ->whereColumn('pm.property_sub_type', 'psm.property_subtype');
-                    })
-                    ->join('sections', 'psm.section_id', '=', 'sections.id')
-                    ->leftJoin('old_colonies as oc', 'pm.new_colony_name', '=', 'oc.id')
-                    ->leftJoin('property_lease_details as pld', 'pm.id', '=', 'pld.property_master_id')
-                    ->leftJoin('applications as app', 'noc.application_no', '=', 'app.application_no')
-                    ->leftJoinSub(
-                        DB::table('application_movements')
-                            ->select('application_no', DB::raw('MAX(id) as latest_created_at'))
-                            ->groupBy('application_no'),
-                        'latest_apm',
-                        function ($join) {
-                            $join->on('noc.application_no', '=', 'latest_apm.application_no');
-                        }
-                    )
-                    ->leftJoin('application_movements as apm', function ($join) {
-                        $join->on('noc.application_no', '=', 'apm.application_no')
-                            ->on('apm.id', '=', 'latest_apm.latest_created_at');
-                    })
-                    ->leftJoinSub(
-                        DB::table('application_statuses')
-                            ->select(
-                                'id',
-                                'model_id',
-                                'reg_app_no',
-                                'service_type',
-                                'is_mis_checked',
-                                'is_scan_file_checked',
-                                'is_uploaded_doc_checked',
-                                'mis_checked_by',
-                                'scan_file_checked_by',
-                                'uploaded_doc_checked_by',
-                                'created_at',
-                                DB::raw('ROW_NUMBER() OVER (PARTITION BY model_id ORDER BY created_at DESC) as row_num')
-                            )
-                            ->where('service_type', $serviceType5),
-                        'latest_statuses',
-                        function ($join) {
-                            $join->on('noc.id', '=', 'latest_statuses.model_id')
-                                ->where('latest_statuses.row_num', '=', 1); // Ensures only the latest record
-                        }
-                    )
-                    ->whereIn('noc.section_id', $sections) // Verify $sections is an array
-                    ->select(
-                        'noc.id',
-                        'noc.created_at',
-                        'noc.application_no',
-                        'noc.status',
-                        'sections.section_code',
-                        'latest_statuses.is_mis_checked',
-                        'latest_statuses.is_scan_file_checked',
-                        'latest_statuses.is_uploaded_doc_checked',
-                        'latest_statuses.mis_checked_by',
-                        'latest_statuses.scan_file_checked_by',
-                        'latest_statuses.uploaded_doc_checked_by',
-                        // 'pm.old_propert_id as old_property_id', // Fixed alias
-                        DB::raw('case when pm.is_joint_property = 1 then spd.old_property_id else pm.old_propert_id end as old_property_id'),
-
-                        'pm.new_colony_name',
-                        'oc.name as colony_name',
-                        'pm.block_no',
-                        // 'pm.plot_or_property_no',
-                        // 'pld.presently_known_as',
-                        DB::raw('case when pm.is_joint_property = 1 then spd.plot_flat_no else pm.plot_or_property_no end as plot_or_property_no'),
-                        DB::raw('case when pm.is_joint_property = 1 then spd.presently_known_as else pld.presently_known_as end as presently_known_as'),
-
-                        'app.is_objected',
-                        'apm.updated_at as latest_moved_at',
-                        'flats.unique_flat_id as flat_id', // Add NULL for flat_id on dated 07/01/25 By Lalit Tiwari
-                        'flats.flat_number as flat_number', // Add NULL for flat_id on dated 07/01/25 By Lalit Tiwari
-                        DB::raw("'NocApplication' as model_name"), // Add model_name for the first query
-                        // DB::raw("$serviceType5 as serviceType") // Added by Nitin 
+                    $join->whereColumn(
+                        'pm.property_sub_type',
+                        'psm.property_subtype'
                     );
-                    $dateStart = '2006-02-14';  
-           		$dateEnd = '2017-05-01';
-					/* $query5->leftJoin(DB::raw("
-				    (
-				        SELECT ptld1.*
-				        FROM property_transferred_lessee_details ptld1
-				        INNER JOIN (
-				            SELECT MAX(id) as max_id
-				            FROM property_transferred_lessee_details
-				            WHERE process_of_transfer = 'Conversion'
-				            AND transferDate BETWEEN '$dateStart' AND '$dateEnd'
-				            GROUP BY property_master_id
-				        ) ptld2 ON ptld1.id = ptld2.max_id
-				    ) as pld3
-				"), 'pm.id', '=', 'pld3.property_master_id'); */
-                // $query5->leftJoin(DB::raw("(
-                //     SELECT ptld1.*
-                //     FROM property_transferred_lessee_details ptld1
-                //     INNER JOIN (
-                //         SELECT property_master_id, MAX(id) as max_id
-                //         FROM property_transferred_lessee_details
-                //         WHERE process_of_transfer = 'Conversion'
-                //         AND transferDate BETWEEN '$dateStart' AND '$dateEnd'
-                //         AND deleted_at IS NULL  -- Only non-deleted records
-                //         GROUP BY property_master_id
-                //     ) ptld2 ON ptld1.id = ptld2.max_id
-                //     WHERE ptld1.deleted_at IS NULL  -- Additional safety filter
-                // ) as pld3"), 'pm.id', '=', 'pld3.property_master_id');
-                $query5->leftJoin(DB::raw("
-								    (
-								        SELECT ptld1.*
-								        FROM property_transferred_lessee_details ptld1
-								        INNER JOIN (
-								            SELECT MAX(id) as max_id
-								            FROM property_transferred_lessee_details
-								            WHERE process_of_transfer = 'Conversion'
-								            AND transferDate BETWEEN '$dateStart' AND '$dateEnd'
-                                             AND deleted_at IS NULL  -- Only non-deleted records
-								            GROUP BY property_master_id, splited_property_detail_id
-								        ) ptld2 ON ptld1.id = ptld2.max_id
-								    ) as pld3
-								"), function ($join) {
-								    $join->on(function ($query) {
-								        $query->on('pm.id', '=', 'pld3.property_master_id')
-								              ->whereNull('noc.splitted_id');
-								    })
-								    ->orOn(function ($query) {
-								        $query->on('spd.id', '=', 'pld3.splited_property_detail_id')
-								              ->whereNotNull('noc.splitted_id');
-								    });
-								});
+                })
 
-                if ($request->status) {
-                    $query5 = $query5->where('noc.status', ($request->status));
-                } else {
-                    $query5 = $query5->whereIn('noc.status', ($itemsIdArr));
-                }
-                if ($request->demandType) {
+                ->join(
+                    'sections',
+                    'psm.section_id',
+                    '=',
+                    'sections.id'
+                )
 
-				    $query5->where(function ($query) use ($request) {
+                ->leftJoin(
+                    'old_colonies as oc',
+                    'pm.new_colony_name',
+                    '=',
+                    'oc.id'
+                )
 
-				        if ($request->demandType == 'with_demand') {
-				            $query->whereNotNull('pld3.id');
-				        }
+                ->leftJoin(
+                    'property_lease_details as pld',
+                    'pm.id',
+                    '=',
+                    'pld.property_master_id'
+                )
 
-				        if ($request->demandType == 'without_demand') {
-				            $query->whereNull('pld3.id');
-				        }
+                ->leftJoin(
+                    'applications as app',
+                    $config['application_no'],
+                    '=',
+                    'app.application_no'
+                )
 
-				    });
-				}
+                /*
+             * Latest application movement.
+             */
+                ->leftJoinSub(
+                    DB::table('application_movements')
+                        ->select(
+                            'application_no',
+                            DB::raw('MAX(id) as latest_created_at')
+                        )
+                        ->groupBy('application_no'),
+                    'latest_apm',
+                    function ($join) use ($config) {
+                        $join->on(
+                            $config['application_no'],
+                            '=',
+                            'latest_apm.application_no'
+                        );
+                    }
+                )
 
-            //     if ($request->status) {
-            //         $query5 = $query5->where('noc.status', ($request->status));
-            //     } else {
-            //         $query5 = $query5->whereIn('noc.status', ($itemsIdArr));
-            //     }
-            //    if ($request->demandType) {
-            //         $dateStart = '2006-02-14';
-            //         $dateEnd   = '2017-05-01';
+                ->leftJoin(
+                    'application_movements as apm',
+                    function ($join) use ($config) {
+                        $join->on(
+                            $config['application_no'],
+                            '=',
+                            'apm.application_no'
+                        );
 
-            //         $query5->where(function ($query) use ($request, $dateStart, $dateEnd) {
-            //             if ($request->demandType == 'with_demand') {
-            //                 $query->whereBetween('pld.doe', [$dateStart, $dateEnd])
-            //                     ->orWhereNull('pld.doe');
-            //             }
+                        $join->on(
+                            'apm.id',
+                            '=',
+                            'latest_apm.latest_created_at'
+                        );
+                    }
+                )
 
-            //             if ($request->demandType == 'without_demand') {
-            //                 $query->whereNotBetween('pld.doe', [$dateStart, $dateEnd])
-            //                     ->whereNotNull('pld.doe');
-            //             }
-            //         });
-            //     } 
-                // Add search filter if search.value is present
-                if ($request->input('search.value')) {
-                    $searchValue = $request->input('search.value');
-                    $query5->where(function ($query) use ($searchValue) {
-                        $query->where('noc.application_no', 'like', "%$searchValue%")
-                                                        // ->orWhere('pm.old_propert_id', 'like', "%$searchValue%")  // Use the correct column alias here
-                            ->orWhereRaw("
-                            CASE 
-                                WHEN pm.is_joint_property = 1 
-                                THEN spd.old_property_id 
-                                ELSE pm.old_propert_id 
-                            END LIKE ?
-                        ", ["%$searchValue%"])  // Use the correct column alias here
-
-                            ->orWhere(DB::raw('LOWER(oc.name)'), 'like', '%' . strtolower($searchValue) . '%')  // Use the correct column alias
-                            ->orWhere('pm.block_no', 'like', "%$searchValue%")  // Correctly reference block
-                                                        // ->orWhere('pm.plot_or_property_no', 'like', "%$searchValue%")  // Correctly reference plot
-                            ->orWhereRaw("
-                            CASE 
-                                WHEN pm.is_joint_property = 1 
-                                THEN spd.plot_flat_no 
-                                ELSE pm.plot_or_property_no 
-                            END LIKE ?
-                        ", ["%$searchValue%"])  // Correctly reference plot
-
-                            ->orWhere('sections.section_code', 'like', "%$searchValue%")  // Correctly reference plot
-                            ->orWhere(DB::raw('NULL'), 'like', "%$searchValue%")  // flat_id is NULL in this query
-                                                        // ->orWhere('pld.presently_known_as', 'like', "%$searchValue%")  // flat_id is NULL in this query
-                            ->orWhereRaw("
-                            CASE 
-                                WHEN pm.is_joint_property = 1 
-                                THEN spd.presently_known_as 
-                                ELSE pld.presently_known_as 
-                            END LIKE ?
-                        ", ["%$searchValue%"])
-
-                            ->orWhere(DB::raw("'NocApplication'"), 'like', "%$searchValue%") // Search by model_name
-                            ->orWhere('noc.created_at', 'like', "%$searchValue%");
-                    });
-                }
-                $clonedQuery5 = (clone $query5);
-                $combinedQuery = $clonedQuery5;
-                break;
-            default:
-                $serviceType1 = getServiceType('SUB_MUT'); // Ensure this function is defined and works properly.
-
-                $query1 = DB::table('mutation_applications as ma')
-                    ->where('ma.status', '<>', getServiceType('APP_WD')) //check added by nitin withdrawn applications should nnot be visibale to officials -- Nitin 21-02-2025
-                    ->leftJoin('property_masters as pm', 'ma.property_master_id', '=', 'pm.id')
-                    ->leftJoin('splited_property_details as spd', 'ma.splitted_id', '=', 'spd.id')
-
-                    ->join('property_section_mappings as psm', function ($join) {
-                        $join->on('pm.new_colony_name', '=', 'psm.colony_id')
-                            ->whereColumn('pm.property_type', 'psm.property_type')
-                            ->whereColumn('pm.property_sub_type', 'psm.property_subtype');
-                    })
-                    ->join('sections', 'psm.section_id', '=', 'sections.id')
-                    ->leftJoin('old_colonies as oc', 'pm.new_colony_name', '=', 'oc.id')
-                    ->leftJoin('property_lease_details as pld', 'pm.id', '=', 'pld.property_master_id')
-                    ->leftJoin('applications as app', 'ma.application_no', '=', 'app.application_no')
-                    ->leftJoinSub(
-                        DB::table('application_movements')
-                            ->select('application_no', DB::raw('MAX(id) as latest_created_at'))
-                            ->groupBy('application_no'),
-                        'latest_apm',
-                        function ($join) {
-                            $join->on('ma.application_no', '=', 'latest_apm.application_no');
-                        }
-                    )
-                    ->leftJoin('application_movements as apm', function ($join) {
-                        $join->on('ma.application_no', '=', 'apm.application_no')
-                            ->on('apm.id', '=', 'latest_apm.latest_created_at');
-                    })
-                    ->leftJoinSub(
-                        DB::table('application_statuses')
-                            ->select(
-                                'id',
-                                'model_id',
-                                'reg_app_no',
-                                'service_type',
-                                'is_mis_checked',
-                                'is_scan_file_checked',
-                                'is_uploaded_doc_checked',
-                                'mis_checked_by',
-                                'scan_file_checked_by',
-                                'uploaded_doc_checked_by',
-                                'created_at',
-                                DB::raw('ROW_NUMBER() OVER (PARTITION BY model_id ORDER BY created_at DESC) as row_num')
+                /*
+             * Latest application status/check information.
+             */
+                ->leftJoinSub(
+                    DB::table('application_statuses')
+                        ->select(
+                            'id',
+                            'model_id',
+                            'reg_app_no',
+                            'service_type',
+                            'is_mis_checked',
+                            'is_scan_file_checked',
+                            'is_uploaded_doc_checked',
+                            'mis_checked_by',
+                            'scan_file_checked_by',
+                            'uploaded_doc_checked_by',
+                            'created_at',
+                            DB::raw(
+                                'ROW_NUMBER() OVER (
+                                PARTITION BY model_id
+                                ORDER BY created_at DESC
+                            ) as row_num'
                             )
-                            ->where('service_type', $serviceType1),
-                        'latest_statuses',
-                        function ($join) {
-                            $join->on('ma.id', '=', 'latest_statuses.model_id')
-                                ->where('latest_statuses.row_num', '=', 1); // Ensures only the latest record
-                        }
-                    )
-                    ->whereIn('ma.section_id', $sections) // Verify $sections is an array
-                    ->select(
-                        'ma.id',
-                        'ma.created_at',
-                        'ma.application_no',
-                        'ma.status',
-                        'sections.section_code',
-                        'latest_statuses.is_mis_checked',
-                        'latest_statuses.is_scan_file_checked',
-                        'latest_statuses.is_uploaded_doc_checked',
-                        'latest_statuses.mis_checked_by',
-                        'latest_statuses.scan_file_checked_by',
-                        'latest_statuses.uploaded_doc_checked_by',
-                        // 'pm.old_propert_id as old_property_id', // Fixed alias
-                        DB::raw('case when pm.is_joint_property = 1 then spd.old_property_id else pm.old_propert_id end as old_property_id'),
+                        )
+                        ->where(
+                            'service_type',
+                            $serviceType
+                        ),
+                    'latest_statuses',
+                    function ($join) use ($config) {
+                        $join->on(
+                            "{$config['alias']}.id",
+                            '=',
+                            'latest_statuses.model_id'
+                        );
 
-                        'pm.new_colony_name',
-                        'oc.name as colony_name',
-                        'pm.block_no',
-                        // 'pm.plot_or_property_no',
-                        // 'pld.presently_known_as',
-                        DB::raw('case when pm.is_joint_property = 1 then spd.plot_flat_no else pm.plot_or_property_no end as plot_or_property_no'),
-                        DB::raw('case when pm.is_joint_property = 1 then spd.presently_known_as else pld.presently_known_as end as presently_known_as'),
+                        $join->where(
+                            'latest_statuses.row_num',
+                            '=',
+                            1
+                        );
+                    }
+                );
 
-                        'app.is_objected',
-                        'apm.updated_at as latest_moved_at',
-                        DB::raw('NULL as flat_id'), // Add NULL for flat_id on dated 07/01/25 By Lalit Tiwari
-                        DB::raw('NULL as flat_number'), // Add NULL for flat_number on dated 07/01/25 By Lalit Tiwari
-                        DB::raw("'MutationApplication' as model_name"), // Add model_name for the first query
-                        // DB::raw("$serviceType1 as serviceType") // Added by Nitin 
-                    );
-                if ($request->status) {
-                    $query1 = $query1->where('ma.status', ($request->status));
-                } else {
-                    $query1 = $query1->whereIn('ma.status', ($itemsIdArr));
-                }
+            /*
+         * DOA and NOC have a flat relationship.
+         */
+            if ($config['flat_join']) {
+                $flatForeignKey = $alias === 'doa'
+                    ? 'doa.flat_id'
+                    : 'noc.flat_id';
 
-                // Add search filter if search.value is present
-                if ($request->input('search.value')) {
-                    $searchValue = $request->input('search.value');
-                    $query1->where(function ($query) use ($searchValue) {
-                        $query->where('ma.application_no', 'like', "%$searchValue%")
-                            // ->orWhere('pm.old_propert_id', 'like', "%$searchValue%")  // Use the correct column alias here
-                            ->orWhereRaw("CASE WHEN pm.is_joint_property = 1 THEN spd.old_property_id ELSE pm.old_propert_id END LIKE ?", ["%$searchValue%"])
+                $query->leftJoin(
+                    'flats',
+                    $flatForeignKey,
+                    '=',
+                    'flats.id'
+                );
+            }
 
-                            ->orWhere(DB::raw('LOWER(oc.name)'), 'like', '%' . strtolower($searchValue) . '%')  // Use the correct column alias
-                            ->orWhere('pm.block_no', 'like', "%$searchValue%")  // Correctly reference block
-                            // ->orWhere('pm.plot_or_property_no', 'like', "%$searchValue%")  // Correctly reference plot
-                            ->orWhereRaw("CASE WHEN pm.is_joint_property = 1 THEN spd.plot_flat_no ELSE pm.plot_or_property_no END LIKE ?", ["%$searchValue%"])
+            /*
+         * Restrict applications to user's sections.
+         */
+            $query->whereIn(
+                $config['section_id'],
+                $sections
+            );
 
-                            ->orWhere('sections.section_code', 'like', "%$searchValue%")  // Correctly reference plot
-                            ->orWhere(DB::raw('NULL'), 'like', "%$searchValue%")  // flat_id is NULL in this query
-                            // ->orWhere('pld.presently_known_as', 'like', "%$searchValue%")  // flat_id is NULL in this query
-                            ->orWhereRaw("CASE WHEN pm.is_joint_property = 1 THEN spd.presently_known_as ELSE pld.presently_known_as END LIKE ?", ["%$searchValue%"])
+            /*
+         * NOC has its own historical demand lookup.
+         *
+         * This is intentionally kept as a special case because it is
+         * business-specific and is not shared by other applications.
+         */
+            if ($alias === 'noc') {
+                $dateStart = '2006-02-14';
+                $dateEnd = '2017-05-01';
 
-                            ->orWhere(DB::raw("'MutationApplication'"), 'like', "%$searchValue%") // Search by model_name
-                            ->orWhere('ma.created_at', 'like', "%$searchValue%");
-                    });
-                }
+                $query->leftJoin(
+                    DB::raw("
+                    (
+                        SELECT ptld1.*
+                        FROM property_transferred_lessee_details ptld1
+                        INNER JOIN (
+                            SELECT MAX(id) as max_id
+                            FROM property_transferred_lessee_details
+                            WHERE process_of_transfer = 'Conversion'
+                            AND transferDate BETWEEN '{$dateStart}' AND '{$dateEnd}'
+                            AND deleted_at IS NULL
+                            GROUP BY property_master_id, splited_property_detail_id
+                        ) ptld2
+                            ON ptld1.id = ptld2.max_id
+                    ) as pld3
+                "),
+                    function ($join) {
+                        $join->on(function ($query) {
+                            $query->on(
+                                'pm.id',
+                                '=',
+                                'pld3.property_master_id'
+                            )->whereNull('noc.splitted_id');
+                        });
 
-                // Query for land use changed applications
-                $serviceType2 = getServiceType('LUC');
-                $query2 = DB::table('land_use_change_applications as lca')
-                    ->where('lca.status', '<>', getServiceType('APP_WD')) //check added by nitin withdrawn applications should nnot be visibale to officials -- Nitin 21-02-2025
-                    ->leftJoin('property_masters', 'lca.property_master_id', '=', 'property_masters.id')
-                    ->leftJoin('splited_property_details as spd', 'lca.splited_property_detail_id', '=', 'spd.id')
+                        $join->orOn(function ($query) {
+                            $query->on(
+                                'spd.id',
+                                '=',
+                                'pld3.splited_property_detail_id'
+                            )->whereNotNull('noc.splitted_id');
+                        });
+                    }
+                );
+            }
 
-                    ->join('property_section_mappings as psm', function ($join) {
-                        $join->on('property_masters.new_colony_name', 'psm.colony_id');
-                        $join->whereColumn('property_masters.property_type', 'psm.property_type');
-                        $join->whereColumn('property_masters.property_sub_type', 'psm.property_subtype');
-                    })
-                    ->join('sections', 'psm.section_id', 'sections.id')
-                    ->leftJoin('old_colonies', 'property_masters.new_colony_name', '=', 'old_colonies.id')
-                    ->leftJoin('property_lease_details', 'property_masters.id', '=', 'property_lease_details.property_master_id')
-                    ->leftJoin('applications as app', 'lca.application_no', '=', 'app.application_no')
-                    ->leftJoinSub(
-                        DB::table('application_movements')
-                            ->select('application_no', DB::raw('MAX(id) as latest_created_at'))
-                            ->groupBy('application_no'),
-                        'latest_apm',
-                        function ($join) {
-                            $join->on('lca.application_no', '=', 'latest_apm.application_no');
-                        }
-                    )
-                    ->leftJoin('application_movements as apm', function ($join) {
-                        $join->on('lca.application_no', '=', 'apm.application_no')
-                            ->on('apm.id', '=', 'latest_apm.latest_created_at');
-                    })
-                    ->leftJoinSub(
-                        DB::table('application_statuses')
-                            ->select(
-                                'id',
-                                'model_id',
-                                'reg_app_no',
-                                'service_type',
-                                'is_mis_checked',
-                                'is_scan_file_checked',
-                                'is_uploaded_doc_checked',
-                                'mis_checked_by',
-                                'scan_file_checked_by',
-                                'uploaded_doc_checked_by',
-                                'created_at',
-                                DB::raw('ROW_NUMBER() OVER (PARTITION BY model_id ORDER BY created_at DESC) as row_num')
-                            )
-                            ->where('service_type', $serviceType2),
-                        'latest_statuses',
-                        function ($join) {
-                            $join->on('lca.id', '=', 'latest_statuses.model_id')
-                                ->where('latest_statuses.row_num', '=', 1); // Ensures only the latest record
-                        }
-                    )
-                    ->whereIn('lca.section_id', $sections) //need to add secton id in all queries
-                    ->select(
-                        'lca.id',
-                        'lca.created_at',
-                        DB::raw('coalesce(lca.application_no,"0") as application_no'),
-                        'lca.status',
-                        'sections.section_code',
-                        'latest_statuses.is_mis_checked',
-                        'latest_statuses.is_scan_file_checked',
-                        'latest_statuses.is_uploaded_doc_checked',
-                        'latest_statuses.mis_checked_by',
-                        'latest_statuses.scan_file_checked_by',
-                        'latest_statuses.uploaded_doc_checked_by',
-                        // 'property_masters.old_propert_id as old_property_id',
-                        DB::raw('case when property_masters.is_joint_property = 1 then spd.old_property_id else property_masters.old_propert_id end as old_property_id'),
+            /*
+         * Select common application columns.
+         */
+            $applicationNoSelect = $config['coalesce_app_no']
+                ? DB::raw(
+                    'COALESCE(' .
+                        $config['application_no'] .
+                        ', "0") as application_no'
+                )
+                : $config['application_no'];
 
-                        'property_masters.new_colony_name',
-                        'old_colonies.name as colony_name',
-                        'property_masters.block_no',
-                        // 'property_masters.plot_or_property_no',
-                        // 'property_lease_details.presently_known_as',
-                        DB::raw('case when property_masters.is_joint_property = 1 then spd.plot_flat_no else property_masters.plot_or_property_no end as plot_or_property_no'),
-                        DB::raw('case when property_masters.is_joint_property = 1 then spd.presently_known_as else property_lease_details.presently_known_as end as presently_known_as'),
+            $query->select([
+                "{$alias}.id",
+                "{$alias}.created_at",
+                $applicationNoSelect,
+                "{$alias}.status",
 
-                        'app.is_objected',
-                        'apm.updated_at as latest_moved_at',
-                        DB::raw('NULL as flat_id'), // Add NULL for flat_id on dated 07/01/25 By Lalit Tiwari
-                        DB::raw('NULL as flat_number'), // Add NULL for flat_number on dated 07/01/25 By Lalit Tiwari
-                        DB::raw("'LandUseChangeApplication' as model_name"), // Add model_name for the first query
-                        // DB::raw("$serviceType2 as serviceType") // Added by Nitin 
-                    );
+                'sections.section_code',
 
-                if ($request->status) {
-                    $query2 = $query2->where('lca.status', ($request->status));
-                } else {
-                    $query2 = $query2->whereIn('lca.status', ($itemsIdArr));
-                }
+                'latest_statuses.is_mis_checked',
+                'latest_statuses.is_scan_file_checked',
+                'latest_statuses.is_uploaded_doc_checked',
+                'latest_statuses.mis_checked_by',
+                'latest_statuses.scan_file_checked_by',
+                'latest_statuses.uploaded_doc_checked_by',
 
-                // Add search filter if search.value is present
-                if ($request->input('search.value')) {
-                    $searchValue = $request->input('search.value');
-                    $query2->where(function ($query) use ($searchValue) {
-                        $query->where('lca.application_no', 'like', "%$searchValue%")
-                            // ->orWhere('property_masters.old_propert_id', 'like', "%$searchValue%")  // Use the correct column alias here
-                            ->orWhereRaw("CASE WHEN property_masters.is_joint_property = 1 THEN spd.old_property_id ELSE property_masters.old_propert_id END LIKE ?", ["%$searchValue%"])
+                DB::raw(
+                    "{$oldPropertyExpression} as old_property_id"
+                ),
 
-                            ->orWhere(DB::raw('LOWER(old_colonies.name)'), 'like', '%' . strtolower($searchValue) . '%')  // Use the correct column alias
-                            ->orWhere('property_masters.block_no', 'like', "%$searchValue%")  // Correctly reference block
-                            // ->orWhere('property_masters.plot_or_property_no', 'like', "%$searchValue%")  // Correctly reference plot
-                            ->orWhereRaw("CASE WHEN property_masters.is_joint_property = 1 THEN spd.plot_flat_no ELSE property_masters.plot_or_property_no END LIKE ?", ["%$searchValue%"])
+                'pm.new_colony_name',
+                'oc.name as colony_name',
+                'pm.block_no',
 
-                            ->orWhere('sections.section_code', 'like', "%$searchValue%")  // Correctly reference plot
-                            ->orWhere(DB::raw('NULL'), 'like', "%$searchValue%")  // flat_id is NULL in this query
-                            // ->orWhere('property_lease_details.presently_known_as', 'like', "%$searchValue%")  // flat_id is NULL in this query
-                            ->orWhereRaw("CASE WHEN property_masters.is_joint_property = 1 THEN spd.presently_known_as ELSE property_lease_details.presently_known_as END LIKE ?", ["%$searchValue%"])
+                DB::raw(
+                    "{$plotPropertyExpression} as plot_or_property_no"
+                ),
 
-                            ->orWhere(DB::raw("'LandUseChangeApplication'"), 'like', "%$searchValue%") // Search by model_name
-                            ->orWhere('lca.created_at', 'like', "%$searchValue%");
-                    });
-                }
+                DB::raw(
+                    "{$presentlyKnownAsExpression} as presently_known_as"
+                ),
 
-                //Query for Deed Of Apartment applications
-                $serviceType3 = getServiceType('DOA');
-                $query3 = DB::table('deed_of_apartment_applications as doa')
-                    ->where('doa.status', '<>', getServiceType('APP_WD')) //check added by nitin withdrawn applications should nnot be visibale to officials -- Nitin 21-02-2025
-                    ->leftJoin('property_masters', 'doa.property_master_id', '=', 'property_masters.id')
-                    ->leftJoin('splited_property_details as spd', 'doa.splited_property_detail_id', '=', 'spd.id')
-                    ->join('property_section_mappings as psm', function ($join) {
-                        $join->on('property_masters.new_colony_name', 'psm.colony_id');
-                        $join->whereColumn('property_masters.property_type', 'psm.property_type');
-                        $join->whereColumn('property_masters.property_sub_type', 'psm.property_subtype');
-                    })
-                    ->join('sections', 'psm.section_id', 'sections.id')
-                    ->leftJoin('old_colonies', 'property_masters.new_colony_name', '=', 'old_colonies.id')
-                    ->leftJoin('property_lease_details', 'property_masters.id', '=', 'property_lease_details.property_master_id')
-                    ->leftJoin('flats', 'doa.flat_id', '=', 'flats.id')
-                    ->leftJoin('applications as app', 'doa.application_no', '=', 'app.application_no')
-                    ->leftJoinSub(
-                        DB::table('application_movements')
-                            ->select('application_no', DB::raw('MAX(id) as latest_created_at'))
-                            ->groupBy('application_no'),
-                        'latest_apm',
-                        function ($join) {
-                            $join->on('doa.application_no', '=', 'latest_apm.application_no');
-                        }
-                    )
-                    ->leftJoin('application_movements as apm', function ($join) {
-                        $join->on('doa.application_no', '=', 'apm.application_no')
-                            ->on('apm.id', '=', 'latest_apm.latest_created_at');
-                    })
-                    ->leftJoinSub(
-                        DB::table('application_statuses')
-                            ->select(
-                                'id',
-                                'model_id',
-                                'reg_app_no',
-                                'service_type',
-                                'is_mis_checked',
-                                'is_scan_file_checked',
-                                'is_uploaded_doc_checked',
-                                'mis_checked_by',
-                                'scan_file_checked_by',
-                                'uploaded_doc_checked_by',
-                                'created_at',
-                                DB::raw('ROW_NUMBER() OVER (PARTITION BY model_id ORDER BY created_at DESC) as row_num')
-                            )
-                            ->where('service_type', $serviceType3),
-                        'latest_statuses',
-                        function ($join) {
-                            $join->on('doa.id', '=', 'latest_statuses.model_id')
-                                ->where('latest_statuses.row_num', '=', 1); // Ensures only the latest record
-                        }
-                    )
-                    ->whereIn('doa.section_id', $sections) //need to add secton id in all queries
-                    ->select(
-                        'doa.id',
-                        'doa.created_at',
-                        'doa.application_no',
-                        'doa.status',
-                        'sections.section_code',
-                        'latest_statuses.is_mis_checked',
-                        'latest_statuses.is_scan_file_checked',
-                        'latest_statuses.is_uploaded_doc_checked',
-                        'latest_statuses.mis_checked_by',
-                        'latest_statuses.scan_file_checked_by',
-                        'latest_statuses.uploaded_doc_checked_by',
-                        // 'property_masters.old_propert_id as old_property_id',
-                        DB::raw('case when property_masters.is_joint_property = 1 then spd.old_property_id else property_masters.old_propert_id end as old_property_id'),
+                'app.is_objected',
 
-                        'property_masters.new_colony_name',
-                        'old_colonies.name as colony_name',
-                        'property_masters.block_no',
-                        // 'property_masters.plot_or_property_no',
-                        // 'property_lease_details.presently_known_as',
-                        DB::raw('case when property_masters.is_joint_property = 1 then spd.plot_flat_no else property_masters.plot_or_property_no end as plot_or_property_no'),
-                        DB::raw('case when property_masters.is_joint_property = 1 then spd.presently_known_as else property_lease_details.presently_known_as end as presently_known_as'),
+                'apm.updated_at as latest_moved_at',
+            ]);
 
-                        'app.is_objected',
-                        'apm.updated_at as latest_moved_at',
-                        'flats.unique_flat_id as flat_id', // Add NULL for flat_id on dated 07/01/25 By Lalit Tiwari
-                        'flats.flat_number as flat_number', // Add NULL for flat_id on dated 07/01/25 By Lalit Tiwari
-                        DB::raw("'DeedOfApartmentApplication' as model_name"), // Add model_name for the first query
-                        // DB::raw("$serviceType3 as serviceType") // Added by Nitin 
-                    );
-                if ($request->status) {
-                    $query3 = $query3->where('doa.status', ($request->status));
-                } else {
-                    $query3 = $query3->whereIn('doa.status', ($itemsIdArr));
-                }
+            /*
+         * Flat fields.
+         */
+            if ($config['flat_join']) {
+                $query->addSelect([
+                    'flats.unique_flat_id as flat_id',
+                    'flats.flat_number as flat_number',
+                ]);
+            } else {
+                $query->addSelect([
+                    DB::raw('NULL as flat_id'),
+                    DB::raw('NULL as flat_number'),
+                ]);
+            }
 
-                // Add search filter if search.value is present
-                if ($request->input('search.value')) {
-                    $searchValue = $request->input('search.value');
-                    $query3->where(function ($query) use ($searchValue) {
-                        $query->where('doa.application_no', 'like', "%$searchValue%")
-                            // ->orWhere('property_masters.old_propert_id', 'like', "%$searchValue%")  // Use the correct column alias here
-                                                        // ->orWhere('property_masters.old_propert_id', 'like', "%$searchValue%")  // Use the correct column alias here
-                            ->orWhereRaw("
-                            CASE 
-                                WHEN property_masters.is_joint_property = 1 
-                                THEN spd.old_property_id 
-                                ELSE property_masters.old_propert_id 
-                            END LIKE ?
-                        ", ["%$searchValue%"])  // Use the correct column alias here
-                            ->orWhere(DB::raw('LOWER(old_colonies.name)'), 'like', '%' . strtolower($searchValue) . '%')  // Use the correct column alias
-                            ->orWhere('property_masters.block_no', 'like', "%$searchValue%")  // Correctly reference block
-                                                        // ->orWhere('property_masters.plot_or_property_no', 'like', "%$searchValue%")  // Correctly reference plot
-                            ->orWhereRaw("
-                            CASE 
-                                WHEN property_masters.is_joint_property = 1 
-                                THEN spd.plot_flat_no 
-                                ELSE property_masters.plot_or_property_no 
-                            END LIKE ?
-                        ", ["%$searchValue%"])  // Correctly reference plot
-                            ->orWhere('sections.section_code', 'like', "%$searchValue%")  // Correctly reference plot
-                            ->orWhere('flats.unique_flat_id', 'like', "%$searchValue%")  // Search by flat_id
-                            ->orWhere('flats.flat_number', 'like', "%$searchValue%")    // Search by flat_number
-                                                        // ->orWhere('property_lease_details.presently_known_as', 'like', "%$searchValue%")  // flat_id is NULL in this query
-                            ->orWhereRaw("
-                            CASE 
-                                WHEN property_masters.is_joint_property = 1 
-                                THEN spd.presently_known_as 
-                                ELSE property_lease_details.presently_known_as 
-                            END LIKE ?
-                        ", ["%$searchValue%"])
-                            ->orWhere(DB::raw("'DeedOfApartmentApplication'"), 'like', "%$searchValue%") // Search by model_name
-                            ->orWhere('doa.created_at', 'like', "%$searchValue%");
-                    });
-                }
+            /*
+         * Keep model_name identical to the original query.
+         */
+            $query->addSelect(
+                DB::raw("'{$modelName}' as model_name")
+            );
 
-                //Query for Conversion applications added by Nitin
-                $serviceType4 = getServiceType('CONVERSION');
-                $query4 = DB::table('conversion_applications as ca')
-                    ->where('ca.status', '<>', getServiceType('APP_WD')) //check added by nitin withdrawn applications should nnot be visibale to officials -- Nitin 21-02-2025
-                    ->leftJoin('property_masters', 'ca.property_master_id', '=', 'property_masters.id')
-                    ->leftJoin('splited_property_details as spd', 'ca.splited_property_detail_id', '=', 'spd.id')
-                    ->join('property_section_mappings as psm', function ($join) {
+            /*
+         * Status filtering.
+         */
+            if ($request->status) {
+                $query->where(
+                    "{$alias}.status",
+                    $request->status
+                );
+            } else {
+                $query->whereIn(
+                    "{$alias}.status",
+                    $itemsIdArr
+                );
+            }
 
-                        $join->on('property_masters.new_colony_name', 'psm.colony_id');
-                        $join->whereColumn('property_masters.property_type', 'psm.property_type');
-                        $join->whereColumn('property_masters.property_sub_type', 'psm.property_subtype');
-                    })
-                    ->join('sections', 'psm.section_id', 'sections.id')
-                    ->leftJoin('old_colonies', 'property_masters.new_colony_name', '=', 'old_colonies.id')
-                    ->leftJoin('property_lease_details', 'property_masters.id', '=', 'property_lease_details.property_master_id')
-                    ->leftJoin('applications as app', 'ca.application_no', '=', 'app.application_no')
-                    ->leftJoinSub(
-                        DB::table('application_movements')
-                            ->select('application_no', DB::raw('MAX(id) as latest_created_at'))
-                            ->groupBy('application_no'),
-                        'latest_apm',
-                        function ($join) {
-                            $join->on('ca.application_no', '=', 'latest_apm.application_no');
-                        }
-                    )
-                    ->leftJoin('application_movements as apm', function ($join) {
-                        $join->on('ca.application_no', '=', 'apm.application_no')
-                            ->on('apm.id', '=', 'latest_apm.latest_created_at');
-                    })
-                    ->leftJoinSub(
-                        DB::table('application_statuses')
-                            ->select(
-                                'id',
-                                'model_id',
-                                'reg_app_no',
-                                'service_type',
-                                'is_mis_checked',
-                                'is_scan_file_checked',
-                                'is_uploaded_doc_checked',
-                                'mis_checked_by',
-                                'scan_file_checked_by',
-                                'uploaded_doc_checked_by',
-                                'created_at',
-                                DB::raw('ROW_NUMBER() OVER (PARTITION BY model_id ORDER BY created_at DESC) as row_num')
-                            )
-                            ->where('service_type', $serviceType4),
-                        'latest_statuses',
-                        function ($join) {
-                            $join->on('ca.id', '=', 'latest_statuses.model_id')
-                                ->where('latest_statuses.row_num', '=', 1); // Ensures only the latest record
-                        }
-                    )
-                    ->whereIn('ca.section_id', $sections) //need to add secton id in all queries
-                    ->select(
-                        'ca.id',
-                        'ca.created_at',
-                        'ca.application_no',
-                        'ca.status',
-                        'sections.section_code',
-                        'latest_statuses.is_mis_checked',
-                        'latest_statuses.is_scan_file_checked',
-                        'latest_statuses.is_uploaded_doc_checked',
-                        'latest_statuses.mis_checked_by',
-                        'latest_statuses.scan_file_checked_by',
-                        'latest_statuses.uploaded_doc_checked_by',
-                        // 'property_masters.old_propert_id as old_property_id',
-                        DB::raw('case when property_masters.is_joint_property = 1 then spd.old_property_id else property_masters.old_propert_id end as old_property_id'),
+            /*
+         * NOC demand filter.
+         */
+            if (
+                $alias === 'noc' &&
+                $request->demandType
+            ) {
+                $query->where(function ($query) use ($request) {
+                    if ($request->demandType === 'with_demand') {
+                        $query->whereNotNull('pld3.id');
+                    }
 
-                        'property_masters.new_colony_name',
-                        'old_colonies.name as colony_name',
-                        'property_masters.block_no',
-                        // 'property_masters.plot_or_property_no',
-                        // 'property_lease_details.presently_known_as',
-                        DB::raw('case when property_masters.is_joint_property = 1 then spd.plot_flat_no else property_masters.plot_or_property_no end as plot_or_property_no'),
-                        DB::raw('case when property_masters.is_joint_property = 1 then spd.presently_known_as else property_lease_details.presently_known_as end as presently_known_as'),
+                    if ($request->demandType === 'without_demand') {
+                        $query->whereNull('pld3.id');
+                    }
+                });
+            }
 
-                        'app.is_objected',
-                        'apm.updated_at as latest_moved_at',
-                        DB::raw('NULL as flat_id'), // Add NULL for flat_id
-                        DB::raw('NULL as flat_number'), // Add NULL for flat_number on dated 07/01/25 By Lalit Tiwari
-                        DB::raw("'ConversionApplication' as model_name"), // Add model_name for the first query
-                        // DB::raw("$serviceType4 as serviceType") // Added by Nitin 
-                    );
+            /*
+         * DataTables search.
+         */
+            $applySearch($query, $config);
 
-                if ($request->status) {
-                    $query4 = $query4->where('ca.status', ($request->status));
-                } else {
-                    $query4 = $query4->whereIn('ca.status', ($itemsIdArr));
-                }
+            return $query;
+        };
 
-                // Add search filter if search.value is present
-                if ($request->input('search.value')) {
-                    $searchValue = $request->input('search.value');
-                    $query4->where(function ($query) use ($searchValue) {
-                        $query->where('ca.application_no', 'like', "%$searchValue%")
-                                                        // ->orWhere('property_masters.old_propert_id', 'like', "%$searchValue%")  // Use the correct column alias here
-                            ->orWhereRaw("
-                            CASE 
-                                WHEN property_masters.is_joint_property = 1 
-                                THEN spd.old_property_id 
-                                ELSE property_masters.old_propert_id 
-                            END LIKE ?
-                        ", ["%$searchValue%"])  // Use the correct column alias here
-                            ->orWhere(DB::raw('LOWER(old_colonies.name)'), 'like', '%' . strtolower($searchValue) . '%')  // Use the correct column alias
-                            ->orWhere('property_masters.block_no', 'like', "%$searchValue%")  // Correctly reference block
-                                                        // ->orWhere('property_masters.plot_or_property_no', 'like', "%$searchValue%")  // Correctly reference plot
-                            ->orWhereRaw("
-                            CASE 
-                                WHEN property_masters.is_joint_property = 1 
-                                THEN spd.plot_flat_no 
-                                ELSE property_masters.plot_or_property_no 
-                            END LIKE ?
-                        ", ["%$searchValue%"])  // Correctly reference plot
+        /*
+     * Build only the requested application type.
+     *
+     * When no type is supplied, preserve the original behavior:
+     * UNION all five application queries.
+     */
+        if (
+            !empty($applicationType) &&
+            isset($applicationConfigs[$applicationType])
+        ) {
+            $combinedQuery = $buildApplicationQuery(
+                $applicationConfigs[$applicationType]
+            );
+        } else {
+            $queryMutation = $buildApplicationQuery(
+                $applicationConfigs['mutation']
+            );
 
-                            ->orWhere('sections.section_code', 'like', "%$searchValue%")  // Correctly reference plot
-                            ->orWhere(DB::raw('NULL'), 'like', "%$searchValue%")  // flat_id is NULL in this query
-                                                        // ->orWhere('property_lease_details.presently_known_as', 'like', "%$searchValue%")  // flat_id is NULL in this query
-                            ->orWhereRaw("
-                            CASE 
-                                WHEN property_masters.is_joint_property = 1 
-                                THEN spd.presently_known_as 
-                                ELSE property_lease_details.presently_known_as 
-                            END LIKE ?
-                        ", ["%$searchValue%"])
+            $queryLuc = $buildApplicationQuery(
+                $applicationConfigs['luc']
+            );
 
-                            ->orWhere(DB::raw("'ConversionApplication'"), 'like', "%$searchValue%") // Search by model_name
-                            ->orWhere('ca.created_at', 'like', "%$searchValue%");
-                    });
-                }
+            $queryDoa = $buildApplicationQuery(
+                $applicationConfigs['doa']
+            );
 
-                // Query added for NOC application - Lalit Tiwari (20/March/2025)
-                $serviceType5 = getServiceType('NOC');
-                $query5 = DB::table('noc_applications as noc')
-                    ->where('noc.status', '<>', getServiceType('APP_WD')) //check added by nitin withdrawn applications should nnot be visibale to officials -- Nitin 21-02-2025
-                    ->leftJoin('property_masters as pm', 'noc.property_master_id', '=', 'pm.id')
-                    ->leftJoin('splited_property_details as spd', 'noc.splitted_id', '=', 'spd.id')
-                    ->leftJoin('flats', 'noc.flat_id', '=', 'flats.id')
-                    ->join('property_section_mappings as psm', function ($join) {
-                        $join->on('pm.new_colony_name', '=', 'psm.colony_id')
-                            ->whereColumn('pm.property_type', 'psm.property_type')
-                            ->whereColumn('pm.property_sub_type', 'psm.property_subtype');
-                    })
-                    ->join('sections', 'psm.section_id', '=', 'sections.id')
-                    ->leftJoin('old_colonies as oc', 'pm.new_colony_name', '=', 'oc.id')
-                    ->leftJoin('property_lease_details as pld', 'pm.id', '=', 'pld.property_master_id')
-                    ->leftJoin('applications as app', 'noc.application_no', '=', 'app.application_no')
-                    ->leftJoinSub(
-                        DB::table('application_movements')
-                            ->select('application_no', DB::raw('MAX(id) as latest_created_at'))
-                            ->groupBy('application_no'),
-                        'latest_apm',
-                        function ($join) {
-                            $join->on('noc.application_no', '=', 'latest_apm.application_no');
-                        }
-                    )
-                    ->leftJoin('application_movements as apm', function ($join) {
-                        $join->on('noc.application_no', '=', 'apm.application_no')
-                            ->on('apm.id', '=', 'latest_apm.latest_created_at');
-                    })
-                    ->leftJoinSub(
-                        DB::table('application_statuses')
-                            ->select(
-                                'id',
-                                'model_id',
-                                'reg_app_no',
-                                'service_type',
-                                'is_mis_checked',
-                                'is_scan_file_checked',
-                                'is_uploaded_doc_checked',
-                                'mis_checked_by',
-                                'scan_file_checked_by',
-                                'uploaded_doc_checked_by',
-                                'created_at',
-                                DB::raw('ROW_NUMBER() OVER (PARTITION BY model_id ORDER BY created_at DESC) as row_num')
-                            )
-                            ->where('service_type', $serviceType5),
-                        'latest_statuses',
-                        function ($join) {
-                            $join->on('noc.id', '=', 'latest_statuses.model_id')
-                                ->where('latest_statuses.row_num', '=', 1); // Ensures only the latest record
-                        }
-                    )
-                    ->whereIn('noc.section_id', $sections) // Verify $sections is an array
-                    ->select(
-                        'noc.id',
-                        'noc.created_at',
-                        'noc.application_no',
-                        'noc.status',
-                        'sections.section_code',
-                        'latest_statuses.is_mis_checked',
-                        'latest_statuses.is_scan_file_checked',
-                        'latest_statuses.is_uploaded_doc_checked',
-                        'latest_statuses.mis_checked_by',
-                        'latest_statuses.scan_file_checked_by',
-                        'latest_statuses.uploaded_doc_checked_by',
-                        // 'pm.old_propert_id as old_property_id', // Fixed alias
-                        DB::raw('case when pm.is_joint_property = 1 then spd.old_property_id else pm.old_propert_id end as old_property_id'),
+            $queryConversion = $buildApplicationQuery(
+                $applicationConfigs['conversion']
+            );
 
-                        'pm.new_colony_name',
-                        'oc.name as colony_name',
-                        'pm.block_no',
-                        // 'pm.plot_or_property_no',
-                        // 'pld.presently_known_as',
-                        DB::raw('case when pm.is_joint_property = 1 then spd.plot_flat_no else pm.plot_or_property_no end as plot_or_property_no'),
-                        DB::raw('case when pm.is_joint_property = 1 then spd.presently_known_as else pld.presently_known_as end as presently_known_as'),
+            $queryNoc = $buildApplicationQuery(
+                $applicationConfigs['noc']
+            );
 
-                        'app.is_objected',
-                        'apm.updated_at as latest_moved_at',
-                        'flats.unique_flat_id as flat_id', // Add NULL for flat_id on dated 07/01/25 By Lalit Tiwari
-                        'flats.flat_number as flat_number', // Add NULL for flat_id on dated 07/01/25 By Lalit Tiwari
-                        DB::raw("'NocApplication' as model_name"), // Add model_name for the first query
-                        // DB::raw("$serviceType5 as serviceType") // Added by Nitin 
-                    );
-                if ($request->status) {
-                    $query5 = $query5->where('noc.status', ($request->status));
-                } else {
-                    $query5 = $query5->whereIn('noc.status', ($itemsIdArr));
-                }
-
-                // Add search filter if search.value is present
-                if ($request->input('search.value')) {
-                    $searchValue = $request->input('search.value');
-                    $query5->where(function ($query) use ($searchValue) {
-                        $query->where('noc.application_no', 'like', "%$searchValue%")
-                            // ->orWhere('pm.old_propert_id', 'like', "%$searchValue%")  // Use the correct column alias here
-                            ->orWhereRaw("
-                            CASE 
-                                WHEN pm.is_joint_property = 1 
-                                THEN spd.old_property_id 
-                                ELSE pm.old_propert_id 
-                            END LIKE ?
-                        ", ["%$searchValue%"])  // Use the correct column alias here
-                            ->orWhere(DB::raw('LOWER(oc.name)'), 'like', '%' . strtolower($searchValue) . '%')  // Use the correct column alias
-                            ->orWhere('pm.block_no', 'like', "%$searchValue%")  // Correctly reference block
-                                                        // ->orWhere('pm.plot_or_property_no', 'like', "%$searchValue%")  // Correctly reference plot
-                            ->orWhereRaw("
-                            CASE 
-                                WHEN pm.is_joint_property = 1 
-                                THEN spd.plot_flat_no 
-                                ELSE pm.plot_or_property_no 
-                            END LIKE ?
-                        ", ["%$searchValue%"])  // Correctly reference plot
-                            ->orWhere('sections.section_code', 'like', "%$searchValue%")  // Correctly reference plot
-                            ->orWhere(DB::raw('NULL'), 'like', "%$searchValue%")  // flat_id is NULL in this query
-                                                        // ->orWhere('pld.presently_known_as', 'like', "%$searchValue%")  // flat_id is NULL in this query
-                            ->orWhereRaw("
-                            CASE 
-                                WHEN pm.is_joint_property = 1 
-                                THEN spd.presently_known_as 
-                                ELSE pld.presently_known_as 
-                            END LIKE ?
-                        ", ["%$searchValue%"])
-                            ->orWhere(DB::raw("'NocApplication'"), 'like', "%$searchValue%") // Search by model_name
-                            ->orWhere('noc.created_at', 'like', "%$searchValue%");
-                    });
-                }
-
-                $clonedQuery1 = (clone $query1);
-                $clonedQuery2 = (clone $query2);
-                $clonedQuery3 = (clone $query3);
-                $clonedQuery4 = (clone $query4);
-                $clonedQuery5 = (clone $query5);
-
-                // Combine all three queries using UNION
-                $combinedQuery = $clonedQuery1->union($clonedQuery2)->union($clonedQuery3)->union($clonedQuery4)->union($clonedQuery5);
-                break;
-
-
-                // dd($combinedQuery);
+            /*
+         * Keep UNION rather than UNION ALL because the original code
+         * used UNION.
+         */
+            $combinedQuery = $queryMutation
+                ->union($queryLuc)
+                ->union($queryDoa)
+                ->union($queryConversion)
+                ->union($queryNoc);
         }
 
-
+        /*
+     * DataTables pagination/order.
+     */
         $limit = $request->input('length');
         $start = $request->input('start');
+
         if ($request->input('order.0.column')) {
             $order = $columns[$request->input('order.0.column')];
             $dir = $request->input('order.0.dir');
@@ -1544,212 +863,458 @@ class ApplicationController extends Controller
             $dir = 'desc';
         }
 
+        /*
+     * Total count.
+     */
         $totalData = $combinedQuery->count();
         $totalFiltered = $totalData;
-        $aggregatedQuery = DB::table(DB::raw("({$combinedQuery->toSql()}) as combined"))
-            ->mergeBindings($combinedQuery);
-        $allApplicationsQuery = clone $aggregatedQuery;
-        $paginatedQuery = clone $aggregatedQuery;
 
-        $allApplications = $allApplicationsQuery
-            // ->whereIn('status', [getServiceType('APP_NEW'), getServiceType('APP_IP')])  //not working
-            ->select('application_no', 'created_at', 'status')
+        /*
+     * Wrap UNION so that pagination/order can be applied to the
+     * combined result.
+     */
+        $aggregatedQuery = DB::table(
+            DB::raw("({$combinedQuery->toSql()}) as combined")
+        )->mergeBindings($combinedQuery);
+
+        /*
+     * This query is still used for the existing application list
+     * processing logic.
+     */
+        $allApplications = (clone $aggregatedQuery)
+            ->select(
+                'application_no',
+                'created_at',
+                'status'
+            )
             ->get();
-        // dd($allApplications);
-        $applications = $paginatedQuery->offset($start)->limit($limit)->orderBy($order, $dir)->get();
+
+        /*
+     * Fetch only the requested DataTables page.
+     */
+        $applications = (clone $aggregatedQuery)
+            ->offset($start)
+            ->limit($limit)
+            ->orderBy($order, $dir)
+            ->get();
+
         $data = [];
-        $showSendProofReadingLink = false;
-        // dd($applications, $allApplications);
+
+        /*
+     * Cache values which are identical for every row.
+     * This does not change the output.
+     */
+        $currentUserId = Auth::user()->id;
+        $currentUserRole = Auth::user()->roles[0]->name;
+
+        $statusClasses = [
+            'APP_REJ' => 'statusRejected',
+            'APP_NEW' => 'statusNew',
+            'APP_IP'  => 'statusSecondary',
+            'RS_REW'  => 'text-white bg-secondary',
+            'RS_PEN'  => 'text-info bg-light-info',
+            'APP_APR' => 'landtypeFreeH',
+            'APP_OBJ' => 'statusObject',
+            'APP_HOLD' => 'statusHold',
+        ];
+
+        $misColorCode = getServiceTypeColorCode('MIS_CHECK');
+        $scanFileColorCode = getServiceTypeColorCode('SCAN_CHECK');
+        $uploadedDocColorCode = getServiceTypeColorCode('UP_DOC_CHE');
+
+        $appliedForMap = [
+            'MutationApplication'        => 'Mutation',
+            'LandUseChangeApplication'   => 'LUC',
+            'DeedOfApartmentApplication' => 'DOA',
+            'ConversionApplication'      => 'CONVERSION',
+            'NocApplication'             => 'NOC',
+        ];
 
         foreach ($applications as $key => $application) {
+
+            /*
+         * Proof reading link.
+         */
+            $showSendProofReadingLink = false;
+
             if ($application->status) {
-                // Get the service code only once to avoid repetitive calls
-                $serviceCode = getServiceCodeById($application->status);
+                $serviceCode = getServiceCodeById(
+                    $application->status
+                );
 
-                // Check if the application status is 'objected', 'rejected', or 'approved'
-                if (in_array($serviceCode, ['APP_OBJ', 'APP_REJ', 'APP_APR'])) {
-                    $showSendProofReadingLink = false;
-                } else {
-                    // Check if the proof reading link has been sent at least once
-                    $isProofReadingLinkSent = ApplicationAppointmentLink::where('application_no', $application->application_no)->exists();
-
-                    // Show the proof reading link if it has been sent at least once
-                    $showSendProofReadingLink = $isProofReadingLinkSent;
-                }
-            }
-            $model = base64_encode($application->model_name);
-            $mis_checked_by = User::find($application->mis_checked_by);
-            $scan_file_checked_by = User::find($application->scan_file_checked_by);
-            $uploaded_doc_checked_by = User::find($application->uploaded_doc_checked_by);
-            $nestedData['id'] = $key + 1;
-            $applicationNumber = $application->application_no;
-
-
-            // $userCurrentApplication = userCurrentActionableApplication();
-            /* if (Auth::user()->roles[0]->name == 'section-officer')
-                $userCurrentApplication = $this->userCurrentActionableApplications($allApplications);
-            else */
-            // $userCurrentApplication = userCurrentActionableApplication();
-            // dd($userCurrentApplication);
-
-            $appMovementCount = ApplicationMovement::where('application_no', $application->application_no)->count();
-            if (Auth::user()->roles[0]->name == 'section-officer' && getServiceCodeById($application->status) == 'APP_NEW') {
-                if ($this->checkOfficalCanViewTheApplication($application->application_no)) {
-                    $applicationNumber = '<div class="d-flex gap-2 align-items-center cursor-pointer text-decoration-underline" onclick="handleViewApplication(\'' . $application->application_no . '\', \'' . $model . '\', ' . $application->id . ')">' . $application->application_no . '<div class="alertGreen"></div></div>';
-                } else {
-                    $applicationNumber = '<div class="d-flex gap-2 align-items-center cursor-pointer text-decoration-underline" onclick="handleViewApplication(\'' . $application->application_no . '\', \'' . $model . '\', ' . $application->id . ')">' . $application->application_no . '<div class="alertDot"></div></div>';
-                }
-            } else if (Auth::user()->roles[0]->name == 'section-officer' && getServiceCodeById($application->status) == 'APP_IP' &&  $appMovementCount == 1) {
-                if ($this->checkOfficalCanViewTheApplication($application->application_no)) {
-                    $applicationNumber = '<div class="d-flex gap-2 align-items-center cursor-pointer text-decoration-underline" onclick="handleViewApplication(\'' . $application->application_no . '\', \'' . $model . '\', ' . $application->id . ')">' . $application->application_no . '<div class="alertGreen"></div></div>';
-                } else {
-                    $applicationNumber = '<div class="d-flex gap-2 align-items-center cursor-pointer text-decoration-underline" onclick="handleViewApplication(\'' . $application->application_no . '\', \'' . $model . '\', ' . $application->id . ')">' . $application->application_no . '<div class="alertDot"></div></div>';
+                if (!in_array(
+                    $serviceCode,
+                    ['APP_OBJ', 'APP_REJ', 'APP_APR']
+                )) {
+                    $showSendProofReadingLink =
+                        ApplicationAppointmentLink::where(
+                            'application_no',
+                            $application->application_no
+                        )->exists();
                 }
             } else {
-                $latestRecord = ApplicationMovement::where('application_no', $application->application_no)
+                $serviceCode = null;
+            }
+
+            $model = base64_encode(
+                $application->model_name
+            );
+
+            /*
+         * Checked-by users.
+         */
+            $mis_checked_by = !empty($application->mis_checked_by)
+                ? User::find($application->mis_checked_by)
+                : null;
+
+            $scan_file_checked_by = !empty($application->scan_file_checked_by)
+                ? User::find($application->scan_file_checked_by)
+                : null;
+
+            $uploaded_doc_checked_by = !empty($application->uploaded_doc_checked_by)
+                ? User::find($application->uploaded_doc_checked_by)
+                : null;
+
+            $nestedData = [];
+
+            $nestedData['id'] = $key + 1;
+
+            /*
+         * Application number / actionable indicator.
+         */
+            $applicationNumber = $application->application_no;
+
+            $appMovementCount = ApplicationMovement::where(
+                'application_no',
+                $application->application_no
+            )->count();
+
+            $canViewApplication = false;
+            $showApplicationIndicator = false;
+
+            if (
+                $currentUserRole === 'section-officer' &&
+                $serviceCode === 'APP_NEW'
+            ) {
+                $showApplicationIndicator = true;
+            } elseif (
+                $currentUserRole === 'section-officer' &&
+                $serviceCode === 'APP_IP' &&
+                $appMovementCount == 1
+            ) {
+                $showApplicationIndicator = true;
+            }
+
+            if ($showApplicationIndicator) {
+                $canViewApplication =
+                    $this->checkOfficalCanViewTheApplication(
+                        $application->application_no
+                    );
+            } else {
+                /*
+             * For other statuses, only show the indicator when the
+             * latest movement is assigned to the current user.
+             */
+                $latestRecord = ApplicationMovement::where(
+                    'application_no',
+                    $application->application_no
+                )
                     ->latest('created_at')
                     ->first();
-                if (!is_null($latestRecord) && $latestRecord->assigned_to == Auth::user()->id) {
-                    if ($this->checkOfficalCanViewTheApplication($application->application_no)) {
-                        $applicationNumber = '<div class="d-flex gap-2 align-items-center cursor-pointor text-decoration-underline" onclick="handleViewApplication(\'' . $application->application_no . '\', \'' . $model . '\', ' . $application->id . ')">' . $application->application_no . '<div class="alertGreen"></div></div>';
-                    } else {
-                        $applicationNumber = '<div class="d-flex gap-2 align-items-center cursor-pointer text-decoration-underline" onclick="handleViewApplication(\'' . $application->application_no . '\', \'' . $model . '\', ' . $application->id . ')">' . $application->application_no . '<div class="alertDot"></div></div>';
-                    }
-                } else {
-                    $applicationNumber =  '<div class="d-flex gap-2 align-items-center cursor-pointer text-decoration-underline" onclick="handleViewApplication(\'' . $application->application_no . '\', \'' . $model . '\', ' . $application->id . ')">' . $application->application_no . '</div>';
+
+                if (
+                    !is_null($latestRecord) &&
+                    $latestRecord->assigned_to == $currentUserId
+                ) {
+                    $canViewApplication =
+                        $this->checkOfficalCanViewTheApplication(
+                            $application->application_no
+                        );
+
+                    $showApplicationIndicator = true;
                 }
             }
-           
+
+            $viewApplicationUrl =
+                "handleViewApplication('" .
+                $application->application_no .
+                "', '" .
+                $model .
+                "', " .
+                $application->id .
+                ")";
+
+            if ($showApplicationIndicator) {
+                $indicatorClass = $canViewApplication
+                    ? 'alertGreen'
+                    : 'alertDot';
+
+                $applicationNumber =
+                    '<div class="d-flex gap-2 align-items-center cursor-pointer text-decoration-underline" ' .
+                    'onclick="' . $viewApplicationUrl . '">' .
+                    $application->application_no .
+                    '<div class="' . $indicatorClass . '"></div>' .
+                    '</div>';
+            } else {
+                $applicationNumber =
+                    '<div class="d-flex gap-2 align-items-center cursor-pointer text-decoration-underline" ' .
+                    'onclick="' . $viewApplicationUrl . '">' .
+                    $application->application_no .
+                    '</div>';
+            }
+
             $nestedData['application_no'] = $applicationNumber;
-            //Display current file location user name with user role by Lalit (15/09/2025)
-            $latest = ApplicationMovement::with(['assignedTo', 'assignedRole'])
-                ->where('application_no', $application->application_no)
+
+            /*
+         * Current file location.
+         */
+            $latest = ApplicationMovement::with([
+                'assignedTo',
+                'assignedRole'
+            ])
+                ->where(
+                    'application_no',
+                    $application->application_no
+                )
                 ->latest('id')
-                ->first(['id', 'assigned_to', 'assigned_to_role']);
+                ->first([
+                    'id',
+                    'assigned_to',
+                    'assigned_to_role'
+                ]);
+
             if ($latest && $latest->assignedTo) {
                 $userName = $latest->assignedTo->name;
-                $roleName = $latest->assignedRole->title
+
+                $roleName =
+                    $latest->assignedRole->title
                     ?? $latest->assignedTo->roles->pluck('title')->first()
                     ?? 'NA';
 
-                $nestedData['file_current_location'] = '<div class="d-flex flex-column">
+                $nestedData['file_current_location'] =
+                    '<div class="d-flex flex-column">
                     <span>' . e($userName) . '</span>
-                    <span class="text-secondary">' . ucwords(str_replace('-', ' ', $roleName)) . '</span>
+                    <span class="text-secondary">' .
+                    ucwords(
+                        str_replace(
+                            '-',
+                            ' ',
+                            $roleName
+                        )
+                    ) .
+                    '</span>
                 </div>';
             } else {
                 $nestedData['file_current_location'] = 'NA';
             }
-            // dd($application);
-            // $nestedData['old_property_id'] = $application->old_property_id ?? $application->old_propert_id;
-            $nestedData['old_property_id'] = $application->old_property_id ?? "N/A";
-            $nestedData['new_colony_name'] = $application->block_no . '/' . $application->plot_or_property_no . '/' . $application->colony_name;
-            // $nestedData['block_no'] = $application->block_no;
-            // $nestedData['plot_or_property_no'] = $application->plot_or_property_no;
 
-            $nestedData['presently_known_as'] = $application->presently_known_as;
-            $flatHTML = '';
+            /*
+         * Property information.
+         */
+            $nestedData['old_property_id'] =
+                $application->old_property_id ?? 'N/A';
+
+            $nestedData['new_colony_name'] =
+                $application->block_no .
+                '/' .
+                $application->plot_or_property_no .
+                '/' .
+                $application->colony_name;
+
+            $nestedData['presently_known_as'] =
+                $application->presently_known_as;
+
+            /*
+         * Flat.
+         */
             if (!empty($application->flat_id)) {
-                $flatHTML .= '<div class="d-flex gap-2 align-items-center">' . $application->flat_number . '</div><span class="text-secondary">(' . $application->flat_id . ')</span>';
+                $flatHTML =
+                    '<div class="d-flex gap-2 align-items-center">' .
+                    $application->flat_number .
+                    '</div>' .
+                    '<span class="text-secondary">(' .
+                    $application->flat_id .
+                    ')</span>';
             } else {
-                $flatHTML .= '<div>NA</div>';
+                $flatHTML = '<div>NA</div>';
             }
-            $nestedData['flat_id'] =   $flatHTML;
+
+            $nestedData['flat_id'] = $flatHTML;
             $nestedData['section'] = $application->section_code;
 
-            switch ($application->model_name) {
-                case 'MutationApplication':
-                    $appliedFor = 'Mutation';
-                    break;
-                case 'LandUseChangeApplication':
-                    $appliedFor = 'LUC';
-                    break;
-                case 'DeedOfApartmentApplication':
-                    $appliedFor = 'DOA';
-                    break;
-                case 'ConversionApplication':
-                    $appliedFor = 'CONVERSION';
-                    break;
-                case 'NocApplication':
-                    $appliedFor = 'NOC';
-                    break;
-                default:
-                    // Default action
-                    break;
-            }
-            //for getting status
-            $item = getStatusDetailsById($application->status);
+            /*
+         * Application type.
+         */
+            $appliedFor =
+                $appliedForMap[$application->model_name] ?? '';
+
+            /*
+         * Status.
+         */
+            $item = getStatusDetailsById(
+                $application->status
+            );
+
             $itemCode = $item->item_code;
             $itemName = $item->item_name;
-            $itemColor = $item->color_code;
-            $statusClasses = [
-                'APP_REJ' => 'statusRejected',
-                'APP_NEW' => 'statusNew',
-                'APP_IP' => 'statusSecondary',
-                'RS_REW' => 'text-white bg-secondary',
-                'RS_PEN' => 'text-info bg-light-info',
-                'APP_APR' => 'landtypeFreeH',
-                'APP_OBJ' => 'statusObject',
-                'APP_HOLD' => 'statusHold',
-            ];
-            $class = $statusClasses[$itemCode] ?? 'text-secondary bg-light';
-            $nestedData['applied_for'] = '<div class="d-flex align-items-center gap-1">
-                <label class="badge bg-info mx-1">' . $appliedFor . '</label>';
-                
-                if ($application->is_objected == 1) {
-                    $nestedData['applied_for'] .= '<div class="alertYellow"></div>';
-                }
-                
+
+            $class =
+                $statusClasses[$itemCode]
+                ?? 'text-secondary bg-light';
+
+            /*
+         * Applied-for display.
+         */
+            $nestedData['applied_for'] =
+                '<div class="d-flex align-items-center gap-1">
+                <label class="badge bg-info mx-1">' .
+                $appliedFor .
+                '</label>';
+
+            if ($application->is_objected == 1) {
+                $nestedData['applied_for'] .=
+                    '<div class="alertYellow"></div>';
+            }
+
             $nestedData['applied_for'] .= '</div>';
+
+            /*
+         * Activity.
+         */
             $nestedData['activity'] = [
-                'mis' => !empty($application->is_mis_checked) ? $application->is_mis_checked : 'NA',
-                'scanned_files' => !empty($application->is_scan_file_checked) ? $application->is_scan_file_checked : 'NA',
-                'uploaded_doc' => !empty($application->is_uploaded_doc_checked) ? $application->is_uploaded_doc_checked : 'NA',
-                'mis_checked_by' => !empty($application->mis_checked_by) ? $mis_checked_by->name : '',
-                'scan_file_checked_by' => !empty($application->scan_file_checked_by) ? $scan_file_checked_by->name : '',
-                'uploaded_doc_checked_by' => !empty($application->uploaded_doc_checked_by) ? $uploaded_doc_checked_by->name : '',
-                'mis_color_code' => !empty(getServiceTypeColorCode('MIS_CHECK')) ? getServiceTypeColorCode('MIS_CHECK') : '',
-                'scan_file_color_code' => !empty(getServiceTypeColorCode('SCAN_CHECK')) ? getServiceTypeColorCode('SCAN_CHECK') : '',
-                'uploaded_doc_color_code' => !empty(getServiceTypeColorCode('UP_DOC_CHE')) ? getServiceTypeColorCode('UP_DOC_CHE') : '',
+                'mis' =>
+                !empty($application->is_mis_checked)
+                    ? $application->is_mis_checked
+                    : 'NA',
+
+                'scanned_files' =>
+                !empty($application->is_scan_file_checked)
+                    ? $application->is_scan_file_checked
+                    : 'NA',
+
+                'uploaded_doc' =>
+                !empty($application->is_uploaded_doc_checked)
+                    ? $application->is_uploaded_doc_checked
+                    : 'NA',
+
+                'mis_checked_by' =>
+                !empty($application->mis_checked_by) &&
+                    $mis_checked_by
+                    ? $mis_checked_by->name
+                    : '',
+
+                'scan_file_checked_by' =>
+                !empty($application->scan_file_checked_by) &&
+                    $scan_file_checked_by
+                    ? $scan_file_checked_by->name
+                    : '',
+
+                'uploaded_doc_checked_by' =>
+                !empty($application->uploaded_doc_checked_by) &&
+                    $uploaded_doc_checked_by
+                    ? $uploaded_doc_checked_by->name
+                    : '',
+
+                'mis_color_code' =>
+                !empty($misColorCode)
+                    ? $misColorCode
+                    : '',
+
+                'scan_file_color_code' =>
+                !empty($scanFileColorCode)
+                    ? $scanFileColorCode
+                    : '',
+
+                'uploaded_doc_color_code' =>
+                !empty($uploadedDocColorCode)
+                    ? $uploadedDocColorCode
+                    : '',
             ];
 
-            $nestedData['status'] = '<span class="highlight_value ' . $class . '">' . ucwords($itemName) . '</span>';
-            //$model = base64_encode($application->model_name);
+            $nestedData['status'] =
+                '<span class="highlight_value ' .
+                $class .
+                '">' .
+                ucwords($itemName) .
+                '</span>';
 
-            // Prepare actions
-            $action = '<div class="d-flex gap-2">';
-            $action .= '<button type="button" class="btn btn-primary px-5" onclick="handleViewApplication(\'' . $application->application_no . '\', \'' . $model . '\', ' . $application->id . ')">View</button>
-                        <button type="button" class="btn btn-success" onclick="getFileMovement(\'' . $application->application_no . '\', this)">
-                            File Movement
-                        </button>';
+            /*
+         * Actions.
+         */
+            $action =
+                '<div class="d-flex gap-2">';
 
-            // Add meeting link button (commented as per discussion, not required at deputy end, IT Cell will do this) - SOURAV CHAUHAN (27 Feb 2025)
-            // if (Auth::user()->roles[0]->name == 'deputy-lndo' && $appliedFor != "LUC" && $showSendProofReadingLink) {
-            //     $action .= '<button type="button" class="btn btn-secondary px-5 send-meeting-link" data-application-id="' . $application->id . '" data-application-model_name="' . $application->model_name . '" data-application-no="' . $application->application_no . '">Send Meeting Link</button>';
+            $action .=
+                '<button type="button" class="btn btn-primary px-5" ' .
+                'onclick="' .
+                $viewApplicationUrl .
+                '">View</button>';
+
+            $action .=
+                '<button type="button" class="btn btn-success" ' .
+                'onclick="getFileMovement(\'' .
+                $application->application_no .
+                '\', this)">
+                File Movement
+            </button>';
+
+            /*
+         * Add meeting link button
+         * (kept commented exactly as in the existing implementation)
+         */
+            // if (
+            //     $currentUserRole == 'deputy-lndo' &&
+            //     $appliedFor != "LUC" &&
+            //     $showSendProofReadingLink
+            // ) {
+            //     $action .=
+            //         '<button type="button"
+            //             class="btn btn-secondary px-5 send-meeting-link"
+            //             data-application-id="' . $application->id . '"
+            //             data-application-model_name="' . $application->model_name . '"
+            //             data-application-no="' . $application->application_no . '">
+            //             Send Meeting Link
+            //         </button>';
             // }
+
             $action .= '</div>';
 
             $nestedData['action'] = $action;
-            $nestedData['created_at'] = Carbon::parse($application->created_at)
+
+            /*
+         * Dates.
+         */
+            $nestedData['created_at'] =
+                Carbon::parse($application->created_at)
                 ->setTimezone('Asia/Kolkata')
                 ->format('d M Y h:m:s');
-            $nestedData['latest_moved_at'] = Carbon::parse($application->latest_moved_at)
+
+            $nestedData['latest_moved_at'] =
+                Carbon::parse($application->latest_moved_at)
                 ->setTimezone('Asia/Kolkata')
                 ->format('d M Y h:m:s');
 
             $data[] = $nestedData;
         }
 
-        $json_data = [
-            "draw"            => intval($request->input('draw')),
-            "recordsTotal"    => intval($totalData),
-            "recordsFiltered" => intval($totalFiltered),
-            "data"            => $data
-        ];
+        /*
+     * DataTables response.
+     */
+        return response()->json([
+            'draw' => intval(
+                $request->input('draw')
+            ),
 
+            'recordsTotal' => intval(
+                $totalData
+            ),
 
-        // dd($json_data);
+            'recordsFiltered' => intval(
+                $totalFiltered
+            ),
 
-        return response()->json($json_data);
+            'data' => $data,
+        ]);
     }
 
 
@@ -1988,8 +1553,8 @@ class ApplicationController extends Controller
                     // ->orWhere('property_lease_details.presently_known_as', 'like', "%$searchValue%")  // flat_id is NULL in this query
                     // ->orWhereRaw("CASE WHEN property_masters.is_joint_property = 1 THEN spd.presently_known_as ELSE pld.presently_known_as END LIKE ?", ["%$searchValue%"])
                     ->orWhereRaw(
-                    "CASE WHEN property_masters.is_joint_property = 1 THEN spd.presently_known_as ELSE property_lease_details.presently_known_as END LIKE ?",
-                    ["%$searchValue%"]
+                        "CASE WHEN property_masters.is_joint_property = 1 THEN spd.presently_known_as ELSE property_lease_details.presently_known_as END LIKE ?",
+                        ["%$searchValue%"]
                     )
                     ->orWhere(DB::raw("'LandUseChangeApplication'"), 'like', "%$searchValue%") // Search by model_name
                     ->orWhere('lca.created_at', 'like', "%$searchValue%");
@@ -2401,7 +1966,7 @@ class ApplicationController extends Controller
             $appMovementCount = ApplicationMovement::where('application_no', $application->application_no)->count();
             if ($this->checkOfficalCanViewTheApplication($application->application_no)) {
                 $applicationNumber = '<div class="d-flex gap-2 align-items-center">' . $application->application_no . '<div class="alertGreen"></div></div>';
-             }/* else if (Auth::user()->roles[0]->name == 'section-officer' && getServiceCodeById($application->status) == 'APP_IP' &&     $appMovementCount == 1) {
+            }/* else if (Auth::user()->roles[0]->name == 'section-officer' && getServiceCodeById($application->status) == 'APP_IP' &&     $appMovementCount == 1) {
                 $applicationNumber = '<div class="d-flex gap-2 align-items-center">' . $application->application_no . '<div class="alertDot"></div></div>';
             } */ else {
                 $latestRecord = ApplicationMovement::where('application_no', $application->application_no)
@@ -2413,9 +1978,9 @@ class ApplicationController extends Controller
                     $applicationNumber = $application->application_no;
                 }
             }
-            
-            $applicationNumber = '<a href="'. route('applications.view', ['id' => $application->id, 'type' => $model]).' ">
-                            '.$applicationNumber.'
+
+            $applicationNumber = '<a href="' . route('applications.view', ['id' => $application->id, 'type' => $model]) . ' ">
+                            ' . $applicationNumber . '
                         </a>';
             $nestedData['application_no'] = $applicationNumber;
             $nestedData['old_property_id'] = $application->old_property_id;
@@ -2494,7 +2059,7 @@ class ApplicationController extends Controller
             // Prepare actions
             $action = '<div class="d-flex gap-2">';
             $action .= '
-                        <a href="'. route('applications.view', ['id' => $application->id, 'type' => $model]).' ">
+                        <a href="' . route('applications.view', ['id' => $application->id, 'type' => $model]) . ' ">
                             <button type="button" class="btn btn-primary px-5">View</button>
                         </a>
                         <button type="button" class="btn btn-success" onclick="getFileMovement(\'' . $application->application_no . '\', this)">
@@ -4038,193 +3603,192 @@ class ApplicationController extends Controller
     public function view(Request $request, $id)
     {
         // dd('Hello');
-       
+
         // dd(base64_decode($request->type));
         // try {
-            // dd($request->all(), $id);
-            $isSplited = 0;
-            $splitedProperty = 0;
-            $splited_primary_id = 0;
-            $uniquePropertyId = 0;
-            $requestModel = base64_decode($request->type);
-            $model = '\\App\\Models\\' . $requestModel;
-            $applicationDetails = $model::find($id);
+        // dd($request->all(), $id);
+        $isSplited = 0;
+        $splitedProperty = 0;
+        $splited_primary_id = 0;
+        $uniquePropertyId = 0;
+        $requestModel = base64_decode($request->type);
+        $model = '\\App\\Models\\' . $requestModel;
+        $applicationDetails = $model::find($id);
 
-            $user = Auth::user();
-            $filterUserSections = $user->hasAnyRole('super-admin', 'minister', 'lndo');
-            if(!$filterUserSections){
-                $isApplicant = $user->hasAnyRole('applicant');
-                if($isApplicant){
-                    //is application applied by this applicant
-                    if($applicationDetails->created_by != $user->id){
-                        return redirect()->route('dashboard')->with('failure', "You don't have permission to view this application.");
-                    }
-                } else {
-                    $assignedSections = getUserAssignedSections();
-                    //  dd($applicationDetails->section_id,$assignedSections[1]);
-                    if(!in_array($applicationDetails->section_id,$assignedSections[1])){
-                        return redirect()->route('dashboard')->with('failure', "You don't have permission to view this application.");
-                    }
+        $user = Auth::user();
+        $filterUserSections = $user->hasAnyRole('super-admin', 'minister', 'lndo');
+        if (!$filterUserSections) {
+            $isApplicant = $user->hasAnyRole('applicant');
+            if ($isApplicant) {
+                //is application applied by this applicant
+                if ($applicationDetails->created_by != $user->id) {
+                    return redirect()->route('dashboard')->with('failure', "You don't have permission to view this application.");
+                }
+            } else {
+                $assignedSections = getUserAssignedSections();
+                //  dd($applicationDetails->section_id,$assignedSections[1]);
+                if (!in_array($applicationDetails->section_id, $assignedSections[1])) {
+                    return redirect()->route('dashboard')->with('failure', "You don't have permission to view this application.");
                 }
             }
+        }
 
 
 
 
-            $downloading = isset($request->downloading) && $request->downloading == 1;
-            $splittedColumn = in_array($requestModel, ['ConversionApplication', 'LandUseChangeApplication', 'DeedOfApartmentApplication']) ? 'splited_property_detail_id' : 'splitted_id';
-            $itemsArrId = Item::where('group_id',17011)                        
-                                ->whereIn('item_code', ['PAY_DEMAND', 'PAY_APP_CHG'])
-                                ->pluck('id')
-                                ->toArray();
-                    
-            $paymentDetails = Payment::where("model",$requestModel)->where("model_id",$applicationDetails->id)->whereIn("type",$itemsArrId)->where("property_master_id",$applicationDetails->property_master_id)->where('status',getServiceType('PAY_SUCCESS'))->latest()->first();
-            // $paymentDetails = Payment::where("model",$requestModel)->where("model_id",$applicationDetails->id)->where("type",1550)->where("property_master_id",$applicationDetails->property_master_id)->first();
+        $downloading = isset($request->downloading) && $request->downloading == 1;
+        $splittedColumn = in_array($requestModel, ['ConversionApplication', 'LandUseChangeApplication', 'DeedOfApartmentApplication']) ? 'splited_property_detail_id' : 'splitted_id';
+        $itemsArrId = Item::where('group_id', 17011)
+            ->whereIn('item_code', ['PAY_DEMAND', 'PAY_APP_CHG'])
+            ->pluck('id')
+            ->toArray();
+
+        $paymentDetails = Payment::where("model", $requestModel)->where("model_id", $applicationDetails->id)->whereIn("type", $itemsArrId)->where("property_master_id", $applicationDetails->property_master_id)->where('status', getServiceType('PAY_SUCCESS'))->latest()->first();
+        // $paymentDetails = Payment::where("model",$requestModel)->where("model_id",$applicationDetails->id)->where("type",1550)->where("property_master_id",$applicationDetails->property_master_id)->first();
         //    dd($paymentDetails);
-            if($paymentDetails){
-                $uniquePaymentId = $paymentDetails->unique_payment_id;
-            } else{
-                $uniquePaymentId = 0;
+        if ($paymentDetails) {
+            $uniquePaymentId = $paymentDetails->unique_payment_id;
+        } else {
+            $uniquePaymentId = 0;
+        }
+        // dd($uniquePaymentId);
+        if ($applicationDetails) {
+            $isOfficeViewTheApplication = /* Auth::user()->hasRole('section-officer') || Auth::user()->hasRole('deputy-lndo') ? */ $this->checkOfficalCanViewTheApplication($applicationDetails['application_no']) /* : isOfficeViewTheApplication($applicationNo) */;
+
+            if (!$isOfficeViewTheApplication) {
+                return redirect()->back()->with('failure', 'An older application is there to be processed. Please process that first.');
             }
-            // dd($uniquePaymentId);
-            if ($applicationDetails) {
-                 $isOfficeViewTheApplication = /* Auth::user()->hasRole('section-officer') || Auth::user()->hasRole('deputy-lndo') ? */ $this->checkOfficalCanViewTheApplication($applicationDetails['application_no']) /* : isOfficeViewTheApplication($applicationNo) */;
-                
-                 if(!$isOfficeViewTheApplication)
-                 {
-                    return redirect()->back()->with('failure', 'An older application is there to be processed. Please process that first.');
-                 }
 
-                 if (!empty($applicationDetails[$splittedColumn]) && $applicationDetails[$splittedColumn] != null && !empty($applicationDetails['old_property_id']) && $applicationDetails['old_property_id'] != null) {
-                        $splittedDetails = SplitedPropertyDetail::find($applicationDetails[$splittedColumn]);
-                        if (!empty($splittedDetails)) {
-                            // dd($splittedDetails->child_prop_id);
-                            // dd('inside if');
-                            $splited_primary_id = !empty($splittedDetails->id) ? $splittedDetails->id : null;
-                            $propertyMasterId = !empty($splittedDetails->property_master_id) ? $splittedDetails->property_master_id : $applicationDetails['property_master_id'];
-                            $oldPropertyId = !empty($splittedDetails->old_property_id) ? $splittedDetails->old_property_id : $applicationDetails['old_property_id'];
-                            $newPropertyId = !empty($splittedDetails->id) ? $splittedDetails->id : $applicationDetails['new_property_id'];
-                            $isSplited = 1;
-                            $splitedProperty = 1;
-                            $uniquePropertyId = $splittedDetails->child_prop_id ?? $splittedDetails->child_prop_id;
-                        } else {
-                            $propertyMasterId = $applicationDetails['property_master_id'];
-                            $oldPropertyId = $applicationDetails['old_property_id'];
-                            $newPropertyId = $applicationDetails['new_property_id'];
-                            $isSplited = 0;
-                            $splitedProperty = 0;
-                            $splited_primary_id = 0;
-                            $uniquePropertyId = $applicationDetails['new_property_id'];
-                        }
-                    } else {
-                        $propertyMasterId = $applicationDetails['property_master_id'];
-                        $oldPropertyId = $applicationDetails['old_property_id'];
-                        $newPropertyId = $applicationDetails['new_property_id'];
-                        $isSplited = 0;
-                        $splitedProperty = 0;
-                        $splited_primary_id = 0;
-                        $uniquePropertyId = $applicationDetails['new_property_id'];
-                    }
-
-                    // dd($uniquePropertyId);
-                $application = Application::where('application_no', $applicationDetails['application_no'])->first();
-                if(!empty($application->created_by)){
-                    $user = User::withTrashed()->find($application->created_by);
+            if (!empty($applicationDetails[$splittedColumn]) && $applicationDetails[$splittedColumn] != null && !empty($applicationDetails['old_property_id']) && $applicationDetails['old_property_id'] != null) {
+                $splittedDetails = SplitedPropertyDetail::find($applicationDetails[$splittedColumn]);
+                if (!empty($splittedDetails)) {
+                    // dd($splittedDetails->child_prop_id);
+                    // dd('inside if');
+                    $splited_primary_id = !empty($splittedDetails->id) ? $splittedDetails->id : null;
+                    $propertyMasterId = !empty($splittedDetails->property_master_id) ? $splittedDetails->property_master_id : $applicationDetails['property_master_id'];
+                    $oldPropertyId = !empty($splittedDetails->old_property_id) ? $splittedDetails->old_property_id : $applicationDetails['old_property_id'];
+                    $newPropertyId = !empty($splittedDetails->id) ? $splittedDetails->id : $applicationDetails['new_property_id'];
+                    $isSplited = 1;
+                    $splitedProperty = 1;
+                    $uniquePropertyId = $splittedDetails->child_prop_id ?? $splittedDetails->child_prop_id;
+                } else {
+                    $propertyMasterId = $applicationDetails['property_master_id'];
+                    $oldPropertyId = $applicationDetails['old_property_id'];
+                    $newPropertyId = $applicationDetails['new_property_id'];
+                    $isSplited = 0;
+                    $splitedProperty = 0;
+                    $splited_primary_id = 0;
+                    $uniquePropertyId = $applicationDetails['new_property_id'];
                 }
-                // dd($application,$user, $user->applicantUserDetails);
-                //for updating application status to in progress when application viewd
-                if (Auth::user()->hasRole('section-officer') && $application->status == getServiceType('APP_NEW')) {
-                    $status = getServiceType('APP_IP');
-                    $application->status = $status;
-                    $application->save();
+            } else {
+                $propertyMasterId = $applicationDetails['property_master_id'];
+                $oldPropertyId = $applicationDetails['old_property_id'];
+                $newPropertyId = $applicationDetails['new_property_id'];
+                $isSplited = 0;
+                $splitedProperty = 0;
+                $splited_primary_id = 0;
+                $uniquePropertyId = $applicationDetails['new_property_id'];
+            }
 
-                    $applicationDetails['status'] = $status;
-                    $applicationDetails->save();
+            // dd($uniquePropertyId);
+            $application = Application::where('application_no', $applicationDetails['application_no'])->first();
+            if (!empty($application->created_by)) {
+                $user = User::withTrashed()->find($application->created_by);
+            }
+            // dd($application,$user, $user->applicantUserDetails);
+            //for updating application status to in progress when application viewd
+            if (Auth::user()->hasRole('section-officer') && $application->status == getServiceType('APP_NEW')) {
+                $status = getServiceType('APP_IP');
+                $application->status = $status;
+                $application->save();
 
-                    if ($requestModel == 'MutationApplication') {
-                        $mailServiceType = 'Mutation';
-                    } else if ($requestModel == 'ConversionApplication') {
-                        $mailServiceType = 'Conversion';
-                    } else if ($requestModel == 'DeedOfApartmentApplication') {
-                        $mailServiceType = 'Deed Of Apartment';
-                    } else if ($requestModel == 'LandUseChangeApplication') {
-                        $mailServiceType = 'Land Use Change';
-                    } else if ($requestModel == 'NocApplication') {
-                        $mailServiceType = 'No Objection Certificate';
-                    } else {
-                        $mailServiceType = 'Service Not Defined';
-                    }
+                $applicationDetails['status'] = $status;
+                $applicationDetails->save();
 
-                    //for send notification - SOURAV CHAUHAN (21/Nov/2024)
-                    $user = User::find($application->created_by);
-                    // $propertyMasterId = $applicationDetails['property_master_id'];
-                    // $oldPropertyId = $applicationDetails['old_property_id'];
-                    // $newPropertyId = $applicationDetails['new_property_id'];
-                    
-                    
-                    // dd($applicationDetails[$splittedColumn]);
-                    $propertyKnownAs = PropertyLeaseDetail::where('property_master_id', $propertyMasterId)
-                        ->pluck('presently_known_as')
-                        ->first();
-
-                    $data = [
-                        'application_type' => $mailServiceType,
-                        'application_no' => $applicationDetails['application_no'],
-                        'property_details' => $propertyKnownAs . " [" . $oldPropertyId . " (" . $newPropertyId . ") ]"
-                    ];
-
-                    $action = 'APP_INP';
-                   
-                    try {
-                        $mailSettings = app(SettingsService::class)->getMailSettings($action);
-                        $mailer = new \App\Mail\CommonPHPMail($data, $action, $communicationTrackingId ?? null);
-                        $mailResponse = $mailer->send($user['email'], $mailSettings);
-
-                        Log::info("Email sent successfully.", [
-                            'action' => $action,
-                            'email'  => $user['email'],
-                            'data'   => $data,
-                        ]);
-                    } catch (\Exception $e) {
-                        Log::error("Email sending failed.", [
-                            'action' => $action,
-                            'email'  => $user['email'],
-                            'error'  => $e->getMessage(),
-                        ]);
-                    }
-                    $mobileNo = $user['mobile_no'];
-                    $checkSmsTemplateExists = checkTemplateExists('sms', $action);
-                    $communicationService = new CommunicationService;
-                    if (!empty($checkSmsTemplateExists)) {
-                        $communicationService->sendSmsMessage($data, $mobileNo, $action);
-                    }
-                    $checkWhatsappTemplateExists = checkTemplateExists('whatsapp', $action);
-                    if (!empty($checkWhatsappTemplateExists)) {
-                        $communicationService->sendWhatsAppMessage($data, $mobileNo, $action);
-                    }
-                }
-                //for logs - SOURAV CHAHAN (18/Nov/2024) 
-                $actionLink = url('edharti/applications/' . $id) . '?type=' . $request->type;
-                UserActionLogHelper::UserActionLog(
-                    'Application View',
-                    $actionLink,
-                    'adminApplication',
-                    "Application <a target='_blank' href='" . $actionLink . "'>" . $applicationDetails['application_no'] . "</a> has been viewed by user " . Auth::user()->name . "."
-                );
-                // }
-
-
-                // if ($applicationDetails) {
-                $data = [];
-                $data['application'] = $application;
-                // dd($data);
-
-                $flatDetails = Flat::where('id', $applicationDetails['flat_id'])->first();
-                if ($flatDetails) {
-                    $applicationDetails['flatDetails'] = $flatDetails;
+                if ($requestModel == 'MutationApplication') {
+                    $mailServiceType = 'Mutation';
+                } else if ($requestModel == 'ConversionApplication') {
+                    $mailServiceType = 'Conversion';
+                } else if ($requestModel == 'DeedOfApartmentApplication') {
+                    $mailServiceType = 'Deed Of Apartment';
+                } else if ($requestModel == 'LandUseChangeApplication') {
+                    $mailServiceType = 'Land Use Change';
+                } else if ($requestModel == 'NocApplication') {
+                    $mailServiceType = 'No Objection Certificate';
+                } else {
+                    $mailServiceType = 'Service Not Defined';
                 }
 
-                /** get pending demands amount for property added by Nitin 19Nov2024*/
+                //for send notification - SOURAV CHAUHAN (21/Nov/2024)
+                $user = User::find($application->created_by);
+                // $propertyMasterId = $applicationDetails['property_master_id'];
+                // $oldPropertyId = $applicationDetails['old_property_id'];
+                // $newPropertyId = $applicationDetails['new_property_id'];
+
+
+                // dd($applicationDetails[$splittedColumn]);
+                $propertyKnownAs = PropertyLeaseDetail::where('property_master_id', $propertyMasterId)
+                    ->pluck('presently_known_as')
+                    ->first();
+
+                $data = [
+                    'application_type' => $mailServiceType,
+                    'application_no' => $applicationDetails['application_no'],
+                    'property_details' => $propertyKnownAs . " [" . $oldPropertyId . " (" . $newPropertyId . ") ]"
+                ];
+
+                $action = 'APP_INP';
+
+                try {
+                    $mailSettings = app(SettingsService::class)->getMailSettings($action);
+                    $mailer = new \App\Mail\CommonPHPMail($data, $action, $communicationTrackingId ?? null);
+                    $mailResponse = $mailer->send($user['email'], $mailSettings);
+
+                    Log::info("Email sent successfully.", [
+                        'action' => $action,
+                        'email'  => $user['email'],
+                        'data'   => $data,
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error("Email sending failed.", [
+                        'action' => $action,
+                        'email'  => $user['email'],
+                        'error'  => $e->getMessage(),
+                    ]);
+                }
+                $mobileNo = $user['mobile_no'];
+                $checkSmsTemplateExists = checkTemplateExists('sms', $action);
+                $communicationService = new CommunicationService;
+                if (!empty($checkSmsTemplateExists)) {
+                    $communicationService->sendSmsMessage($data, $mobileNo, $action);
+                }
+                $checkWhatsappTemplateExists = checkTemplateExists('whatsapp', $action);
+                if (!empty($checkWhatsappTemplateExists)) {
+                    $communicationService->sendWhatsAppMessage($data, $mobileNo, $action);
+                }
+            }
+            //for logs - SOURAV CHAHAN (18/Nov/2024) 
+            $actionLink = url('edharti/applications/' . $id) . '?type=' . $request->type;
+            UserActionLogHelper::UserActionLog(
+                'Application View',
+                $actionLink,
+                'adminApplication',
+                "Application <a target='_blank' href='" . $actionLink . "'>" . $applicationDetails['application_no'] . "</a> has been viewed by user " . Auth::user()->name . "."
+            );
+            // }
+
+
+            // if ($applicationDetails) {
+            $data = [];
+            $data['application'] = $application;
+            // dd($data);
+
+            $flatDetails = Flat::where('id', $applicationDetails['flat_id'])->first();
+            if ($flatDetails) {
+                $applicationDetails['flatDetails'] = $flatDetails;
+            }
+
+            /** get pending demands amount for property added by Nitin 19Nov2024*/
                 // $pendingAmount = 0;
                 // $demands = Demand::where('property_master_id', $applicationDetails->property_master_id)->where(function ($query) use ($applicationDetails) {
                 //     if (isset($applicationDetails->splited_property_detail_id) && !is_null($applicationDetails->splited_property_detail_id)) {
@@ -4241,44 +3805,42 @@ class ApplicationController extends Controller
 
 
 // dd($applicationDetails);
-                /** get pending demands amount with flat condition - SOURAV CHAUHAN (02 June 2026) */
-                $pendingAmount = 0;
+            /** get pending demands amount with flat condition - SOURAV CHAUHAN (02 June 2026) */
+            $pendingAmount = 0;
 
-                $demands = Demand::where(function ($query) use ($applicationDetails,$requestModel) {
+            $demands = Demand::where(function ($query) use ($applicationDetails, $requestModel) {
 
-                    // If flat_id exists then search demand by flat_id
-                    if (!empty($applicationDetails->flat_id)) {
-                        $query->where('flat_id', $applicationDetails->flat_id);
-
+                // If flat_id exists then search demand by flat_id
+                if (!empty($applicationDetails->flat_id)) {
+                    $query->where('flat_id', $applicationDetails->flat_id);
+                } else {
+                    if ($requestModel == 'MutationApplication' || $requestModel == 'NocApplication') {
+                        $splitPropertyId = 'splitted_id';
                     } else {
-                            if ($requestModel == 'MutationApplication' || $requestModel == 'NocApplication') {
-                                $splitPropertyId = 'splitted_id';
-                            } else {
-                                $splitPropertyId = 'splited_property_detail_id';
-                            }
-
-                        // Otherwise search by property
-                        $query->where('property_master_id', $applicationDetails->property_master_id)
-
-                            ->where(function ($subQuery) use ($applicationDetails,$splitPropertyId) {
-
-                                if (
-                                    isset($applicationDetails->$splitPropertyId) &&
-                                    !is_null($applicationDetails->$splitPropertyId)
-                                ) {
-
-                                    $subQuery->where(
-                                        'splited_property_detail_id',
-                                        $applicationDetails->$splitPropertyId
-                                    );
-
-                                } else {
-
-                                    $subQuery->whereNull('splited_property_detail_id');
-                                }
-                            });
+                        $splitPropertyId = 'splited_property_detail_id';
                     }
-                })
+
+                    // Otherwise search by property
+                    $query->where('property_master_id', $applicationDetails->property_master_id)
+
+                        ->where(function ($subQuery) use ($applicationDetails, $splitPropertyId) {
+
+                            if (
+                                isset($applicationDetails->$splitPropertyId) &&
+                                !is_null($applicationDetails->$splitPropertyId)
+                            ) {
+
+                                $subQuery->where(
+                                    'splited_property_detail_id',
+                                    $applicationDetails->$splitPropertyId
+                                );
+                            } else {
+
+                                $subQuery->whereNull('splited_property_detail_id');
+                            }
+                        });
+                }
+            })
                 ->whereIn('status', [
                     getServiceType('DEM_PENDING'),
                     getServiceType('DEM_PART_PAID'),
@@ -4289,650 +3851,648 @@ class ApplicationController extends Controller
                 ->get();
 
 
-// dd($demands);
+            // dd($demands);
 
 
 
 
 
 
-                 $isNewDemand = true;
-                if($demands->isEmpty() && empty($applicationDetails->flat_id)){
-                    $isNewDemand = false;
-                    $oldDemand = OldDemand::where('property_id', $applicationDetails['old_property_id'])->where('outstanding','!=',0)->first();
-                    $pendingAmount = $oldDemand['outstanding'] ?? 0;
-                    $demandAmount = $oldDemand['amount'] ?? 0;
-                    $paidAmount = $oldDemand['paid_amount'] ?? 0;
-                } else {
-                    $pendingAmount = $demands->sum('balance_amount');
-                    $demandAmount = $demands->sum('net_total');
-                    $paidAmount = $demands->sum('paid_amount');
-                }
+            $isNewDemand = true;
+            if ($demands->isEmpty() && empty($applicationDetails->flat_id)) {
+                $isNewDemand = false;
+                $oldDemand = OldDemand::where('property_id', $applicationDetails['old_property_id'])->where('outstanding', '!=', 0)->first();
+                $pendingAmount = $oldDemand['outstanding'] ?? 0;
+                $demandAmount = $oldDemand['amount'] ?? 0;
+                $paidAmount = $oldDemand['paid_amount'] ?? 0;
+            } else {
+                $pendingAmount = $demands->sum('balance_amount');
+                $demandAmount = $demands->sum('net_total');
+                $paidAmount = $demands->sum('paid_amount');
+            }
 
 
-                // Store in response array
-                $data['pendingAmount'] = $pendingAmount;
-                $data['demandAmount'] = $demandAmount;
-                $data['paidAmount'] = $paidAmount;
-                $data['isNewDemand'] = $isNewDemand;
-                $data['pendingDemands'] = $demands;
+            // Store in response array
+            $data['pendingAmount'] = $pendingAmount;
+            $data['demandAmount'] = $demandAmount;
+            $data['paidAmount'] = $paidAmount;
+            $data['isNewDemand'] = $isNewDemand;
+            $data['pendingDemands'] = $demands;
 
-                
-                /** ---------------------------------------- */
 
-                // $documents = Document::where('model_name', $requestModel)
-                //     ->where('model_id', $id)
-                //     ->get();
-                // // dd($documents, $decodedModel, $id);
-                // $finalDocs = [];
+            /** ---------------------------------------- */
 
-                // foreach ($documents as $key => $document) {
-                //     // foreach ($document as $doc) {
-                //     $values = DocumentKey::where('document_id', $document->id)->get();
-                //     $document->values = $values;
-                //     // }
-                //     $finalDocs[] = $document;
-                // }
+            // $documents = Document::where('model_name', $requestModel)
+            //     ->where('model_id', $id)
+            //     ->get();
+            // // dd($documents, $decodedModel, $id);
+            // $finalDocs = [];
 
-              
-                
-                //for show hide action buttons
-                $applicationLatestMov = ApplicationMovement::where('application_no', $applicationDetails['application_no'])->latest()->first();
+            // foreach ($documents as $key => $document) {
+            //     // foreach ($document as $doc) {
+            //     $values = DocumentKey::where('document_id', $document->id)->get();
+            //     $document->values = $values;
+            //     // }
+            //     $finalDocs[] = $document;
+            // }
+
+
+
+            //for show hide action buttons
+            $applicationLatestMov = ApplicationMovement::where('application_no', $applicationDetails['application_no'])->latest()->first();
+            $showActionButtons = false;
+            $showRevertButton = false; //show revert button in vew file added by Nitin 09Dec2024
+            if ($application->status == getServiceType('APP_REJ') || $application->status == getServiceType('APP_APR')) {
                 $showActionButtons = false;
-                $showRevertButton = false; //show revert button in vew file added by Nitin 09Dec2024
-                if ($application->status == getServiceType('APP_REJ') || $application->status == getServiceType('APP_APR')) {
-                    $showActionButtons = false;
-                } else if ($applicationLatestMov) {
-                    $assignedTo = $applicationLatestMov->assigned_to;
-                    // dd($assignedTo,Auth::user()->id);
-                    if ($assignedTo == Auth::user()->id) {
-                        $showActionButtons = true;
+            } else if ($applicationLatestMov) {
+                $assignedTo = $applicationLatestMov->assigned_to;
+                // dd($assignedTo,Auth::user()->id);
+                if ($assignedTo == Auth::user()->id) {
+                    $showActionButtons = true;
 
 
-                        //For showing revert button to login user when forward done on multiple levels - 06 August 2026 START *********
-                        $isApplicationRevertible = ApplicationMovement::where('application_no', $applicationDetails['application_no'])
-                                                ->where('assigned_by','!=',Auth::id())
-                                                ->where('assigned_to',Auth::id())
-                                                ->where('is_forwarded', 1)
-                                                ->latest()
-                                                ->first();
-                        if(!empty($isApplicationRevertible)){
-                            $showRevertButton =  true;
-                        }
-                        //For showing revert button to login user when forward done on multiple levels - 06 August 2026 END *********
-
-
-
-
-                        if ($applicationLatestMov->is_forwarded >= 1) {
-                            $showActionButtons = false;
-                            $showRevertButton =  true;
-                            $firstForwardEntry = ApplicationMovement::where('application_no', $applicationDetails['application_no'])->where('is_forwarded', 1)->first();
-                            if (!empty($firstForwardEntry) && $firstForwardEntry->assigned_by == Auth::id()) {
-                                $showActionButtons = true;
-                                $showRevertButton =  false;
-                            }
-                        }
-                        // dd($showActionButtons);
-                    } else if ($assignedTo == null && Auth::user()->hasRole('section-officer')) {
-                        $showActionButtons = true;
+                    //For showing revert button to login user when forward done on multiple levels - 06 August 2026 START *********
+                    $isApplicationRevertible = ApplicationMovement::where('application_no', $applicationDetails['application_no'])
+                        ->where('assigned_by', '!=', Auth::id())
+                        ->where('assigned_to', Auth::id())
+                        ->where('is_forwarded', 1)
+                        ->latest()
+                        ->first();
+                    if (!empty($isApplicationRevertible)) {
+                        $showRevertButton =  true;
                     }
+                    //For showing revert button to login user when forward done on multiple levels - 06 August 2026 END *********
+
+
+
+
+                    if ($applicationLatestMov->is_forwarded >= 1) {
+                        $showActionButtons = false;
+                        $showRevertButton =  true;
+                        $firstForwardEntry = ApplicationMovement::where('application_no', $applicationDetails['application_no'])->where('is_forwarded', 1)->first();
+                        if (!empty($firstForwardEntry) && $firstForwardEntry->assigned_by == Auth::id()) {
+                            $showActionButtons = true;
+                            $showRevertButton =  false;
+                        }
+                    }
+                    // dd($showActionButtons);
+                } else if ($assignedTo == null && Auth::user()->hasRole('section-officer')) {
+                    $showActionButtons = true;
                 }
-                
-                // for show hide the create letter button  SOURAV CHAUHAN
-                $showCreateLetterButtons = false;
-                $applicationMovAll = ApplicationMovement::where('application_no', $applicationDetails['application_no'])->get();
-                if ($applicationMovAll->count() == 1 || $applicationMovAll->last()->assigned_to_role == 7 || $applicationMovAll->last()->assigned_to_role == 4) {
-                    $showCreateLetterButtons = true;
-                }
+            }
+
+            // for show hide the create letter button  SOURAV CHAUHAN
+            $showCreateLetterButtons = false;
+            $applicationMovAll = ApplicationMovement::where('application_no', $applicationDetails['application_no'])->get();
+            if ($applicationMovAll->count() == 1 || $applicationMovAll->last()->assigned_to_role == 7 || $applicationMovAll->last()->assigned_to_role == 4) {
+                $showCreateLetterButtons = true;
+            }
 
 
-                // dd($applicationLatestMov);
+            // dd($applicationLatestMov);
 
 
-                // for show hide the send appointment link button for CDV  SOURAV CHAUHAN
-                /*$showAppointmentLinkButton = true;
+            // for show hide the send appointment link button for CDV  SOURAV CHAUHAN
+            /*$showAppointmentLinkButton = true;
                 $applicationAppointmentLink = ApplicationAppointmentLink::where('application_no', $applicationDetails['application_no'])->latest()->first();
                 if ($applicationAppointmentLink) {
                     $showAppointmentLinkButton = false;
                 }*/
 
-                $applicationAppointmentLink = ApplicationAppointmentLink::where('application_no', $applicationDetails['application_no'])->latest()->first();
+            $applicationAppointmentLink = ApplicationAppointmentLink::where('application_no', $applicationDetails['application_no'])->latest()->first();
 
 
-                //for show hide warning mail sent button
-                $shoWarningMailButton = false;
-                if ($application->is_warning_sent == null) {
-                    if (isset($applicationAppointmentLink) && $applicationAppointmentLink->is_attended == 0 && $applicationAppointmentLink->is_active == 0) {
-                        $shoWarningMailButton = true;
+            //for show hide warning mail sent button
+            $shoWarningMailButton = false;
+            if ($application->is_warning_sent == null) {
+                if (isset($applicationAppointmentLink) && $applicationAppointmentLink->is_attended == 0 && $applicationAppointmentLink->is_active == 0) {
+                    $shoWarningMailButton = true;
+                }
+            }
+
+            // for checking, is proof reading attended by applicant- SOURAV CHAUHAN (17/Dec/2024)
+            $isAppointmentAttended = false;
+            if (isset($applicationAppointmentLink) && $applicationAppointmentLink->is_attended == 1) {
+                $isAppointmentAttended = true;
+            }
+            $showApproveButton = false; // Nitin 13Dec2024
+            $showCdvActionInDocuments = false;
+            $showRecommandForAppoval = false;
+            $showUploadSignedLetter = false;
+            $showActionButtonSection = false;
+            $showRecommandAndObjectButtonSection = true;
+            $isSignedLetterAvailable = false;
+            $applicationRecommendeByCdv = false;
+            switch ($requestModel) {
+                case 'MutationApplication':
+                    $extraApplicants = ApplicationExtraApplicant::where('application_no', $applicationDetails['application_no'])->get();
+                    $showRecommandForAppoval = true;
+                    $applicationType = 'Mutation';
+                    $serviceType = getServiceType('SUB_MUT');
+                    $documents = Document::where('service_type', $serviceType)->where('model_name', $requestModel)->where('model_id', $id)->get();
+                    // dd($documents);
+                    if (!empty($documents)) {
+                        //show or not CDV action in document listing - SOURAV CHAUHAN (23/Dec/2024)
+                        $isApplicationMoveToCdv = ApplicationMovement::where('application_no', $applicationDetails['application_no'])->where('assigned_to_role', 4)->where('action', '!=', null)->count();
+                        if ($isApplicationMoveToCdv > 0) {
+                            $showCdvActionInDocuments = true;
+                        }
                     }
-                }
 
-                // for checking, is proof reading attended by applicant- SOURAV CHAUHAN (17/Dec/2024)
-                $isAppointmentAttended = false;
-                if (isset($applicationAppointmentLink) && $applicationAppointmentLink->is_attended == 1) {
-                    $isAppointmentAttended = true;
-                }
-                $showApproveButton = false; // Nitin 13Dec2024
-                $showCdvActionInDocuments = false;
-                $showRecommandForAppoval = false;
-                $showUploadSignedLetter = false;
-                $showActionButtonSection = false;
-                $showRecommandAndObjectButtonSection = true;
-                $isSignedLetterAvailable = false;
-                $applicationRecommendeByCdv = false;
-                switch ($requestModel) {
-                    case 'MutationApplication':
-                         $extraApplicants = ApplicationExtraApplicant::where('application_no', $applicationDetails['application_no'])->get();
-                        $showRecommandForAppoval = true;
-                        $applicationType = 'Mutation';
-                        $serviceType = getServiceType('SUB_MUT');
-                        $documents = Document::where('service_type', $serviceType)->where('model_name', $requestModel)->where('model_id', $id)->get();
-                        // dd($documents);
-                        if (!empty($documents)) {
-                            //show or not CDV action in document listing - SOURAV CHAUHAN (23/Dec/2024)
-                            $isApplicationMoveToCdv = ApplicationMovement::where('application_no', $applicationDetails['application_no'])->where('assigned_to_role', 4)->where('action', '!=', null)->count();
-                            if ($isApplicationMoveToCdv > 0) {
-                                $showCdvActionInDocuments = true;
-                            }
-                        }
-
-                        //For showing the upload singned letter option
-                       // $isApplicationRecommendeByCdv = ApplicationMovement::where('application_no', $applicationDetails['application_no'])->where('assigned_by_role', 4)->where('action', 'RECOMMENDED')->count();
-                       if($applicationDetails->service_type->item_code == "CONVERSION" || $applicationDetails->service_type->item_code == "SUB_MUT"){
-        	                $isApplicationRecommendeByCdv = ApplicationMovement::where('application_no', $applicationDetails['application_no'])->where('assigned_by_role', 4)->where('action', 'RECOMMENDED')->count();
-                        }
-                        else {
-                            $isApplicationRecommendeByCdv = ApplicationMovement::where('application_no', $applicationDetails['application_no'])->where('assigned_by_role', 7)->where('action', 'RECOMMENDED')->get();
-                        }
-        // dd($isApplicationRecommendeByCdv);
-                        if ($isApplicationRecommendeByCdv > 0) {
-                            $showUploadSignedLetter = true;
-                            $applicationRecommendeByCdv = true;
-                        }
-        //                  if ($isApplicationRecommendeByCdv > 0) {
-        //                     $showUploadSignedLetter = 1;
-		// }
-		// else {
-		// 	 $showUploadSignedLetter = 0;
-		// }
-
-                        $isSignedLetterAvailable = Application::where('application_no', $applicationDetails['application_no'])
-                            ->whereNotNull('Signed_letter')
-                            ->exists();
-
-
-                        //for showing Approve button to deputy - SOURAV CHAUHAN (31/Dec/2024)
-                        if (!empty($application->Signed_letter)) {
-                            $showApproveButton = true;
-                        }
-
-
-
-                        //coapplicants
-                        $data['coapplicants'] = Coapplicant::where('service_type', $serviceType)->where('model_name', $requestModel)->where('model_id', $id)->get();
-                        $showAppointmentLinkButton = self::showAppointmentLinkButtonFun($requestModel, $applicationDetails['application_no']);
-
-                        //for showing Recommend for approval button at CDV end - SOURAV CHAUHAN (24/Dec/2024)
-                        $documentsUploadedByApplicant = Document::where('service_type', $serviceType)
-                            ->where('model_name', $requestModel)
-                            ->where('model_id', $id)
-                            ->whereNotNull('file_path')
-                            ->get();
-                        foreach ($documentsUploadedByApplicant as $documentApp) {
-                            if (!is_null($documentApp->file_path)) {
-                                if (is_null($documentApp->office_file_path)) {
-                                    $showRecommandForAppoval = false;
-                                    break;
-                                } else {
-                                    continue;
-                                }
-                            }
-                        }
-
-                        $applicantShare = ApplicantShare::where('application_no', $applicationDetails['application_no'])->value('share');
-                        // Fetch documents from application_document_details table
-                        // In your controller method where you prepare the view data
-                        $applicationDocumentDetails = ApplicationDocumentDetail::where('application_no', $applicationDetails['application_no'])
-                            ->orderBy('id', 'asc')
-                            ->get();
-
-                        // Prepare document data for 4 rows
-                        $mutationApplicationDocumentData = [
-                            0 => ['name' => '', 'date' => ''],
-                            1 => ['name' => '', 'date' => ''],
-                            2 => ['name' => '', 'date' => ''],
-                            3 => ['name' => '', 'date' => '']
-                        ];
-
-                        // Populate with existing data
-                        foreach ($applicationDocumentDetails as $index => $documentData) {
-                            if ($index < 4) { // Only fill up to 4 rows
-                                $mutationApplicationDocumentData[$index] = [
-                                    'name' => $documentData->document_name ?? '',
-                                    'date' => $documentData->document_date ? Carbon::parse($documentData->document_date)->format('Y-m-d') : ''
-                                ];
-                            }
-                        }
-
-
-                        break;
-                    case 'LandUseChangeApplication':
-                        $applicationType = 'Land Use Change';
-                        $serviceType = getServiceType('LUC');
-                        $latestAppAction = AppLatestAction::where('application_no', $applicationDetails['application_no'])->first();
-                        /** code adde by NItin 13 Dec 2024 */
-                        if (Auth::user()->hasRole('deputy-lndo') && $latestAppAction && $latestAppAction->latest_action == "RECOMMENDED" && Self::getUserIdBySectionCodeAndRole(11) == $latestAppAction->latest_action_by) {
-                            $showApproveButton = true;
-                        }
-
-                        /** --- code adde by NItin 13 Dec 2024 */
-                        $documentList = config('applicationDocumentType.LUC.documents');
-                        $requiredDocuments = collect($documentList)->where('required', 1)->all();
-                        $requiredDocumentTypes = array_map(function ($element) {
-                            return $element['label'];
-                        }, $requiredDocuments);
-                        $uploadedDocuments = Document::where('service_type', $serviceType)->where('model_name', $requestModel)->where('model_id', $id)->get();
-                        // dd($requiredDocumentTypes, $uploadedDocuments);
-                        $showAppointmentLinkButton = false;
-                        $documents = [
-                            'required' => [],
-                            'optional' => [],
-                            'additional' => [] // added by Nitin on 24-01-2025
-                        ];
-
-                        // Required documents
-                        foreach ($requiredDocumentTypes as $requiredDocument) {
-                            foreach ($uploadedDocuments as $uploadedDocument) {
-                                if ($requiredDocument == $uploadedDocument->title) {
-                                    $documents['required'][] = [
-                                        'title' => $uploadedDocument->title,
-                                        'file_path' => $uploadedDocument->file_path
-                                    ];
-                                    break;
-                                }
-                            }
-                        }
-
-                        //optional documents
-                        $optionalDocuments = collect($documentList)->where('required', 0)->all();
-                        $optionalDocumentTypes = array_map(function ($element) {
-                            return $element['label'];
-                        }, $optionalDocuments);
-
-                        foreach ($optionalDocumentTypes as $optionalDocument) {
-                            $found = false;
-                            foreach ($uploadedDocuments as $uploadedDocument) {
-                                if ($optionalDocument == $uploadedDocument->title) {
-                                    $documents['optional'][] = [
-                                        'title' => $uploadedDocument->title,
-                                        'file_path' => $uploadedDocument->file_path
-                                    ];
-                                    $found = true;
-                                    break;
-                                }
-                            }
-                            if (!$found) {
-                                $documents['optional'][] = [
-                                    'title' => $optionalDocument,
-                                    'file_path' => null
-                                ];
-                            }
-                        }
-                        /** get additional documents */
-
-                        $additionalDocuments = $uploadedDocuments->where('document_type', 'AdditionalDocument')->values()->toArray();
-                        $documents['additional'] = $additionalDocuments;
-                        // dd($documents);
-                        $data['documents'] = $documents;
-                        break;
-                    case 'DeedOfApartmentApplication':
-                        $showRecommandForAppoval = true;
-                        $showActionButtonSection = true;
-                        $showRecommandAndObjectButtonSection = false;
-                        $applicationType = 'Deed Of Apartment';
-                        $serviceType = getServiceType('DOA');
-                        $requiredDocuments = config('applicationDocumentType.DOA.documents');
-                        $uploadedDocuments = Document::where('service_type', $serviceType)->where('model_name', $requestModel)->where('model_id', $id)->get();
-                        $documents = [
-                            'required' => [],
-                        ];
-                        foreach ($requiredDocuments as $key => $requiredDocument) {
-                            foreach ($requiredDocument as $key => $value) {
-                                foreach ($uploadedDocuments as $uploadedDocument) {
-                                    if ($requiredDocument[$key] == $uploadedDocument->document_type) {
-                                        $documents['required'][] = [
-                                            'title' => $uploadedDocument->title,
-                                            'file_path' => $uploadedDocument->file_path
-                                        ];
-                                        break;
-                                    }
-                                }
-                            }
-                        }
-
-                        $data['documents'] = $documents;
-                        //For showing the upload singned letter option
-                        // $isApplicationRecommendeBySection = ApplicationMovement::where('application_no', $applicationDetails['application_no'])->where('assigned_by_role', 7)->where('action', 'RECOMMENDED')->count();
-                        $isApplicationRecommendeBySection = ApplicationMovement::where('application_no', $applicationDetails['application_no'])->where('assigned_by_role', 7)->where('action', 'RECOMMENDED_FOR_APPROVAL')->count();
-                        if ($isApplicationRecommendeBySection > 0) {
-                            $showUploadSignedLetter = true;
-                        }
-
-
-                        //for showing Approve button to deputy - SOURAV CHAUHAN (31/Dec/2024)
-                        if (!empty($application->Signed_letter)) {
-                            $showApproveButton = true;
-                        }
-                        $showAppointmentLinkButton = self::showAppointmentLinkButtonFun($requestModel, $applicationDetails['application_no']);
-                        //for showing Recommend for approval button at Deputy end - LALIT TIWAR (01/Jan/2025)
-                        $documentsUploadedByApplicant = Document::where('service_type', $serviceType)
-                            ->where('model_name', $requestModel)
-                            ->where('model_id', $id)
-                            ->whereNotNull('file_path')
-                            ->get();
-
-                            // dd($documentsUploadedByApplicant);
-                        foreach ($documentsUploadedByApplicant as $documentApp) {
-                            if (!is_null($documentApp->file_path)) {
-                                if (is_null($documentApp->office_file_path)) {
-                                    $showRecommandForAppoval = false;
-                                    $recordExistsAppLink = ApplicationAppointmentLink::where('application_no', $applicationDetails['application_no'])->where('is_active', 1)->exists();
-                                    if ($recordExistsAppLink) {
-                                        $showRecommandAndObjectButtonSection = true;
-                                    }
-                                    break;
-                                } else {
-                                    continue;
-                                }
-                            }
-                        }
-
-                        //For showing Recommonded & object button to section
-                        $recordExists = AppLatestAction::where('application_no', $applicationDetails['application_no'])->exists();
-                        if (!$recordExists) {
-                            $showActionButtonSection = true;
-                        }
-
-
-
-
-                        break;
-                    case 'ConversionApplication':
-                        $showRecommandForAppoval = true;
-                        $applicationType = 'Conversion';
-                        $serviceType = getServiceType('CONVERSION');
-                        $requiredDocuments = config('applicationDocumentType.CONVERSION.Required');
-                        $uploadedDocuments = Document::where('service_type', $serviceType)->where('model_name', $requestModel)->where('model_id', $id)->get();
-
-
-                        if (!empty($uploadedDocuments)) {
-                            //show or not CDV action in document listing - SOURAV CHAUHAN (23/Dec/2024)
-                            $isApplicationMoveToCdv = ApplicationMovement::where('application_no', $applicationDetails['application_no'])->where('assigned_to_role', 4)->where('action', '!=', null)->count();
-                            if ($isApplicationMoveToCdv > 0) {
-                                $showCdvActionInDocuments = true;
-                            }
-                        }
-
-                        //For showing the upload singned letter option
+                    //For showing the upload singned letter option
+                    // $isApplicationRecommendeByCdv = ApplicationMovement::where('application_no', $applicationDetails['application_no'])->where('assigned_by_role', 4)->where('action', 'RECOMMENDED')->count();
+                    if ($applicationDetails->service_type->item_code == "CONVERSION" || $applicationDetails->service_type->item_code == "SUB_MUT") {
                         $isApplicationRecommendeByCdv = ApplicationMovement::where('application_no', $applicationDetails['application_no'])->where('assigned_by_role', 4)->where('action', 'RECOMMENDED')->count();
-                        if ($isApplicationRecommendeByCdv > 0) {
-                            $showUploadSignedLetter = true;
-                             $applicationRecommendeByCdv = true;
-                        }
-
-
-                        //for showing Approve button to deputy - SOURAV CHAUHAN (31/Dec/2024)
-                         $isSignedLetterAvailable = Application::where('application_no', $applicationDetails['application_no'])
-                            ->whereNotNull('Signed_letter')
-                            ->exists();
-
-                        if (!empty($application->Signed_letter)) {
-                            $showApproveButton = true;
-                        }
-
-
-
-                        $data['coapplicants'] = Coapplicant::where('service_type', $serviceType)->where('model_name', $requestModel)->where('model_id', $id)->get();
-                        $documents = [
-                            'required' => [],
-                        ];
-                        foreach ($requiredDocuments as $key => $requiredDocument) {
-                            foreach ($uploadedDocuments as $uploadedDocument) {
-                                if ($key == $uploadedDocument->title) {
-                                    $documents['required'][] = [
-                                        'title' => $uploadedDocument->title,
-                                        'file_path' => $uploadedDocument->file_path
-                                    ];
-                                    break;
-                                }
-                            }
-                        }
-                        $data['documents'] = $documents;
-                        $showAppointmentLinkButton = self::showAppointmentLinkButtonFun($requestModel, $applicationDetails['application_no']);
-
-                        //for showing Recommend for approval button at CDV end - SOURAV CHAUHAN (24/Dec/2024)
-                        $documentsUploadedByApplicant = Document::where('service_type', $serviceType)
-                            ->where('model_name', $requestModel)
-                            ->where('model_id', $id)
-                            ->whereNotNull('file_path')
-                            ->get();
-                        foreach ($documentsUploadedByApplicant as $documentApp) {
-                            if ($documentApp->document_type != 'mortgageNoCFile' && $documentApp->document_type != 'convCourtOrderFile') {
-                                if (!is_null($documentApp->file_path)) {
-                                    if (is_null($documentApp->office_file_path)) {
-                                        $showRecommandForAppoval = false;
-                                        break;
-                                    } else {
-                                        continue;
-                                    }
-                                }
-                            }
-                        }
-
-
-
-                        break;
-
-                    case 'NocApplication':
-                        $showRecommandForAppoval = true;
-                        $applicationType = 'Noc';
-                        $serviceType = getServiceType('NOC');
-                        $requiredDocuments = config('applicationDocumentType.NOC.Required');
-                        $uploadedDocuments = Document::where('service_type', $serviceType)->where('model_name', $requestModel)->where('model_id', $id)->get();
-
-                        //For showing the upload singned letter option
-                        $isApplicationRecommendeByCdv = ApplicationMovement::where('application_no', $applicationDetails['application_no'])->where('assigned_by_role', 7)->where('action', 'RECOMMENDED')->count();
-                        if ($isApplicationRecommendeByCdv > 0) {
-                            $showUploadSignedLetter = true;
-                        }
-
-
-                        //for showing Approve button to deputy - SOURAV CHAUHAN (31/Dec/2024)
-                        if (!empty($application->Signed_letter)) {
-                            $showApproveButton = true;
-                        }
-
-
-
-                        $data['coapplicants'] = Coapplicant::where('service_type', $serviceType)->where('model_name', $requestModel)->where('model_id', $id)->get();
-
-                        $documents = [
-                            'required' => [],
-                        ];
-                        foreach ($requiredDocuments as $key => $requiredDocument) {
-                            foreach ($uploadedDocuments as $uploadedDocument) {
-                                if ($key == $uploadedDocument->title) {
-                                    $documents['required'][] = [
-                                        'title' => $uploadedDocument->title,
-                                        'file_path' => $uploadedDocument->file_path
-                                    ];
-                                    break;
-                                }
-                            }
-                        }
-                        $data['documents'] = $documents;
-                        $showAppointmentLinkButton = self::showAppointmentLinkButtonFun($requestModel, $applicationDetails['application_no']);
-
-                        //for showing Recommend for approval button at CDV end - SOURAV CHAUHAN (24/Dec/2024)
-                        $documentsUploadedByApplicant = Document::where('service_type', $serviceType)
-                            ->where('model_name', $requestModel)
-                            ->where('model_id', $id)
-                            ->whereNotNull('file_path')
-                            ->get();
-                        foreach ($documentsUploadedByApplicant as $documentApp) {
-                            if ($documentApp->document_type != 'mortgageNoCFile' && $documentApp->document_type != 'convCourtOrderFile') {
-                                if (!is_null($documentApp->file_path)) {
-                                    if (is_null($documentApp->office_file_path)) {
-                                        $showRecommandForAppoval = false;
-                                        break;
-                                    } else {
-                                        continue;
-                                    }
-                                }
-                            }
-                        }
-                        break;
-                    default:
-                        $applicationType = '';
-                        break;
-                }
-
-                $data['applicationType'] = $applicationType;
-                $data['roles'] = Auth::user()->roles[0]->name;
-                $property = PropertyMaster::find($applicationDetails['property_master_id']);
-                $data['showApproveButton'] = $showApproveButton;
-                $data['uniquePaymentId'] = $uniquePaymentId;
-                $scannedFiles['files'] = [];
-                if (!empty($property['id'])) {
-
-                    $splitedColumnName = in_array($requestModel, ['LandUseChangeApplication', 'ConversionApplication']) ? 'splitted_property_detail_id' : 'splitted_id';
-                    // dd($applicationDetails[$splitedColumnName],$applicationDetails['property_master_id']);
-                    // dd($splitedColumnName);
-                    // dd($applicationDetails);
-                    $scannedFiles = GeneralFunctions::getLocalScannedFiles($applicationDetails['property_master_id'], $applicationDetails[$splitedColumnName]);
-                    // $scanningLink=Config:: get('constants.propertyDocList');
-                    // // dd($scanningLink);
-                    // $response = Http::timeout(10)->get( $scanningLink . $property['old_propert_id']);
-                    // // $response = Http::get('https://ldo.gov.in/edhartiapi/Api/PropDocs/bypropertyID?PropertyID=' . $property['old_propert_id']);
-                    // // dd($response);
-                    // if ($response->successful()) {
-                    //     $jsonData = $response->json();
-                        
-                    //     // Proceed if jsonData is not empty
-                    //     if (!empty($jsonData)) {
-                    //         $scannedFiles['baseUrl'] = $jsonData[0]['Path'];
-                    //         $vol=1;
-                    //        foreach ($jsonData[0]['ListFileName'] as $value) {
-                    //         	$decoded = $this->decryptDotNet($value['PropertyFileNameDcrpt'], '1234567890123456');
-					// 			// if (!$decoded) { 
-					// 			//     // Decode fail ho gaya → original naam use karo
-					// 			//     $decoded = $value['PropertyFileName'];
-					// 			// }
-					// 			//$scannedFiles['files'][] = $decoded;
-                    //          //$scannedFiles['files'][] = $this->decryptDotNet($value['PropertyFileName'],'1234567890123456');
-                    //             $scannedFiles['files'][] = [
-                    //             'actual' => $value['PropertyFileNameDcrpt'],
-                    //            'display' => 'Volume-'. $vol++
-                    //             ];
-
-                    //            // $vol++;
-                    //         }
-                    //     } else {
-                    //         // Handle case where the response is empty or not as expected
-                    //         Log::warning('API response returned empty or invalid data.');
-                    //         $scannedFiles['files'] = [];
-                    //     }
-                    // } elseif ($response->clientError()) {
-                    //     \Log::error("Client error: " . $response->status() . ' - ' . $response->body());
-                    //     $scannedFiles['files'] = [];
-                    // } elseif ($response->serverError()) {
-                    //     \Log::error("Server error: " . $response->status() . ' - ' . $response->body());
-                    //     $scannedFiles['files'] = [];
-                    // } else {
-                    //     Log::error('API request failed with status: ' . $response->status());
-                    //     $scannedFiles['files'] = [];
+                    } else {
+                        $isApplicationRecommendeByCdv = ApplicationMovement::where('application_no', $applicationDetails['application_no'])->where('assigned_by_role', 7)->where('action', 'RECOMMENDED')->get();
+                    }
+                    // dd($isApplicationRecommendeByCdv);
+                    if ($isApplicationRecommendeByCdv > 0) {
+                        $showUploadSignedLetter = true;
+                        $applicationRecommendeByCdv = true;
+                    }
+                    //                  if ($isApplicationRecommendeByCdv > 0) {
+                    //                     $showUploadSignedLetter = 1;
+                    // }
+                    // else {
+                    // 	 $showUploadSignedLetter = 0;
                     // }
 
-                    $data['scannedFiles'] = $scannedFiles;
-                    $data['propertyMasterId'] = $property['id'];
-                    $data['suggestedPropertyId'] = $oldPropertyId;
-                    $data['oldPropertyId'] = $oldPropertyId;
-                    $data['uniquePropertyId'] = $uniquePropertyId;
-                    $data['sectionCode'] = $property['section_code'];
-                    $data['isSplited'] = $isSplited;
-                    $data['splitedProperty'] = $splitedProperty;
-                    $data['splited_primary_id'] = $splited_primary_id;
+                    $isSignedLetterAvailable = Application::where('application_no', $applicationDetails['application_no'])
+                        ->whereNotNull('Signed_letter')
+                        ->exists();
 
-                    // dd($data);
 
-                } else {
-                    $data['propertyMasterId'] = '';
-                    $data['suggestedPropertyId'] = '';
-                    $data['oldPropertyId'] = '';
-                    $data['uniquePropertyId'] = '';
-                    $data['sectionCode'] = '';
-                    $data['isSplited'] = '';
-                    $data['splitedProperty'] = '';
-                    $data['splited_primary_id'] = '';
+                    //for showing Approve button to deputy - SOURAV CHAUHAN (31/Dec/2024)
+                    if (!empty($application->Signed_letter)) {
+                        $showApproveButton = true;
+                    }
 
-                }
+
+
+                    //coapplicants
+                    $data['coapplicants'] = Coapplicant::where('service_type', $serviceType)->where('model_name', $requestModel)->where('model_id', $id)->get();
+                    $showAppointmentLinkButton = self::showAppointmentLinkButtonFun($requestModel, $applicationDetails['application_no']);
+
+                    //for showing Recommend for approval button at CDV end - SOURAV CHAUHAN (24/Dec/2024)
+                    $documentsUploadedByApplicant = Document::where('service_type', $serviceType)
+                        ->where('model_name', $requestModel)
+                        ->where('model_id', $id)
+                        ->whereNotNull('file_path')
+                        ->get();
+                    foreach ($documentsUploadedByApplicant as $documentApp) {
+                        if (!is_null($documentApp->file_path)) {
+                            if (is_null($documentApp->office_file_path)) {
+                                $showRecommandForAppoval = false;
+                                break;
+                            } else {
+                                continue;
+                            }
+                        }
+                    }
+
+                    $applicantShare = ApplicantShare::where('application_no', $applicationDetails['application_no'])->value('share');
+                    // Fetch documents from application_document_details table
+                    // In your controller method where you prepare the view data
+                    $applicationDocumentDetails = ApplicationDocumentDetail::where('application_no', $applicationDetails['application_no'])
+                        ->orderBy('id', 'asc')
+                        ->get();
+
+                    // Prepare document data for 4 rows
+                    $mutationApplicationDocumentData = [
+                        0 => ['name' => '', 'date' => ''],
+                        1 => ['name' => '', 'date' => ''],
+                        2 => ['name' => '', 'date' => ''],
+                        3 => ['name' => '', 'date' => '']
+                    ];
+
+                    // Populate with existing data
+                    foreach ($applicationDocumentDetails as $index => $documentData) {
+                        if ($index < 4) { // Only fill up to 4 rows
+                            $mutationApplicationDocumentData[$index] = [
+                                'name' => $documentData->document_name ?? '',
+                                'date' => $documentData->document_date ? Carbon::parse($documentData->document_date)->format('Y-m-d') : ''
+                            ];
+                        }
+                    }
+
+
+                    break;
+                case 'LandUseChangeApplication':
+                    $applicationType = 'Land Use Change';
+                    $serviceType = getServiceType('LUC');
+                    $latestAppAction = AppLatestAction::where('application_no', $applicationDetails['application_no'])->first();
+                    /** code adde by NItin 13 Dec 2024 */
+                    if (Auth::user()->hasRole('deputy-lndo') && $latestAppAction && $latestAppAction->latest_action == "RECOMMENDED" && Self::getUserIdBySectionCodeAndRole(11) == $latestAppAction->latest_action_by) {
+                        $showApproveButton = true;
+                    }
+
+                    /** --- code adde by NItin 13 Dec 2024 */
+                    $documentList = config('applicationDocumentType.LUC.documents');
+                    $requiredDocuments = collect($documentList)->where('required', 1)->all();
+                    $requiredDocumentTypes = array_map(function ($element) {
+                        return $element['label'];
+                    }, $requiredDocuments);
+                    $uploadedDocuments = Document::where('service_type', $serviceType)->where('model_name', $requestModel)->where('model_id', $id)->get();
+                    // dd($requiredDocumentTypes, $uploadedDocuments);
+                    $showAppointmentLinkButton = false;
+                    $documents = [
+                        'required' => [],
+                        'optional' => [],
+                        'additional' => [] // added by Nitin on 24-01-2025
+                    ];
+
+                    // Required documents
+                    foreach ($requiredDocumentTypes as $requiredDocument) {
+                        foreach ($uploadedDocuments as $uploadedDocument) {
+                            if ($requiredDocument == $uploadedDocument->title) {
+                                $documents['required'][] = [
+                                    'title' => $uploadedDocument->title,
+                                    'file_path' => $uploadedDocument->file_path
+                                ];
+                                break;
+                            }
+                        }
+                    }
+
+                    //optional documents
+                    $optionalDocuments = collect($documentList)->where('required', 0)->all();
+                    $optionalDocumentTypes = array_map(function ($element) {
+                        return $element['label'];
+                    }, $optionalDocuments);
+
+                    foreach ($optionalDocumentTypes as $optionalDocument) {
+                        $found = false;
+                        foreach ($uploadedDocuments as $uploadedDocument) {
+                            if ($optionalDocument == $uploadedDocument->title) {
+                                $documents['optional'][] = [
+                                    'title' => $uploadedDocument->title,
+                                    'file_path' => $uploadedDocument->file_path
+                                ];
+                                $found = true;
+                                break;
+                            }
+                        }
+                        if (!$found) {
+                            $documents['optional'][] = [
+                                'title' => $optionalDocument,
+                                'file_path' => null
+                            ];
+                        }
+                    }
+                    /** get additional documents */
+
+                    $additionalDocuments = $uploadedDocuments->where('document_type', 'AdditionalDocument')->values()->toArray();
+                    $documents['additional'] = $additionalDocuments;
+                    // dd($documents);
+                    $data['documents'] = $documents;
+                    break;
+                case 'DeedOfApartmentApplication':
+                    $showRecommandForAppoval = true;
+                    $showActionButtonSection = true;
+                    $showRecommandAndObjectButtonSection = false;
+                    $applicationType = 'Deed Of Apartment';
+                    $serviceType = getServiceType('DOA');
+                    $requiredDocuments = config('applicationDocumentType.DOA.documents');
+                    $uploadedDocuments = Document::where('service_type', $serviceType)->where('model_name', $requestModel)->where('model_id', $id)->get();
+                    $documents = [
+                        'required' => [],
+                    ];
+                    foreach ($requiredDocuments as $key => $requiredDocument) {
+                        foreach ($requiredDocument as $key => $value) {
+                            foreach ($uploadedDocuments as $uploadedDocument) {
+                                if ($requiredDocument[$key] == $uploadedDocument->document_type) {
+                                    $documents['required'][] = [
+                                        'title' => $uploadedDocument->title,
+                                        'file_path' => $uploadedDocument->file_path
+                                    ];
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    $data['documents'] = $documents;
+                    //For showing the upload singned letter option
+                    // $isApplicationRecommendeBySection = ApplicationMovement::where('application_no', $applicationDetails['application_no'])->where('assigned_by_role', 7)->where('action', 'RECOMMENDED')->count();
+                    $isApplicationRecommendeBySection = ApplicationMovement::where('application_no', $applicationDetails['application_no'])->where('assigned_by_role', 7)->where('action', 'RECOMMENDED_FOR_APPROVAL')->count();
+                    if ($isApplicationRecommendeBySection > 0) {
+                        $showUploadSignedLetter = true;
+                    }
+
+
+                    //for showing Approve button to deputy - SOURAV CHAUHAN (31/Dec/2024)
+                    if (!empty($application->Signed_letter)) {
+                        $showApproveButton = true;
+                    }
+                    $showAppointmentLinkButton = self::showAppointmentLinkButtonFun($requestModel, $applicationDetails['application_no']);
+                    //for showing Recommend for approval button at Deputy end - LALIT TIWAR (01/Jan/2025)
+                    $documentsUploadedByApplicant = Document::where('service_type', $serviceType)
+                        ->where('model_name', $requestModel)
+                        ->where('model_id', $id)
+                        ->whereNotNull('file_path')
+                        ->get();
+
+                    // dd($documentsUploadedByApplicant);
+                    foreach ($documentsUploadedByApplicant as $documentApp) {
+                        if (!is_null($documentApp->file_path)) {
+                            if (is_null($documentApp->office_file_path)) {
+                                $showRecommandForAppoval = false;
+                                $recordExistsAppLink = ApplicationAppointmentLink::where('application_no', $applicationDetails['application_no'])->where('is_active', 1)->exists();
+                                if ($recordExistsAppLink) {
+                                    $showRecommandAndObjectButtonSection = true;
+                                }
+                                break;
+                            } else {
+                                continue;
+                            }
+                        }
+                    }
+
+                    //For showing Recommonded & object button to section
+                    $recordExists = AppLatestAction::where('application_no', $applicationDetails['application_no'])->exists();
+                    if (!$recordExists) {
+                        $showActionButtonSection = true;
+                    }
+
+
+
+
+                    break;
+                case 'ConversionApplication':
+                    $showRecommandForAppoval = true;
+                    $applicationType = 'Conversion';
+                    $serviceType = getServiceType('CONVERSION');
+                    $requiredDocuments = config('applicationDocumentType.CONVERSION.Required');
+                    $uploadedDocuments = Document::where('service_type', $serviceType)->where('model_name', $requestModel)->where('model_id', $id)->get();
+
+
+                    if (!empty($uploadedDocuments)) {
+                        //show or not CDV action in document listing - SOURAV CHAUHAN (23/Dec/2024)
+                        $isApplicationMoveToCdv = ApplicationMovement::where('application_no', $applicationDetails['application_no'])->where('assigned_to_role', 4)->where('action', '!=', null)->count();
+                        if ($isApplicationMoveToCdv > 0) {
+                            $showCdvActionInDocuments = true;
+                        }
+                    }
+
+                    //For showing the upload singned letter option
+                    $isApplicationRecommendeByCdv = ApplicationMovement::where('application_no', $applicationDetails['application_no'])->where('assigned_by_role', 4)->where('action', 'RECOMMENDED')->count();
+                    if ($isApplicationRecommendeByCdv > 0) {
+                        $showUploadSignedLetter = true;
+                        $applicationRecommendeByCdv = true;
+                    }
+
+
+                    //for showing Approve button to deputy - SOURAV CHAUHAN (31/Dec/2024)
+                    $isSignedLetterAvailable = Application::where('application_no', $applicationDetails['application_no'])
+                        ->whereNotNull('Signed_letter')
+                        ->exists();
+
+                    if (!empty($application->Signed_letter)) {
+                        $showApproveButton = true;
+                    }
+
+
+
+                    $data['coapplicants'] = Coapplicant::where('service_type', $serviceType)->where('model_name', $requestModel)->where('model_id', $id)->get();
+                    $documents = [
+                        'required' => [],
+                    ];
+                    foreach ($requiredDocuments as $key => $requiredDocument) {
+                        foreach ($uploadedDocuments as $uploadedDocument) {
+                            if ($key == $uploadedDocument->title) {
+                                $documents['required'][] = [
+                                    'title' => $uploadedDocument->title,
+                                    'file_path' => $uploadedDocument->file_path
+                                ];
+                                break;
+                            }
+                        }
+                    }
+                    $data['documents'] = $documents;
+                    $showAppointmentLinkButton = self::showAppointmentLinkButtonFun($requestModel, $applicationDetails['application_no']);
+
+                    //for showing Recommend for approval button at CDV end - SOURAV CHAUHAN (24/Dec/2024)
+                    $documentsUploadedByApplicant = Document::where('service_type', $serviceType)
+                        ->where('model_name', $requestModel)
+                        ->where('model_id', $id)
+                        ->whereNotNull('file_path')
+                        ->get();
+                    foreach ($documentsUploadedByApplicant as $documentApp) {
+                        if ($documentApp->document_type != 'mortgageNoCFile' && $documentApp->document_type != 'convCourtOrderFile') {
+                            if (!is_null($documentApp->file_path)) {
+                                if (is_null($documentApp->office_file_path)) {
+                                    $showRecommandForAppoval = false;
+                                    break;
+                                } else {
+                                    continue;
+                                }
+                            }
+                        }
+                    }
+
+
+
+                    break;
+
+                case 'NocApplication':
+                    $showRecommandForAppoval = true;
+                    $applicationType = 'Noc';
+                    $serviceType = getServiceType('NOC');
+                    $requiredDocuments = config('applicationDocumentType.NOC.Required');
+                    $uploadedDocuments = Document::where('service_type', $serviceType)->where('model_name', $requestModel)->where('model_id', $id)->get();
+
+                    //For showing the upload singned letter option
+                    $isApplicationRecommendeByCdv = ApplicationMovement::where('application_no', $applicationDetails['application_no'])->where('assigned_by_role', 7)->where('action', 'RECOMMENDED')->count();
+                    if ($isApplicationRecommendeByCdv > 0) {
+                        $showUploadSignedLetter = true;
+                    }
+
+
+                    //for showing Approve button to deputy - SOURAV CHAUHAN (31/Dec/2024)
+                    if (!empty($application->Signed_letter)) {
+                        $showApproveButton = true;
+                    }
+
+
+
+                    $data['coapplicants'] = Coapplicant::where('service_type', $serviceType)->where('model_name', $requestModel)->where('model_id', $id)->get();
+
+                    $documents = [
+                        'required' => [],
+                    ];
+                    foreach ($requiredDocuments as $key => $requiredDocument) {
+                        foreach ($uploadedDocuments as $uploadedDocument) {
+                            if ($key == $uploadedDocument->title) {
+                                $documents['required'][] = [
+                                    'title' => $uploadedDocument->title,
+                                    'file_path' => $uploadedDocument->file_path
+                                ];
+                                break;
+                            }
+                        }
+                    }
+                    $data['documents'] = $documents;
+                    $showAppointmentLinkButton = self::showAppointmentLinkButtonFun($requestModel, $applicationDetails['application_no']);
+
+                    //for showing Recommend for approval button at CDV end - SOURAV CHAUHAN (24/Dec/2024)
+                    $documentsUploadedByApplicant = Document::where('service_type', $serviceType)
+                        ->where('model_name', $requestModel)
+                        ->where('model_id', $id)
+                        ->whereNotNull('file_path')
+                        ->get();
+                    foreach ($documentsUploadedByApplicant as $documentApp) {
+                        if ($documentApp->document_type != 'mortgageNoCFile' && $documentApp->document_type != 'convCourtOrderFile') {
+                            if (!is_null($documentApp->file_path)) {
+                                if (is_null($documentApp->office_file_path)) {
+                                    $showRecommandForAppoval = false;
+                                    break;
+                                } else {
+                                    continue;
+                                }
+                            }
+                        }
+                    }
+                    break;
+                default:
+                    $applicationType = '';
+                    break;
+            }
+
+            $data['applicationType'] = $applicationType;
+            $data['roles'] = Auth::user()->roles[0]->name;
+            $property = PropertyMaster::find($applicationDetails['property_master_id']);
+            $data['showApproveButton'] = $showApproveButton;
+            $data['uniquePaymentId'] = $uniquePaymentId;
+            $scannedFiles['files'] = [];
+            if (!empty($property['id'])) {
+
+                $splitedColumnName = in_array($requestModel, ['LandUseChangeApplication', 'ConversionApplication']) ? 'splitted_property_detail_id' : 'splitted_id';
+                // dd($applicationDetails[$splitedColumnName],$applicationDetails['property_master_id']);
+                // dd($splitedColumnName);
+                // dd($applicationDetails);
+                $scannedFiles = GeneralFunctions::getLocalScannedFiles($applicationDetails['property_master_id'], $applicationDetails[$splitedColumnName]);
+                // $scanningLink=Config:: get('constants.propertyDocList');
+                // // dd($scanningLink);
+                // $response = Http::timeout(10)->get( $scanningLink . $property['old_propert_id']);
+                // // $response = Http::get('https://ldo.gov.in/edhartiapi/Api/PropDocs/bypropertyID?PropertyID=' . $property['old_propert_id']);
+                // // dd($response);
+                // if ($response->successful()) {
+                //     $jsonData = $response->json();
+
+                //     // Proceed if jsonData is not empty
+                //     if (!empty($jsonData)) {
+                //         $scannedFiles['baseUrl'] = $jsonData[0]['Path'];
+                //         $vol=1;
+                //        foreach ($jsonData[0]['ListFileName'] as $value) {
+                //         	$decoded = $this->decryptDotNet($value['PropertyFileNameDcrpt'], '1234567890123456');
+                // 			// if (!$decoded) { 
+                // 			//     // Decode fail ho gaya → original naam use karo
+                // 			//     $decoded = $value['PropertyFileName'];
+                // 			// }
+                // 			//$scannedFiles['files'][] = $decoded;
+                //          //$scannedFiles['files'][] = $this->decryptDotNet($value['PropertyFileName'],'1234567890123456');
+                //             $scannedFiles['files'][] = [
+                //             'actual' => $value['PropertyFileNameDcrpt'],
+                //            'display' => 'Volume-'. $vol++
+                //             ];
+
+                //            // $vol++;
+                //         }
+                //     } else {
+                //         // Handle case where the response is empty or not as expected
+                //         Log::warning('API response returned empty or invalid data.');
+                //         $scannedFiles['files'] = [];
+                //     }
+                // } elseif ($response->clientError()) {
+                //     \Log::error("Client error: " . $response->status() . ' - ' . $response->body());
+                //     $scannedFiles['files'] = [];
+                // } elseif ($response->serverError()) {
+                //     \Log::error("Server error: " . $response->status() . ' - ' . $response->body());
+                //     $scannedFiles['files'] = [];
+                // } else {
+                //     Log::error('API request failed with status: ' . $response->status());
+                //     $scannedFiles['files'] = [];
+                // }
+
+                $data['scannedFiles'] = $scannedFiles;
+                $data['propertyMasterId'] = $property['id'];
+                $data['suggestedPropertyId'] = $oldPropertyId;
+                $data['oldPropertyId'] = $oldPropertyId;
+                $data['uniquePropertyId'] = $uniquePropertyId;
+                $data['sectionCode'] = $property['section_code'];
+                $data['isSplited'] = $isSplited;
+                $data['splitedProperty'] = $splitedProperty;
+                $data['splited_primary_id'] = $splited_primary_id;
 
                 // dd($data);
 
-                $applicationDetails['serviceType'] = $serviceType;
-                if ($applicationDetails->section_id) {
-                    $section = Section::find($applicationDetails->section_id);
-                    $applicationDetails['sectionCode'] = $section['section_code'];
-                } else {
-                    $applicationDetails['sectionCode'] = $applicationDetails->sectionCode;
-                }
+            } else {
+                $data['propertyMasterId'] = '';
+                $data['suggestedPropertyId'] = '';
+                $data['oldPropertyId'] = '';
+                $data['uniquePropertyId'] = '';
+                $data['sectionCode'] = '';
+                $data['isSplited'] = '';
+                $data['splitedProperty'] = '';
+                $data['splited_primary_id'] = '';
+            }
 
-                $data['details'] = $applicationDetails;
-                if($applicationType == 'Noc'){
-                    $doe = PropertyLeaseDetail::where('property_master_id',$applicationDetails->property_master_id)->value('doe');
-                    $data['details']['executed_on'] = $doe;
-                }
-                $data['applicationMovementId'] = $id;
+            // dd($data);
 
-                // $data['checkList'] = ApplicationStatus::where('service_type', $serviceType)->where('model_id', $id)->first();
-                // Specify the column to sort by
-                $data['checkList'] = ApplicationStatus::where('service_type', $serviceType)->where('model_id', $id)->latest('created_at')->first();
-                $oldPropertyId = (string) $applicationDetails['old_property_id'];
-                $UserApplicationController = new UserApplicationController();
-                $data['propertyCommonDetails'] = $UserApplicationController->getPropertyCommonDetails($oldPropertyId);
+            $applicationDetails['serviceType'] = $serviceType;
+            if ($applicationDetails->section_id) {
+                $section = Section::find($applicationDetails->section_id);
+                $applicationDetails['sectionCode'] = $section['section_code'];
+            } else {
+                $applicationDetails['sectionCode'] = $applicationDetails->sectionCode;
+            }
 
-                // $data['user'] = User::find($applicationDetails['created_by']);
-                $data['user'] = User::withTrashed()->find($applicationDetails['created_by']);
-                $data['latestAppAction'] = AppLatestAction::where('application_no', $applicationDetails['application_no'])->first();
-                // dd($showActionButtons);
-                $data['showActionButtons'] = $showActionButtons;
-                $data['showRevertButton'] = $showRevertButton;
-                $data['showCreateLetterButtons'] = $showCreateLetterButtons;
-                $data['showAppointmentLinkButton'] = $showAppointmentLinkButton;
-                $data['applicationAppointmentLink'] = $applicationAppointmentLink;
-                $data['actionServiceType'] = $serviceType;
-                $data['latestMovement'] = $applicationLatestMov;
-                $data['isAppointmentAttended'] = $isAppointmentAttended;
-                $data['showCdvActionInDocuments'] = $showCdvActionInDocuments;
-                $data['showRecommandForAppoval'] = $showRecommandForAppoval;
-                $data['showUploadSignedLetter'] = $showUploadSignedLetter;
-                $data['showActionButtonSection'] = $showActionButtonSection;
-                $data['showRecommandAndObjectButtonSection'] = $showRecommandAndObjectButtonSection;
-                $data['shoWarningMailButton'] = $shoWarningMailButton;
-                $data['isSignedLetterAvailable'] = $isSignedLetterAvailable;
-                $data['applicationRecommendeByCdv'] = $applicationRecommendeByCdv;
+            $data['details'] = $applicationDetails;
+            if ($applicationType == 'Noc') {
+                $doe = PropertyLeaseDetail::where('property_master_id', $applicationDetails->property_master_id)->value('doe');
+                $data['details']['executed_on'] = $doe;
+            }
+            $data['applicationMovementId'] = $id;
 
-                $data['splittedColumn'] = $splittedColumn;
+            // $data['checkList'] = ApplicationStatus::where('service_type', $serviceType)->where('model_id', $id)->first();
+            // Specify the column to sort by
+            $data['checkList'] = ApplicationStatus::where('service_type', $serviceType)->where('model_id', $id)->latest('created_at')->first();
+            $oldPropertyId = (string) $applicationDetails['old_property_id'];
+            $UserApplicationController = new UserApplicationController();
+            $data['propertyCommonDetails'] = $UserApplicationController->getPropertyCommonDetails($oldPropertyId);
 
-                $data['applicationDocumentDetails'] = !empty($mutationApplicationDocumentData) ? $mutationApplicationDocumentData : [];
-                $data['applicantShare'] = !empty($applicantShare) ? $applicantShare : '';
-                 $data['extraApplicants'] = !empty($extraApplicants) ? $extraApplicants : '';
+            // $data['user'] = User::find($applicationDetails['created_by']);
+            $data['user'] = User::withTrashed()->find($applicationDetails['created_by']);
+            $data['latestAppAction'] = AppLatestAction::where('application_no', $applicationDetails['application_no'])->first();
+            // dd($showActionButtons);
+            $data['showActionButtons'] = $showActionButtons;
+            $data['showRevertButton'] = $showRevertButton;
+            $data['showCreateLetterButtons'] = $showCreateLetterButtons;
+            $data['showAppointmentLinkButton'] = $showAppointmentLinkButton;
+            $data['applicationAppointmentLink'] = $applicationAppointmentLink;
+            $data['actionServiceType'] = $serviceType;
+            $data['latestMovement'] = $applicationLatestMov;
+            $data['isAppointmentAttended'] = $isAppointmentAttended;
+            $data['showCdvActionInDocuments'] = $showCdvActionInDocuments;
+            $data['showRecommandForAppoval'] = $showRecommandForAppoval;
+            $data['showUploadSignedLetter'] = $showUploadSignedLetter;
+            $data['showActionButtonSection'] = $showActionButtonSection;
+            $data['showRecommandAndObjectButtonSection'] = $showRecommandAndObjectButtonSection;
+            $data['shoWarningMailButton'] = $shoWarningMailButton;
+            $data['isSignedLetterAvailable'] = $isSignedLetterAvailable;
+            $data['applicationRecommendeByCdv'] = $applicationRecommendeByCdv;
+
+            $data['splittedColumn'] = $splittedColumn;
+
+            $data['applicationDocumentDetails'] = !empty($mutationApplicationDocumentData) ? $mutationApplicationDocumentData : [];
+            $data['applicantShare'] = !empty($applicantShare) ? $applicantShare : '';
+            $data['extraApplicants'] = !empty($extraApplicants) ? $extraApplicants : '';
 
 
 
-                // Get all roles for Move Forward Application To Department - Lalit on 25/Nov/2024
-                /* if (Auth::user()->hasRole('deputy-lndo')) {
+            // Get all roles for Move Forward Application To Department - Lalit on 25/Nov/2024
+            /* if (Auth::user()->hasRole('deputy-lndo')) {
                     $data['departmentRoles'] = Role::whereNotIn('name', ['deputy-lndo','CDN', 'user', 'super-admin', 'admin', 'applicant'])->pluck('name', 'name')->all();
                 } elseif (Auth::user()->hasRole('lndo')) {
                     $data['departmentRoles'] = Role::whereNotIn('name', ['lndo','CDN', 'user', 'super-admin', 'admin', 'applicant'])->pluck('name', 'name')->all();
@@ -4944,78 +4504,78 @@ class ApplicationController extends Controller
                     $data['departmentRoles'] = [];
                 } */
 
-                // Update assigned department roles to forward application role wise - Lalit Tiwari (16/04/2025)
-                $user = Auth::user();
-                $role = collect([
-                    'deputy-lndo' => ['section-officer', 'AO', 'engineer-officer', 'lndo', 'audit-cell', 'vegillence'],
-                    'lndo' => ['section-officer', 'deputy-lndo'],
-                    'CDV' => ['section-officer', 'deputy-lndo'],
-                    'section-officer' => ['deputy-lndo'],
-                    'engineer-officer' => ['deputy-lndo', 'AE', 'JE'],
-                    'AE' => ['engineer-officer', 'JE'],
-                    'AO' => ['deputy-lndo'],
-                    'audit-cell' => ['deputy-lndo'],
-                    'it-cell' => ['section-officer'],
-                    'vegillence' => ['deputy-lndo'],
-                ]);
+            // Update assigned department roles to forward application role wise - Lalit Tiwari (16/04/2025)
+            $user = Auth::user();
+            $role = collect([
+                'deputy-lndo' => ['section-officer', 'AO', 'engineer-officer', 'lndo', 'audit-cell', 'vegillence'],
+                'lndo' => ['section-officer', 'deputy-lndo'],
+                'CDV' => ['section-officer', 'deputy-lndo'],
+                'section-officer' => ['deputy-lndo'],
+                'engineer-officer' => ['deputy-lndo', 'AE', 'JE'],
+                'AE' => ['engineer-officer', 'JE'],
+                'AO' => ['deputy-lndo'],
+                'audit-cell' => ['deputy-lndo'],
+                'it-cell' => ['section-officer'],
+                'vegillence' => ['deputy-lndo'],
+            ]);
 
-                $latestForwardedBy = ApplicationMovement::where('application_no', $applicationDetails['application_no'])->where('is_forwarded', 1)->first();
-                // if(isset($latestForwardedBy)){
-                //     $forwardedByRoleId = $latestForwardedBy->assigned_by_role;
-                //     $forwardedByRole = Role::find($forwardedByRoleId)->name;
-                //     $role = $role->map(function ($roles) {
-                //         return array_values(array_filter($roles, function ($item) {
-                //             return $item !== $forwardedByRole;
-                //         }));
-                //     });
-                // }
+            $latestForwardedBy = ApplicationMovement::where('application_no', $applicationDetails['application_no'])->where('is_forwarded', 1)->first();
+            // if(isset($latestForwardedBy)){
+            //     $forwardedByRoleId = $latestForwardedBy->assigned_by_role;
+            //     $forwardedByRole = Role::find($forwardedByRoleId)->name;
+            //     $role = $role->map(function ($roles) {
+            //         return array_values(array_filter($roles, function ($item) {
+            //             return $item !== $forwardedByRole;
+            //         }));
+            //     });
+            // }
 
 
-                if (isset($latestForwardedBy)) {
-                    $forwardedByRoleId = $latestForwardedBy->assigned_by_role;
-                    $forwardedByRole = optional(Role::find($forwardedByRoleId))->name;
+            if (isset($latestForwardedBy)) {
+                $forwardedByRoleId = $latestForwardedBy->assigned_by_role;
+                $forwardedByRole = optional(Role::find($forwardedByRoleId))->name;
 
-                    if ($forwardedByRole) {
-                        $role = $role->map(function ($roles) use ($forwardedByRole) {
-                            return array_values(array_filter($roles, function ($item) use ($forwardedByRole) {
-                                return $item !== $forwardedByRole;
-                            }));
-                        });
-                    }
+                if ($forwardedByRole) {
+                    $role = $role->map(function ($roles) use ($forwardedByRole) {
+                        return array_values(array_filter($roles, function ($item) use ($forwardedByRole) {
+                            return $item !== $forwardedByRole;
+                        }));
+                    });
                 }
-
-                $matchedRole = $role->first(function ($_roles, $key) use ($user) {
-                    return $user->hasRole($key);
-                });
-
-                // Commented the code below to display the title instead of the name in the "Forward to Department Role" dropdown - Lalit (2 April 2025)
-                // $data['departmentRoles'] = $matchedRole
-                //     ? Role::whereIn('name', $matchedRole)->pluck('name', 'name')->all()
-                //     : [];
-                // Added the code below to display the title in the "Forward to Department Role" dropdown - Lalit (2 April 2025)
-                $data['departmentRoles'] = $matchedRole
-                    ? Role::whereIn('name', $matchedRole)->pluck('title', 'name')->all()
-                    : [];
-
-                    // dd($downloading);
-                    if (!$downloading) {
-                        return view('application.view', $data);
-                    } else {
-                    // dd($data['details']->executed_on);
-                    // dd($data['details']);
-                        
-                    $data['downloading'] = $downloading;
-                    $doe = PropertyLeaseDetail::where('property_master_id', $applicationDetails['property_master_id'])
-                        ->pluck('doe')
-                        ->first();
-                        $data['doe'] = $doe;
-                    // return view('application.pdf', $data);
-                    $pdf = PDF::loadView('application.pdf', $data);
-                    return $pdf->download($applicationDetails['application_no'] . '.pdf', $data);
-                }
-            } else {
-                return redirect()->back()->with('failure', 'Application not found!');
             }
+
+            $matchedRole = $role->first(function ($_roles, $key) use ($user) {
+                return $user->hasRole($key);
+            });
+
+            // Commented the code below to display the title instead of the name in the "Forward to Department Role" dropdown - Lalit (2 April 2025)
+            // $data['departmentRoles'] = $matchedRole
+            //     ? Role::whereIn('name', $matchedRole)->pluck('name', 'name')->all()
+            //     : [];
+            // Added the code below to display the title in the "Forward to Department Role" dropdown - Lalit (2 April 2025)
+            $data['departmentRoles'] = $matchedRole
+                ? Role::whereIn('name', $matchedRole)->pluck('title', 'name')->all()
+                : [];
+
+            // dd($downloading);
+            if (!$downloading) {
+                return view('application.view', $data);
+            } else {
+                // dd($data['details']->executed_on);
+                // dd($data['details']);
+
+                $data['downloading'] = $downloading;
+                $doe = PropertyLeaseDetail::where('property_master_id', $applicationDetails['property_master_id'])
+                    ->pluck('doe')
+                    ->first();
+                $data['doe'] = $doe;
+                // return view('application.pdf', $data);
+                $pdf = PDF::loadView('application.pdf', $data);
+                return $pdf->download($applicationDetails['application_no'] . '.pdf', $data);
+            }
+        } else {
+            return redirect()->back()->with('failure', 'Application not found!');
+        }
         // } catch (RequestException $e) {
         //     \Log::error('Request exception: ' . $e->getMessage());
         //     return redirect()->back()->with('failure', 'Could not connect to the external API. Please try again later');
@@ -5108,7 +4668,7 @@ class ApplicationController extends Controller
         }
     }
 
-     // Add this new method to your controller
+    // Add this new method to your controller
     private function storeMutationApplicationDocumentDetails($request)
     {
         try {
@@ -5188,103 +4748,102 @@ class ApplicationController extends Controller
 
 
     private function storeMutationApplicationExtraApplicants($request)
-{
-    try {
-        $applicationNo = $request->applicationNo;
-        $applicants = $request->applicants ?? [];
+    {
+        try {
+            $applicationNo = $request->applicationNo;
+            $applicants = $request->applicants ?? [];
 
 
-        // Validate application exists
-        $application = Application::where('application_no', $applicationNo)->first();
+            // Validate application exists
+            $application = Application::where('application_no', $applicationNo)->first();
 
-        if (!$application) {
-            Log::warning("Application not found while saving extra applicants: {$applicationNo}");
-            return false;
-        }
+            if (!$application) {
+                Log::warning("Application not found while saving extra applicants: {$applicationNo}");
+                return false;
+            }
 
-        // If no applicants are received, remove existing ones
-        if (empty($applicants) || !is_array($applicants)) {
-            ApplicationExtraApplicant::where('application_no', $applicationNo)->delete();
+            // If no applicants are received, remove existing ones
+            if (empty($applicants) || !is_array($applicants)) {
+                ApplicationExtraApplicant::where('application_no', $applicationNo)->delete();
 
-            Log::info("Deleted all extra applicants for application: {$applicationNo}");
+                Log::info("Deleted all extra applicants for application: {$applicationNo}");
+
+                return true;
+            }
+
+            $validExtraApplicants = [];
+
+            foreach ($applicants as $index => $applicant) {
+
+                $name     = trim($applicant['name'] ?? '');
+                $relation = trim($applicant['relation'] ?? '');
+                $age      = trim($applicant['age'] ?? '');
+                $gender   = trim($applicant['gender'] ?? '');
+                $share    = trim($applicant['share'] ?? '');
+
+                // Skip completely empty row
+                if (
+                    $name === '' &&
+                    $relation === '' &&
+                    $age === '' &&
+                    $gender === '' &&
+                    $share === ''
+                ) {
+                    continue;
+                }
+
+                // Validate mandatory fields
+                if ($name === '' || $share === '') {
+                    Log::warning(
+                        "Skipping incomplete extra applicant at index {$index} for application {$applicationNo}",
+                        $applicant
+                    );
+
+                    continue;
+                }
+                $gender = $gender === '' ? null : $gender;
+
+                $validExtraApplicants[] = [
+                    'application_no' => $applicationNo,
+                    'model_name'     => $application->model_name,
+                    'name'           => $name,
+                    'relation'       => $relation,
+                    'age'            => $age,
+                    'gender'         => $gender,
+                    'share'          => $share,
+                    'created_at'     => now(),
+                    'updated_at'     => now(),
+                ];
+            }
+
+            DB::transaction(function () use ($applicationNo, $validExtraApplicants) {
+
+                ApplicationExtraApplicant::where('application_no', $applicationNo)->delete();
+
+                if (!empty($validExtraApplicants)) {
+                    ApplicationExtraApplicant::insert($validExtraApplicants);
+                }
+            });
+
+            Log::info(
+                'Stored ' . count($validExtraApplicants) .
+                    " extra applicants for application {$applicationNo}"
+            );
 
             return true;
+        } catch (\Throwable $e) {
+
+            Log::error(
+                "Error in storeMutationApplicationExtraApplicants: {$e->getMessage()}",
+                [
+                    'application_no' => $request->applicationNo ?? null,
+                    'trace' => $e->getTraceAsString(),
+                ]
+            );
+
+            return false;
         }
-
-        $validExtraApplicants = [];
-
-        foreach ($applicants as $index => $applicant) {
-
-            $name     = trim($applicant['name'] ?? '');
-            $relation = trim($applicant['relation'] ?? '');
-            $age      = trim($applicant['age'] ?? '');
-            $gender   = trim($applicant['gender'] ?? '');
-            $share    = trim($applicant['share'] ?? '');
-
-            // Skip completely empty row
-            if (
-                $name === '' &&
-                $relation === '' &&
-                $age === '' &&
-                $gender === '' &&
-                $share === ''
-            ) {
-                continue;
-            }
-
-            // Validate mandatory fields
-            if ($name === '' || $share === '') {
-                Log::warning(
-                    "Skipping incomplete extra applicant at index {$index} for application {$applicationNo}",
-                    $applicant
-                );
-
-                continue;
-            }
-            $gender = $gender === '' ? null : $gender;
-
-            $validExtraApplicants[] = [
-                'application_no' => $applicationNo,
-                'model_name'     => $application->model_name,
-                'name'           => $name,
-                'relation'       => $relation,
-                'age'            => $age,
-                'gender'         => $gender,
-                'share'          => $share,
-                'created_at'     => now(),
-                'updated_at'     => now(),
-            ];
-        }
-
-        DB::transaction(function () use ($applicationNo, $validExtraApplicants) {
-
-            ApplicationExtraApplicant::where('application_no', $applicationNo)->delete();
-
-            if (!empty($validExtraApplicants)) {
-                ApplicationExtraApplicant::insert($validExtraApplicants);
-            }
-        });
-
-        Log::info(
-            'Stored ' . count($validExtraApplicants) .
-            " extra applicants for application {$applicationNo}"
-        );
-
-        return true;
-
-    } catch (\Throwable $e) {
-
-        Log::error(
-            "Error in storeMutationApplicationExtraApplicants: {$e->getMessage()}",
-            [
-                'application_no' => $request->applicationNo ?? null,
-                'trace' => $e->getTraceAsString(),
-            ]
-        );
-
-        return false;
     }
-}
     //for tracking actions of application and assign to apllications to official users - SOURAV CHAUHAN (12/Nov/2024)
     public function applicationAction(Request $request)
     {
@@ -5411,116 +4970,113 @@ class ApplicationController extends Controller
                 $splittedColumn = in_array($application->model_name, ['ConversionApplication', 'LandUseChangeApplication', 'DeedOfApartmentApplication'])
                     ? 'splited_property_detail_id'
                     : 'splitted_id';
-                
-                    $model = '\\App\\Models\\' . $application->model_name;
-                    $applicationDetails = $model::where('id', $application->model_id)->first();
-                    $oldPropertyId = $applicationDetails->old_property_id;
-                    $propertyMasterId = $applicationDetails->property_master_id;
-                    //Demand check For Conversion head START ---------
-                    // dd($serviceType);
-                    if($serviceType == 'CONVERSION'){
-                      
-                        $demand = Demand::where('old_property_id', $oldPropertyId)->whereIn('status', [getServiceType('DEM_DRAFT'), getServiceType('DEM_PENDING'), getServiceType('DEM_PARTIAL_PAID'),getServiceType('DEM_PAID')])->where('app_no',$applicationNo)->latest()->first();
-                        $conversionSubheadAvailable = false;
-                        if($demand){
-                            $demandDetails = DemandDetail::where('demand_id', $demand->id)->get();
-                            foreach($demandDetails as $demandDetail)
-                            {
-                                $subhead = getServiceCodeById($demandDetail->subhead_id);
-                                if($subhead == "DEM_CONV_CHG"){
-                                    $conversionSubheadAvailable = true;
-                                    break; 
-                                }
+
+                $model = '\\App\\Models\\' . $application->model_name;
+                $applicationDetails = $model::where('id', $application->model_id)->first();
+                $oldPropertyId = $applicationDetails->old_property_id;
+                $propertyMasterId = $applicationDetails->property_master_id;
+                //Demand check For Conversion head START ---------
+                // dd($serviceType);
+                if ($serviceType == 'CONVERSION') {
+
+                    $demand = Demand::where('old_property_id', $oldPropertyId)->whereIn('status', [getServiceType('DEM_DRAFT'), getServiceType('DEM_PENDING'), getServiceType('DEM_PARTIAL_PAID'), getServiceType('DEM_PAID')])->where('app_no', $applicationNo)->latest()->first();
+                    $conversionSubheadAvailable = false;
+                    if ($demand) {
+                        $demandDetails = DemandDetail::where('demand_id', $demand->id)->get();
+                        foreach ($demandDetails as $demandDetail) {
+                            $subhead = getServiceCodeById($demandDetail->subhead_id);
+                            if ($subhead == "DEM_CONV_CHG") {
+                                $conversionSubheadAvailable = true;
+                                break;
                             }
                         }
-
-                        if(!$conversionSubheadAvailable){
-                            $response = ['status' => false, 'message' => 'Please create a demand for this application first.'];
-                            return response()->json($response);
-                        }
-                    }
-                    //Demand check For Conversion head END ---------
-
-                    
-                    if ($serviceType == 'SUB_MUT') {
-
-                        // Handle applicant share if present in the request
-                        if ($request->has('applicantShare')) {
-                            $this->storeApplicantShare($request);
-                        }
-                        // Handle coapplicantShares if present in the request
-                        if ($request->has('coapplicantShares') && is_array($request->coapplicantShares)) {
-                            $this->storeCoapplicantShares($request);
-                        }
-                        // Handle documentNameAndDate if present in the request
-                        if ($request->has('documentNameAndDate') && is_array($request->documentNameAndDate)) {
-                            $this->storeMutationApplicationDocumentDetails($request);
-                        }
-
-                        if($request->has('applicantShare') && $request->applicantShare > 0){
-                            $this->storeMutationApplicationExtraApplicants($request);
-                        }
                     }
 
-
-                    //for checking demand available or not before generating draft letter
-                    $pendingAmount = 0;
-                    // $demands = Demand::where('property_master_id', $applicationDetails->property_master_id)->where(function ($query) use ($applicationDetails) {
-                    //     if (isset($applicationDetails->splited_property_detail_id) && !is_null($applicationDetails->splited_property_detail_id)) {
-                    //         return $query->where('splited_property_detail_id', $applicationDetails->splited_property_detail_id);
-                    //     } else {
-                    //         return $query->whereNull('splited_property_detail_id');
-                    //     }
-                    // })
-                    //     ->whereIn('status', [getServiceType('DEM_PENDING'), getServiceType('DEM_PART_PAID'), getServiceType('DEM_DRAFT'),getServiceType('DEM_PAID')])
-                    //     ->get();
+                    if (!$conversionSubheadAvailable) {
+                        $response = ['status' => false, 'message' => 'Please create a demand for this application first.'];
+                        return response()->json($response);
+                    }
+                }
+                //Demand check For Conversion head END ---------
 
 
+                if ($serviceType == 'SUB_MUT') {
 
-//for checking the available demand according to flat if available- SOURAV CHAUHAN (16 June 2026)
+                    // Handle applicant share if present in the request
+                    if ($request->has('applicantShare')) {
+                        $this->storeApplicantShare($request);
+                    }
+                    // Handle coapplicantShares if present in the request
+                    if ($request->has('coapplicantShares') && is_array($request->coapplicantShares)) {
+                        $this->storeCoapplicantShares($request);
+                    }
+                    // Handle documentNameAndDate if present in the request
+                    if ($request->has('documentNameAndDate') && is_array($request->documentNameAndDate)) {
+                        $this->storeMutationApplicationDocumentDetails($request);
+                    }
+
+                    if ($request->has('applicantShare') && $request->applicantShare > 0) {
+                        $this->storeMutationApplicationExtraApplicants($request);
+                    }
+                }
+
+
+                //for checking demand available or not before generating draft letter
+                $pendingAmount = 0;
+                // $demands = Demand::where('property_master_id', $applicationDetails->property_master_id)->where(function ($query) use ($applicationDetails) {
+                //     if (isset($applicationDetails->splited_property_detail_id) && !is_null($applicationDetails->splited_property_detail_id)) {
+                //         return $query->where('splited_property_detail_id', $applicationDetails->splited_property_detail_id);
+                //     } else {
+                //         return $query->whereNull('splited_property_detail_id');
+                //     }
+                // })
+                //     ->whereIn('status', [getServiceType('DEM_PENDING'), getServiceType('DEM_PART_PAID'), getServiceType('DEM_DRAFT'),getServiceType('DEM_PAID')])
+                //     ->get();
+
+
+
+                //for checking the available demand according to flat if available- SOURAV CHAUHAN (16 June 2026)
                 $demands = Demand::where('property_master_id', $applicationDetails->property_master_id)
-                                    ->where(function ($query) use ($applicationDetails) {
+                    ->where(function ($query) use ($applicationDetails) {
 
-                                        if (!is_null($applicationDetails->flat_id)) {
-                                            $query->where('flat_id', $applicationDetails->flat_id);
-
-                                        } elseif (!is_null($applicationDetails->splited_property_detail_id)) {
-                                            $query->where(
-                                                'splited_property_detail_id',
-                                                $applicationDetails->splited_property_detail_id
-                                            );
-
-                                        } else {
-                                            $query->whereNull('splited_property_detail_id');
-                                        }
-                                    })
-                                    ->whereIn('status', [
-                                        getServiceType('DEM_PENDING'),
-                                        getServiceType('DEM_PART_PAID'),
-                                        getServiceType('DEM_DRAFT'),
-                                        getServiceType('DEM_PAID')
-                                    ])
-                                    ->get();
+                        if (!is_null($applicationDetails->flat_id)) {
+                            $query->where('flat_id', $applicationDetails->flat_id);
+                        } elseif (!is_null($applicationDetails->splited_property_detail_id)) {
+                            $query->where(
+                                'splited_property_detail_id',
+                                $applicationDetails->splited_property_detail_id
+                            );
+                        } else {
+                            $query->whereNull('splited_property_detail_id');
+                        }
+                    })
+                    ->whereIn('status', [
+                        getServiceType('DEM_PENDING'),
+                        getServiceType('DEM_PART_PAID'),
+                        getServiceType('DEM_DRAFT'),
+                        getServiceType('DEM_PAID')
+                    ])
+                    ->get();
 
 
 
 
 
-                 $isNewDemand = true;
-                if($demands->isEmpty()){
+                $isNewDemand = true;
+                if ($demands->isEmpty()) {
                     $isNewDemand = false;
-                    $oldDemand = OldDemand::where('property_id', $applicationDetails['old_property_id'])->where('outstanding','!=',0)->first();
+                    $oldDemand = OldDemand::where('property_id', $applicationDetails['old_property_id'])->where('outstanding', '!=', 0)->first();
                     $pendingAmount = !empty($oldDemand['outstanding']) ? $oldDemand['outstanding'] : 0;
                 } else {
                     $pendingAmount = $demands->sum('balance_amount');
                 }
-                if(!$isNewDemand && ($serviceType != 'NOC' && $serviceType != 'SUB_MUT' && $serviceType != 'DOA')){
+                if (!$isNewDemand && ($serviceType != 'NOC' && $serviceType != 'SUB_MUT' && $serviceType != 'DOA')) {
                     $response = ["status" => false, "message" => "First create a new demand using the Create Demand button."];
-                    return response()->json($response); 
+                    return response()->json($response);
                 }
-                if($pendingAmount > 0){
+                if ($pendingAmount > 0) {
                     $response = ["status" => false, "message" => "Cannot proceed as the full demand is not paid."];
-                    return response()->json($response);               
+                    return response()->json($response);
                 }
 
 
@@ -5593,23 +5149,23 @@ class ApplicationController extends Controller
                         $action = 'APP_OBJ';
                         $checkEmailTemplateExists = checkTemplateExists('email', $action);
                         if (!empty($checkEmailTemplateExists)) {
-                             try {
-                                    $mailSettings = app(SettingsService::class)->getMailSettings($action);
-                                    $mailer = new \App\Mail\CommonPHPMail($data, $action, $communicationTrackingId ?? null);
-                                    $mailResponse = $mailer->send($user['email'], $mailSettings);
+                            try {
+                                $mailSettings = app(SettingsService::class)->getMailSettings($action);
+                                $mailer = new \App\Mail\CommonPHPMail($data, $action, $communicationTrackingId ?? null);
+                                $mailResponse = $mailer->send($user['email'], $mailSettings);
 
-                                    Log::info("Email sent successfully.", [
-                                        'action' => $action,
-                                        'email'  => $user['email'],
-                                        'data'   => $data,
-                                    ]);
-                                } catch (\Exception $e) {
-                                    Log::error("Email sending failed.", [
-                                        'action' => $action,
-                                        'email'  => $user['email'],
-                                        'error'  => $e->getMessage(),
-                                    ]);
-                                }
+                                Log::info("Email sent successfully.", [
+                                    'action' => $action,
+                                    'email'  => $user['email'],
+                                    'data'   => $data,
+                                ]);
+                            } catch (\Exception $e) {
+                                Log::error("Email sending failed.", [
+                                    'action' => $action,
+                                    'email'  => $user['email'],
+                                    'error'  => $e->getMessage(),
+                                ]);
+                            }
                         }
 
                         $mobileNo = $user['mobile_no'];
@@ -5698,14 +5254,14 @@ class ApplicationController extends Controller
                 $applicationDetails = $model::find($application->model_id);
                 $oldPropertyId = $applicationDetails->old_property_id;
                 $demandFindQuery = Demand::where('old_property_id', $oldPropertyId)
-                            ->whereIn('status', [
-                                getServiceType('DEM_DRAFT'),
-                                getServiceType('DEM_PENDING'),
-                                getServiceType('DEM_PART_PAID')
-                            ])
-                            ->when(!empty($applicationDetails->flat_id), function ($query) use ($applicationDetails) {
-                                $query->where('flat_id', $applicationDetails->flat_id);
-                            });
+                    ->whereIn('status', [
+                        getServiceType('DEM_DRAFT'),
+                        getServiceType('DEM_PENDING'),
+                        getServiceType('DEM_PART_PAID')
+                    ])
+                    ->when(!empty($applicationDetails->flat_id), function ($query) use ($applicationDetails) {
+                        $query->where('flat_id', $applicationDetails->flat_id);
+                    });
                 if ($demandFindQuery->exists()) {
                     $pendingDemand = $demandFindQuery->first();
                     if ($pendingDemand->status == getServiceType('DEM_DRAFT')) {
@@ -5721,37 +5277,37 @@ class ApplicationController extends Controller
                     $latestActionBy = $latestAppAction->latest_action_by;
                     $latestActionByRoleId = User::find($latestActionBy)->roles[0]->id;
                     $model = '\\App\\Models\\' . $application->model_name;
-                    
 
-                        $model::where('id', $application->model_id)->update(['status' => $status]);
-                        $application->update([
-                            'status' => $status,
-                            'is_objected' => 0,
-                            'disposed_at' => date('Y-m-d H:i:s')
-                        ]);
-                    
-                    
-                        //store to apllication movement for trackin
-                        $applicationMovement = ApplicationMovement::create([
-                            'assigned_by' => Auth::user()->id,
-                            'assigned_by_role' => Auth::user()->roles[0]->id,
-                            'assigned_to' => null,
-                            'assigned_to_role' => null,
-                            'service_type' => $application->service_type, //for mutation,LUC,DOA etc
-                            'model_id' => $application->model_id,
-                            'status' => $status, //for new application, objected application, rejected, approved etc
-                            'action' => $action, //for new application, objected application, rejected, approved etc
-                            'application_no' => $applicationNo,
-                            'remarks' => $request->remark,
-                        ]);
 
-                        //update latest action
-                            $latestAppAction->update([
-                                'prev_action' => $latestAppAction->latest_action,
-                                'prev_action_by' => $latestAppAction->latest_action_by,
-                                'latest_action' => $action,
-                                'latest_action_by' => Auth::user()->id
-                            ]);
+                    $model::where('id', $application->model_id)->update(['status' => $status]);
+                    $application->update([
+                        'status' => $status,
+                        'is_objected' => 0,
+                        'disposed_at' => date('Y-m-d H:i:s')
+                    ]);
+
+
+                    //store to apllication movement for trackin
+                    $applicationMovement = ApplicationMovement::create([
+                        'assigned_by' => Auth::user()->id,
+                        'assigned_by_role' => Auth::user()->roles[0]->id,
+                        'assigned_to' => null,
+                        'assigned_to_role' => null,
+                        'service_type' => $application->service_type, //for mutation,LUC,DOA etc
+                        'model_id' => $application->model_id,
+                        'status' => $status, //for new application, objected application, rejected, approved etc
+                        'action' => $action, //for new application, objected application, rejected, approved etc
+                        'application_no' => $applicationNo,
+                        'remarks' => $request->remark,
+                    ]);
+
+                    //update latest action
+                    $latestAppAction->update([
+                        'prev_action' => $latestAppAction->latest_action,
+                        'prev_action_by' => $latestAppAction->latest_action_by,
+                        'latest_action' => $action,
+                        'latest_action_by' => Auth::user()->id
+                    ]);
                    
                     // if($applicationNo != "APP0000015"){
                     /** Finalize the application --  added by NItin on 22Dec2024 */
@@ -5821,10 +5377,10 @@ class ApplicationController extends Controller
                     // dd($signedLetter);
                     if (!empty($checkEmailTemplateExists)) {
 
-                         // --- EMAIL ---
+                        // --- EMAIL ---
                         try {
                             $mailSettings = app(SettingsService::class)->getMailSettings($action);
-                            $mailer = new \App\Mail\CommonPHPMail($data, $action, $communicationTrackingId ?? null,$signedLetter ?? null);
+                            $mailer = new \App\Mail\CommonPHPMail($data, $action, $communicationTrackingId ?? null, $signedLetter ?? null);
                             $mailResponse = $mailer->send($userDetails->email, $mailSettings);
 
                             Log::info("Email sent successfully.", [
@@ -5860,7 +5416,7 @@ class ApplicationController extends Controller
 
                 }
             } else {
-                if($serviceType == "CONVERSION"){
+                if ($serviceType == "CONVERSION") {
                     self::checkConversionDemand($application);
                 }
                 $status = getServiceType('APP_IP');
@@ -5889,17 +5445,17 @@ class ApplicationController extends Controller
                         ];
                         $request = Request::create('/applications/appointment/link', 'POST', $requestData);
                         $appointmentLink = Self::sendAppointmentLinkToApplicant($request);
-                        
-                        
+
+
                         $responseData = json_decode($appointmentLink->getContent(), true);
                         // if($application->application_no == "APP0000001"){
-                            // dd($responseData);
+                        // dd($responseData);
                         // }
-                        if ($responseData['status'] === 'success') { 
+                        if ($responseData['status'] === 'success') {
                             //$response = ['status' => true, 'message' => 'Proof reading link send successfully'];
                             //return response()->json($response);
                         } else {
-                        /// return response()->json(['status' => false, 'message' => 'Their is some issue in sending proof reading link']);
+                            /// return response()->json(['status' => false, 'message' => 'Their is some issue in sending proof reading link']);
                         }
                         // dd($usersWithRole);
                         // $assignedToUser = $usersWithRole[0]->id;
@@ -5996,11 +5552,12 @@ class ApplicationController extends Controller
     }
 
 
-   function checkConversionDemand($application){
+    function checkConversionDemand($application)
+    {
         $model = '\\App\\Models\\' . $application->model_name;
         $data = $model::where('id', $application->model_id)->first();
         $propertyMasterId = $data->property_master_id;
-        $splitedPropertyId = $data->splited_property_detail_id; 
+        $splitedPropertyId = $data->splited_property_detail_id;
     }
 
     function getUserIdBySectionCodeAndRole($roleId, $sectionId = null)
@@ -6165,23 +5722,23 @@ class ApplicationController extends Controller
             $checkEmailTemplateExists = checkTemplateExists('email', $action);
             if (!empty($checkEmailTemplateExists)) {
                 try {
-                        
-                        $mailSettings = app(SettingsService::class)->getMailSettings($action);
-                        $mailer = new \App\Mail\CommonPHPMail($data, $action, $communicationTrackingId ?? null);
-                        $mailResponse = $mailer->send($user['email'], $mailSettings);
 
-                        Log::info("Email sent successfully.", [
-                            'action' => $action,
-                            'email'  => $user['email'],
-                            'data'   => $data,
-                        ]);
-                    } catch (\Exception $e) {
-                        Log::error("Email sending failed.", [
-                            'action' => $action,
-                            'email'  => $user['email'],
-                            'error'  => $e->getMessage(),
-                        ]);
-                    }
+                    $mailSettings = app(SettingsService::class)->getMailSettings($action);
+                    $mailer = new \App\Mail\CommonPHPMail($data, $action, $communicationTrackingId ?? null);
+                    $mailResponse = $mailer->send($user['email'], $mailSettings);
+
+                    Log::info("Email sent successfully.", [
+                        'action' => $action,
+                        'email'  => $user['email'],
+                        'data'   => $data,
+                    ]);
+                } catch (\Exception $e) {
+                    Log::error("Email sending failed.", [
+                        'action' => $action,
+                        'email'  => $user['email'],
+                        'error'  => $e->getMessage(),
+                    ]);
+                }
             }
 
             $mobileNo = $user['mobile_no'];
@@ -6201,9 +5758,9 @@ class ApplicationController extends Controller
         //     $action = $status;
         //     $checkEmailTemplateExists = checkTemplateExists('email', $action);
         //     if (!empty($checkEmailTemplateExists)) {
-                
+
         //          try {
-                        
+
         //                 $mailSettings = app(SettingsService::class)->getMailSettings($action);
         //                 $mailer = new \App\Mail\CommonPHPMail($data, $action, $communicationTrackingId ?? null);
         //                 $mailResponse = $mailer->send($user['email'], $mailSettings);
@@ -6288,12 +5845,12 @@ class ApplicationController extends Controller
 
         $deputyUserDetails = User::find($deputyUserId);
         $deputyUserName = $deputyUserDetails->name;
-        
+
         // $propertyId = $applicationDetails->old_property_id;
 
         $applicationNo = $application->application_no;
 
-       
+
 
         $blockNo = $propertyDetails->block_no;
         $newColonyName = $propertyDetails->new_colony_name;
@@ -6304,20 +5861,20 @@ class ApplicationController extends Controller
         $leaseDetails = PropertyLeaseDetail::where('property_master_id', $applicationDetails->property_master_id)->first();
         $plotArea = $childProperty ? $childProperty?->area_in_sqm : $leaseDetails->plot_area_in_sqm;
         //area from supplementary lease
-        if($childProperty){
+        if ($childProperty) {
 
             // PropertyMiscDetail::where
         } else {
-            $propertyMisDetails = PropertyMiscDetail::where('old_property_id',$applicationDetails->old_property_id)->first();
-            if($propertyMisDetails && $propertyMisDetails->supplementary_area_in_sqm > 0){
+            $propertyMisDetails = PropertyMiscDetail::where('old_property_id', $applicationDetails->old_property_id)->first();
+            if ($propertyMisDetails && $propertyMisDetails->supplementary_area_in_sqm > 0) {
                 $plotArea = $plotArea + $propertyMisDetails->supplementary_area_in_sqm;
             }
         }
         $knownAs = $childProperty ? $childProperty?->presently_known_as : $leaseDetails->presently_known_as;
         $unit = getServiceNameById($leaseDetails->unit);
 
-       
-       
+
+
         $lesseeNames = [];
         $transferDate = [];
 
@@ -6325,42 +5882,44 @@ class ApplicationController extends Controller
         // dd($propertyTransferredLesseeDetail);
         $hasChildRecords = false;
         // dd($propertyDetails);
-        if(!empty($childId)){
+        if (!empty($childId)) {
             $hasChildRecords = PropertyTransferredLesseeDetail::where(
-                        'property_master_id', $propertyDetails->id
-                    )
-                    ->where('splited_property_detail_id', $childId)
-                    ->exists();
-        } 
+                'property_master_id',
+                $propertyDetails->id
+            )
+                ->where('splited_property_detail_id', $childId)
+                ->exists();
+        }
         // dd($childId, $hasChildRecords);
 
         $propertyTransferredLesseeDetail = PropertyTransferredLesseeDetail::where(
-                    'property_master_id', $propertyDetails->id
-                )
-                ->where(function ($query) use ($childId, $hasChildRecords) {
-                    if ($childId && $hasChildRecords) {
-                        $query->where('splited_property_detail_id', $childId);
-                    } else {
-                        $query->whereNull('splited_property_detail_id');
-                    }
-                })
-                ->where('batch_transfer_id', function ($q) use ($propertyDetails, $childId, $hasChildRecords) {
-                    $q->selectRaw('MAX(batch_transfer_id)')
-                        ->from('property_transferred_lessee_details')
-                        ->where('deleted_at', NULL)
-                        ->where('property_master_id', $propertyDetails->id)
-                        ->where('process_of_transfer','Conversion')//added for adding transfer date of conversion only - SOURAV Chauhan (6 May 2026)
-                        ->where(function ($sub) use ($childId, $hasChildRecords) {
-                            if ($childId && $hasChildRecords) {
-                                $sub->where('splited_property_detail_id', $childId);
-                            } else {
-                                $sub->whereNull('splited_property_detail_id');
-                            }
-                        });
-                })
-                
-                
-                ->get();
+            'property_master_id',
+            $propertyDetails->id
+        )
+            ->where(function ($query) use ($childId, $hasChildRecords) {
+                if ($childId && $hasChildRecords) {
+                    $query->where('splited_property_detail_id', $childId);
+                } else {
+                    $query->whereNull('splited_property_detail_id');
+                }
+            })
+            ->where('batch_transfer_id', function ($q) use ($propertyDetails, $childId, $hasChildRecords) {
+                $q->selectRaw('MAX(batch_transfer_id)')
+                    ->from('property_transferred_lessee_details')
+                    ->where('deleted_at', NULL)
+                    ->where('property_master_id', $propertyDetails->id)
+                    ->where('process_of_transfer', 'Conversion') //added for adding transfer date of conversion only - SOURAV Chauhan (6 May 2026)
+                    ->where(function ($sub) use ($childId, $hasChildRecords) {
+                        if ($childId && $hasChildRecords) {
+                            $sub->where('splited_property_detail_id', $childId);
+                        } else {
+                            $sub->whereNull('splited_property_detail_id');
+                        }
+                    });
+            })
+
+
+            ->get();
 
         // dd($propertyTransferredLesseeDetail);
         $lesseeNames = $transferDate = array();
@@ -6369,10 +5928,10 @@ class ApplicationController extends Controller
             $lesseeNames[] = $lesseeDetail->lessee_name;
             $transferDate[] = $lesseeDetail->transferDate;
         }
-// dd($lesseeNames);
+        // dd($lesseeNames);
         // Convert to strings/arrays safely
         $lesseeNames = !empty($lesseeNames) ? implode(' , ', $lesseeNames) : 'N/A';
-        
+
         $transferDate = !empty($transferDate) ? array_values(array_unique($transferDate)) : ['N/A'];
         $isPropertyFlat = false;
         $flatDetails = '';
@@ -6380,19 +5939,17 @@ class ApplicationController extends Controller
             $isPropertyFlat = true;
             $flatDetails = Flat::find($applicationDetails->flat_id);
         }
-        if($applicationDetails->service_type->item_code == "CONVERSION"){
-        	$isApplicationRecommendeByCdv = ApplicationMovement::where('application_no', $applicationNo)->where('assigned_by_role', 4)->where('action', 'RECOMMENDED')->count();
+        if ($applicationDetails->service_type->item_code == "CONVERSION") {
+            $isApplicationRecommendeByCdv = ApplicationMovement::where('application_no', $applicationNo)->where('assigned_by_role', 4)->where('action', 'RECOMMENDED')->count();
+        } else {
+            $isApplicationRecommendeByCdv = ApplicationMovement::where('application_no', $applicationDetails['application_no'])->where('assigned_by_role', 7)->where('action', 'RECOMMENDED')->count();
         }
-        else {
-        $isApplicationRecommendeByCdv = ApplicationMovement::where('application_no', $applicationDetails['application_no'])->where('assigned_by_role', 7)->where('action', 'RECOMMENDED')->count();
-		}
-    	
-                        if ($isApplicationRecommendeByCdv > 0) {
-                            $showUploadSignedLetter = 1;
-		}
-		else {
-			 $showUploadSignedLetter = 0;
-		}
+
+        if ($isApplicationRecommendeByCdv > 0) {
+            $showUploadSignedLetter = 1;
+        } else {
+            $showUploadSignedLetter = 0;
+        }
 
         $noticeData = [
             'sectionName'    => $sectionName,
@@ -6414,9 +5971,9 @@ class ApplicationController extends Controller
             'unit'           => !empty($flatDetails->unit) ? getServiceNameById($flatDetails->unit) : $unit,
             'knownAs' => $flatDetails->known_as ?? $knownAs,
             'lesseeNames' => $lesseeNames,
-            'transferDate' => ($transferDate[0] !='N/A')?Carbon::parse($transferDate[0])
+            'transferDate' => ($transferDate[0] != 'N/A') ? Carbon::parse($transferDate[0])
                 ->setTimezone('Asia/Kolkata')
-                ->format('d-m-Y') :'NA',
+                ->format('d-m-Y') : 'NA',
             'deputyUserName' => $deputyUserName,
             'date'           => Carbon::now()->format('d-m-Y'),
             'showUploadSignedLetter' => $showUploadSignedLetter,
@@ -6433,33 +5990,35 @@ class ApplicationController extends Controller
 
             $baseUrl = url('/');
 
-            $fullUrl = $baseUrl . '/storage/public/' 
-                . $applicantUserDetail->applicant_number 
-                . '/' . $colonyCode 
-                . '/' . $process 
-                . '/' . $request->applicationNo 
-                . '/official/' .$applicationNo.'_'. $process . '_letter.pdf';
-            $filename = time().'.svg';
-            $path = public_path('qrcode/'.$filename);
+            $fullUrl = $baseUrl . '/storage/public/'
+                . $applicantUserDetail->applicant_number
+                . '/' . $colonyCode
+                . '/' . $process
+                . '/' . $request->applicationNo
+                . '/official/' . $applicationNo . '_' . $process . '_letter.pdf';
+            $filename = time() . '.svg';
+            $path = public_path('qrcode/' . $filename);
             $qrcode =  QrCode::size(300)
-                     ->generate($fullUrl, $path);
+                ->generate($fullUrl, $path);
 
             $coapplicants = Coapplicant::where('model_name', $application->model_name)->where('model_id', $application->model_id)->get();
             $applicantDetail = UserRegistration::where('applicant_number', $applicantUserDetail->applicant_number)->first();
             $latestApplicationExtraApplicant = ApplicationExtraApplicant::where('application_no', $applicationDetails->application_no)->get();
-          
-            
-            
+
+
+
 
             $hasChildRecords = PropertyTransferredLesseeDetail::where(
-                    'property_master_id', $propertyDetails->id
-                )
+                'property_master_id',
+                $propertyDetails->id
+            )
                 ->whereNotNull('splited_property_detail_id')
                 ->exists();
-                // dd($hasChildRecords);
+            // dd($hasChildRecords);
             $latestLesseeDetails = PropertyTransferredLesseeDetail::where(
-                    'property_master_id', $propertyDetails->id
-                )
+                'property_master_id',
+                $propertyDetails->id
+            )
                 ->where(function ($query) use ($childId, $hasChildRecords) {
                     if ($childId && $hasChildRecords) {
                         $query->where('splited_property_detail_id', $childId);
@@ -6481,7 +6040,7 @@ class ApplicationController extends Controller
                         });
                 })
                 ->get();
-                // dd($latestLesseeDetails);
+            // dd($latestLesseeDetails);
             $applicationDocumentDetails = ApplicationDocumentDetail::where('application_no', $application->application_no)
                 ->orderBy('id', 'asc')
                 ->get();
@@ -6497,11 +6056,11 @@ class ApplicationController extends Controller
                 . '/official/' . $applicationNo . '_' . $process . '_letter.pdf';
 
             // $qrcode = QrCode::size(200)->generate($fullUrl);
-                        $filename = time() . '.svg';
+            $filename = time() . '.svg';
             $path = public_path('qrcode/' . $filename);
             $qrcode =  QrCode::size(300)
                 ->generate($fullUrl, $path);
-            
+
 
 
             $mutationData = array_merge($noticeData, [
@@ -6521,7 +6080,6 @@ class ApplicationController extends Controller
 
             // dd($mutationData);
             $pdf = Pdf::loadView('application/mutation/mutation-letter', $mutationData);
-
         } else if ($application->service_type == getServiceType('DOA')) {
             $process = 'deed_of_apartment';
             $pdf = Pdf::loadView('application/deed_of_apartment/deed_of_apartment-letter');
@@ -6530,16 +6088,16 @@ class ApplicationController extends Controller
 
             $baseUrl = url('/');
 
-            $fullUrl = $baseUrl . '/storage/public/' 
-                . $applicantUserDetail->applicant_number 
-                . '/' . $colonyCode 
-                . '/' . $process 
-                . '/' . $request->applicationNo 
-                . '/official/' .$applicationNo.'_'. $process . '_letter.pdf';
-            $filename = time().'.svg';
-            $path = public_path('qrcode/'.$filename);
+            $fullUrl = $baseUrl . '/storage/public/'
+                . $applicantUserDetail->applicant_number
+                . '/' . $colonyCode
+                . '/' . $process
+                . '/' . $request->applicationNo
+                . '/official/' . $applicationNo . '_' . $process . '_letter.pdf';
+            $filename = time() . '.svg';
+            $path = public_path('qrcode/' . $filename);
             $qrcode =  QrCode::size(300)
-                     ->generate($fullUrl, $path);
+                ->generate($fullUrl, $path);
 
             $coapplicants = Coapplicant::where('model_name', $application->model_name)->where('model_id', $application->model_id)->get();
             $applicantDetail = UserRegistration::where('applicant_number', $applicantUserDetail->applicant_number)->first();
@@ -6564,11 +6122,11 @@ class ApplicationController extends Controller
                 'conversionChargesInWords' => $conversionChargesInWords,
                 'deputyUserName' => $deputyUserName,
                 'filename' => $filename
-               
+
             ]);
 
             // dd($conversionData);
-            
+
 
             $pdf = Pdf::loadView('application/conversion/conversion-letter', $conversionData);
         } else if ($application->service_type == getServiceType('LUC')) {
@@ -6579,16 +6137,16 @@ class ApplicationController extends Controller
 
             $baseUrl = url('/');
 
-            $fullUrl = $baseUrl . '/storage/public/' 
-                . $applicantUserDetail->applicant_number 
-                . '/' . $colonyCode 
-                . '/' . $process 
-                . '/' . $request->applicationNo 
-                . '/official/' .$applicationNo.'_'. $process . '_letter.pdf';
-            $filename = time().'.svg';
-            $path = public_path('qrcode/'.$filename);
+            $fullUrl = $baseUrl . '/storage/public/'
+                . $applicantUserDetail->applicant_number
+                . '/' . $colonyCode
+                . '/' . $process
+                . '/' . $request->applicationNo
+                . '/official/' . $applicationNo . '_' . $process . '_letter.pdf';
+            $filename = time() . '.svg';
+            $path = public_path('qrcode/' . $filename);
             $qrcode =  QrCode::size(300)
-                     ->generate($fullUrl, $path);
+                ->generate($fullUrl, $path);
             $pdf = Pdf::loadView('application/noc/noc-letter', [
                 'noticeData' => $noticeData,
                 'filename' => $filename,
@@ -6598,7 +6156,7 @@ class ApplicationController extends Controller
         // $pdf = Pdf::loadView('application/mutation/mutation-letter');
         //generate the letter
         if ($pdf) {
-            $pathToUpload = 'public/' . $applicantUserDetail->applicant_number . '/' . $colonyCode . '/' . $process . '/' . $request->applicationNo . '/official/' .$applicationNo.'_'. $process . '_letter.pdf';
+            $pathToUpload = 'public/' . $applicantUserDetail->applicant_number . '/' . $colonyCode . '/' . $process . '/' . $request->applicationNo . '/official/' . $applicationNo . '_' . $process . '_letter.pdf';
             $pdfContent = $pdf->output();
 
             // Save the PDF to the specified location
@@ -6620,112 +6178,112 @@ class ApplicationController extends Controller
     {
         // dd($request->applicationModelName);
         try {
-        $transactionSuccess = false;
-        return DB::transaction(function () use ($request, &$transactionSuccess, $action) {
-            if (empty($request->applicationId) || empty($request->applicationNo) || empty($request->applicationModelName)) {
-                return response()->json(['message' => 'Missing required parameters'], 400);
-            }
-            // Determine application details based on the application model name
-            $applicationModel = match ($request->applicationModelName) {
-                'MutationApplication' => MutationApplication::class,
-                'LandUseChangeApplication' => LandUseChangeApplication::class,
-                'DeedOfApartmentApplication' => DeedOfApartmentApplication::class,
-                'ConversionApplication' => ConversionApplication::class,
-                default => null,
-            };
+            $transactionSuccess = false;
+            return DB::transaction(function () use ($request, &$transactionSuccess, $action) {
+                if (empty($request->applicationId) || empty($request->applicationNo) || empty($request->applicationModelName)) {
+                    return response()->json(['message' => 'Missing required parameters'], 400);
+                }
+                // Determine application details based on the application model name
+                $applicationModel = match ($request->applicationModelName) {
+                    'MutationApplication' => MutationApplication::class,
+                    'LandUseChangeApplication' => LandUseChangeApplication::class,
+                    'DeedOfApartmentApplication' => DeedOfApartmentApplication::class,
+                    'ConversionApplication' => ConversionApplication::class,
+                    default => null,
+                };
 
-            if (!$applicationModel) {
-                return response()->json(['message' => 'Invalid application model name'], 400);
-            }
+                if (!$applicationModel) {
+                    return response()->json(['message' => 'Invalid application model name'], 400);
+                }
 
-            $getApplicationDetails = $applicationModel::where('application_no', $request->applicationNo)->first();
-            // dd($getApplicationDetails);
+                $getApplicationDetails = $applicationModel::where('application_no', $request->applicationNo)->first();
+                // dd($getApplicationDetails);
 
-            if (!$getApplicationDetails) {
-                return response()->json(['message' => 'Application details not found'], 404);
-            }
+                if (!$getApplicationDetails) {
+                    return response()->json(['message' => 'Application details not found'], 404);
+                }
 
-            $userPropertyQuery = UserProperty::where([
-                ['old_property_id', $getApplicationDetails->old_property_id],
-                ['new_property_id', $getApplicationDetails->property_master_id],
-            ]);
-            if (!empty($getApplicationDetails->flat_id)) {
-                $userPropertyQuery->where('flat_id', $getApplicationDetails->flat_id);
-            }
-            $userId = $userPropertyQuery->pluck('user_id')->first();
-            // dd($userId);
-            if (!$userId) {
-                return response()->json(['message' => 'User not found'], 404);
-            }
+                $userPropertyQuery = UserProperty::where([
+                    ['old_property_id', $getApplicationDetails->old_property_id],
+                    ['new_property_id', $getApplicationDetails->property_master_id],
+                ]);
+                if (!empty($getApplicationDetails->flat_id)) {
+                    $userPropertyQuery->where('flat_id', $getApplicationDetails->flat_id);
+                }
+                $userId = $userPropertyQuery->pluck('user_id')->first();
+                // dd($userId);
+                if (!$userId) {
+                    return response()->json(['message' => 'User not found'], 404);
+                }
 
-            $userDetails = User::find($userId);
+                $userDetails = User::find($userId);
 
-            if (!$userDetails) {
-                return response()->json(['message' => 'User details not found'], 404);
-            }
-            // if($request->applicationNo == "APP0000353")
-            //     {
-                    // dd($userDetails);
+                if (!$userDetails) {
+                    return response()->json(['message' => 'User details not found'], 404);
+                }
+                // if($request->applicationNo == "APP0000353")
+                //     {
+                // dd($userDetails);
                 // }
-                
 
-            // Generate Encoded Meeting Link
-            $meetingLink = url('edharti/applicant/appointment/' . base64_encode($request->applicationNo) . '/' . base64_encode(strtotime(now())));
-            $clickableMeetingLink = '<a href="' . $meetingLink . '" target="_blank">Click Here</a>';
-            $isApplicationAppointmentLink = ApplicationAppointmentLink::where('application_no', $request->applicationNo)
-                ->orderBy('created_at', 'desc')->first();
-            if ($isApplicationAppointmentLink) {
-                // Update only the first record found
-                $isApplicationAppointmentLink->update(['is_active' => 0]);
-            }
-            //insert meeting record into application_appointment_links table
-            $ifRecordInserted = ApplicationAppointmentLink::create([
-                'application_no' => $request->applicationNo,
-                'link' => $meetingLink,
-                'schedule_date' => null,
-                'valid_till' => Carbon::now()->addMonth()->format('Y-m-d'),
-                'is_attended' => null,
-                'is_active' => 1,
-                'created_at' => Carbon::now(),
-                'updated_at' => Carbon::now(),
-            ]);
-            if ($ifRecordInserted) {
 
-                if ($request->applicationModelName == 'MutationApplication') {
-                    $mailServiceType = 'Mutation';
-                } else if ($request->applicationModelName == 'ConversionApplication') {
-                    $mailServiceType = 'Conversion';
-                } else if ($request->applicationModelName == 'DeedOfApartmentApplication') {
-                    $mailServiceType = 'Deed Of Apartment';
-                } else if ($request->applicationModelName == 'LandUseChangeApplication') {
-                    $mailServiceType = 'Land Use Change';
-                } else {
-                    $mailServiceType = '';
+                // Generate Encoded Meeting Link
+                $meetingLink = url('edharti/applicant/appointment/' . base64_encode($request->applicationNo) . '/' . base64_encode(strtotime(now())));
+                $clickableMeetingLink = '<a href="' . $meetingLink . '" target="_blank">Click Here</a>';
+                $isApplicationAppointmentLink = ApplicationAppointmentLink::where('application_no', $request->applicationNo)
+                    ->orderBy('created_at', 'desc')->first();
+                if ($isApplicationAppointmentLink) {
+                    // Update only the first record found
+                    $isApplicationAppointmentLink->update(['is_active' => 0]);
                 }
+                //insert meeting record into application_appointment_links table
+                $ifRecordInserted = ApplicationAppointmentLink::create([
+                    'application_no' => $request->applicationNo,
+                    'link' => $meetingLink,
+                    'schedule_date' => null,
+                    'valid_till' => Carbon::now()->addMonth()->format('Y-m-d'),
+                    'is_attended' => null,
+                    'is_active' => 1,
+                    'created_at' => Carbon::now(),
+                    'updated_at' => Carbon::now(),
+                ]);
+                if ($ifRecordInserted) {
+
+                    if ($request->applicationModelName == 'MutationApplication') {
+                        $mailServiceType = 'Mutation';
+                    } else if ($request->applicationModelName == 'ConversionApplication') {
+                        $mailServiceType = 'Conversion';
+                    } else if ($request->applicationModelName == 'DeedOfApartmentApplication') {
+                        $mailServiceType = 'Deed Of Apartment';
+                    } else if ($request->applicationModelName == 'LandUseChangeApplication') {
+                        $mailServiceType = 'Land Use Change';
+                    } else {
+                        $mailServiceType = '';
+                    }
 
 
-                $oldPropertyId = $getApplicationDetails->old_property_id;
-                $propertyMasterId = $getApplicationDetails->property_master_id;
-                $newPropertyId = $getApplicationDetails->new_property_id;
-                $propertyKnownAs = PropertyLeaseDetail::where('property_master_id', $propertyMasterId)
-                    ->pluck('presently_known_as')
-                    ->first();
+                    $oldPropertyId = $getApplicationDetails->old_property_id;
+                    $propertyMasterId = $getApplicationDetails->property_master_id;
+                    $newPropertyId = $getApplicationDetails->new_property_id;
+                    $propertyKnownAs = PropertyLeaseDetail::where('property_master_id', $propertyMasterId)
+                        ->pluck('presently_known_as')
+                        ->first();
 
-                //for send notification - SOURAV CHAUHAN (21/Nov/2024)
-                $data = [
-                    'application_no' =>  $request->applicationNo,
-                    'application_type' => $mailServiceType,
-                    'property_details' => $propertyKnownAs . " [" . $oldPropertyId . " (" . $newPropertyId . ") ]",
-                    'link' => $clickableMeetingLink,
-                ];
+                    //for send notification - SOURAV CHAUHAN (21/Nov/2024)
+                    $data = [
+                        'application_no' =>  $request->applicationNo,
+                        'application_type' => $mailServiceType,
+                        'property_details' => $propertyKnownAs . " [" . $oldPropertyId . " (" . $newPropertyId . ") ]",
+                        'link' => $clickableMeetingLink,
+                    ];
 
-                if ($action == "HOLD") {
-                    $action = "APP_HOLD";
-                } else {
-                    $action = "APP_MEETING_LINK";
-                }
-                $attachment = '';
-                // Only attach letters for Mutation and Conversion added by Swati Mishra on 26082025
+                    if ($action == "HOLD") {
+                        $action = "APP_HOLD";
+                    } else {
+                        $action = "APP_MEETING_LINK";
+                    }
+                    $attachment = '';
+                    // Only attach letters for Mutation and Conversion added by Swati Mishra on 26082025
                     if (in_array($request->applicationModelName, ['MutationApplication', 'ConversionApplication', 'DeedOfApartmentApplication', 'LandUseChangeApplication'])) {
                         $baseApplication = Application::where('application_no', $request->applicationNo)->first();
                         // dd($baseApplication);
@@ -6735,7 +6293,7 @@ class ApplicationController extends Controller
                             //     str_replace('public/', '', $baseApplication->letter)
                             // );
 
-                             $absolutePath = "storage/".$baseApplication->letter;
+                            $absolutePath = "storage/" . $baseApplication->letter;
 
 
 
@@ -6746,48 +6304,48 @@ class ApplicationController extends Controller
                         }
                     }
                     // dd($attachment);
-                $checkEmailTemplateExists = checkTemplateExists('email', $action);
-                if (!empty($checkEmailTemplateExists)) {
-                     // --- EMAIL ---
-                    try {
-                        $mailSettings = app(SettingsService::class)->getMailSettings($action);
-                        $mailer = new \App\Mail\CommonPHPMail($data, $action, $communicationTrackingId ?? null, $attachment);
-                        $mailResponse = $mailer->send($userDetails->email, $mailSettings);
+                    $checkEmailTemplateExists = checkTemplateExists('email', $action);
+                    if (!empty($checkEmailTemplateExists)) {
+                        // --- EMAIL ---
+                        try {
+                            $mailSettings = app(SettingsService::class)->getMailSettings($action);
+                            $mailer = new \App\Mail\CommonPHPMail($data, $action, $communicationTrackingId ?? null, $attachment);
+                            $mailResponse = $mailer->send($userDetails->email, $mailSettings);
 
-                        Log::info("Email sent successfully.", [
-                            'action' => $action,
-                            'email'  => $userDetails->email,
-                            'data'   => $data,
-                        ]);
-                    } catch (\Exception $e) {
-                        Log::error("Email sending failed.", [
-                            'action' => $action,
-                            'email'  => $userDetails->email,
-                            'error'  => $e->getMessage(),
-                        ]);
+                            Log::info("Email sent successfully.", [
+                                'action' => $action,
+                                'email'  => $userDetails->email,
+                                'data'   => $data,
+                            ]);
+                        } catch (\Exception $e) {
+                            Log::error("Email sending failed.", [
+                                'action' => $action,
+                                'email'  => $userDetails->email,
+                                'error'  => $e->getMessage(),
+                            ]);
+                        }
                     }
-                }
 
-                $mobileNo = $userDetails->mobile_no;
-                $checkSmsTemplateExists = checkTemplateExists('sms', $action);
-                if (!empty($checkSmsTemplateExists)) {
-                    $this->communicationService->sendSmsMessage($data, $mobileNo, $action);
-                }
-                $checkWhatsappTemplateExists = checkTemplateExists('whatsapp', $action);
-                if (!empty($checkWhatsappTemplateExists)) {
-                    $this->communicationService->sendWhatsAppMessage($data, $mobileNo, $action);
-                }
+                    $mobileNo = $userDetails->mobile_no;
+                    $checkSmsTemplateExists = checkTemplateExists('sms', $action);
+                    if (!empty($checkSmsTemplateExists)) {
+                        $this->communicationService->sendSmsMessage($data, $mobileNo, $action);
+                    }
+                    $checkWhatsappTemplateExists = checkTemplateExists('whatsapp', $action);
+                    if (!empty($checkWhatsappTemplateExists)) {
+                        $this->communicationService->sendWhatsAppMessage($data, $mobileNo, $action);
+                    }
 
-                $transactionSuccess = true;
+                    $transactionSuccess = true;
+                    return response()->json(['status' => 'success', 'message' => 'Meeting link sent successfully']);
+                }
+            });
+            if ($transactionSuccess) {
                 return response()->json(['status' => 'success', 'message' => 'Meeting link sent successfully']);
+            } else {
+                Log::info("Meeting link faliled to send");
+                return response()->json(['status' => 'failure', 'message' => 'Meeting link not sent successfully']);
             }
-        });
-        if ($transactionSuccess) {
-            return response()->json(['status' => 'success', 'message' => 'Meeting link sent successfully']);
-        } else {
-            Log::info("Meeting link faliled to send");
-            return response()->json(['status' => 'failure', 'message' => 'Meeting link not sent successfully']);
-        }
         } catch (\Exception $e) {
             Log::error('Error sending appointment link: ' . $e->getMessage());
             return response()->json(['status' => false, 'message' => 'An error occurred while processing your request'], 500);
@@ -6802,15 +6360,15 @@ class ApplicationController extends Controller
         $model = '\\App\\Models\\' . $application->model_name;
         $applicationDetails = $model::find($application->model_id);
         $oldPropertyId = $applicationDetails->old_property_id;
-         $demandFindQuery = Demand::where('old_property_id', $oldPropertyId)
-                            ->whereIn('status', [
-                                getServiceType('DEM_DRAFT'),
-                                getServiceType('DEM_PENDING'),
-                                getServiceType('DEM_PART_PAID')
-                            ])
-                            ->when(!empty($applicationDetails->flat_id), function ($query) use ($applicationDetails) {
-                                $query->where('flat_id', $applicationDetails->flat_id);
-                            });
+        $demandFindQuery = Demand::where('old_property_id', $oldPropertyId)
+            ->whereIn('status', [
+                getServiceType('DEM_DRAFT'),
+                getServiceType('DEM_PENDING'),
+                getServiceType('DEM_PART_PAID')
+            ])
+            ->when(!empty($applicationDetails->flat_id), function ($query) use ($applicationDetails) {
+                $query->where('flat_id', $applicationDetails->flat_id);
+            });
         if ($demandFindQuery->exists()) {
             $pendingDemand = $demandFindQuery->first();
             if ($pendingDemand->status == getServiceType('DEM_DRAFT')) {
@@ -6825,7 +6383,7 @@ class ApplicationController extends Controller
         $model = '\\App\\Models\\' . $application->model_name;
         $applicationDetails = $model::find($application->model_id);
         // $propertyDetails = PropertyMaster::where('old_propert_id', $applicationDetails->old_property_id)->first();
-                $isSplittedPropertyObj = SplitedPropertyDetail::where('old_property_id', $oldPropertyId)->first();
+        $isSplittedPropertyObj = SplitedPropertyDetail::where('old_property_id', $oldPropertyId)->first();
 
         if ($isSplittedPropertyObj) {
             $propertyDetails = PropertyMaster::find($isSplittedPropertyObj->property_master_id);
@@ -6862,7 +6420,7 @@ class ApplicationController extends Controller
         if ($request->hasFile('signedLetter')) {
             // $signedLetter = GeneralFunctions::uploadFile($request->signedLetter, $pathToUpload, 'signedLetter');
             $file = $request->signedLetter;
-            $fileName = $applicationNo.'_'.$process . '_letter.' . $file->extension();
+            $fileName = $applicationNo . '_' . $process . '_letter.' . $file->extension();
             $signedLetter = $file->storeAs($pathToUpload, $fileName, 'public');
         } else {
             $signedLetter = null;
@@ -7447,373 +7005,373 @@ class ApplicationController extends Controller
     public function updateApplication(Request $request)
     {
         try {
-        $transactionSuccess = false;
-        if (!empty($request->applicationModelType)) {
-            return DB::transaction(function () use ($request, &$transactionSuccess) {
-                //Checking Model Type 
-                if ($request->applicationModelType == 'DeedOfApartmentApplication') {
-                    //Checking Applicaiton Number & Model Id
-                    if (!empty($request->applicationNumber) && !empty($request->updateId)) {
-                        //Fetching application Record
-                        $applicationObj = DeedOfApartmentApplication::find($request->updateId);
-                        if (!empty($applicationObj)) {
-                            //Get Application details record
-                            $applicationDetails = Application::where('application_no', $applicationObj->application_no)->first();
-                            $oldApplicationObj = $applicationObj->getOriginal();
-                            $applicationObj->building_name = !empty($request->buildingName) ? $request->buildingName : $applicationObj->building_name;
-                            $applicationObj->original_buyer_name = !empty($request->originalBuyerName) ? $request->originalBuyerName : $applicationObj->original_buyer_name;
-                            $applicationObj->present_occupant_name = !empty($request->presentOccupantName) ? $request->presentOccupantName : $applicationObj->present_occupant_name;
-                            $applicationObj->purchased_from = !empty($request->purchasedFrom) ? $request->purchasedFrom : $applicationObj->purchased_from;
-                            $applicationObj->purchased_date = !empty($request->purchaseDate) ? $request->purchaseDate : $applicationObj->purchased_date;
-                            $applicationObj->flat_area = !empty($request->apartmentArea) ? $request->apartmentArea : $applicationObj->flat_area;
-                            $applicationObj->plot_area = !empty($request->plotArea) ? $request->plotArea : $applicationObj->plot_area;
-                            $applicationObj->status = getServiceType('APP_IP');
-                            if ($applicationObj->isDirty()) {
-                                $applicationObj->save();
-                                $changes = $applicationObj->getChanges();
-                                //Update record into history table
-                                $deedOfApartmentHistory = new DeedOfApartmentApplicationHistory();
-                                $deedOfApartmentHistory->application_no = $request->applicationNumber;
-                                foreach ($changes as $key => $change) {
-                                    if ($key != 'updated_at' && $key != 'updated_by' && $key != 'status') {
-                                        $deedOfApartmentHistory->$key = $oldApplicationObj[$key];
-                                        $newKey = 'new_' . $key;
-                                        $deedOfApartmentHistory->$newKey = $change;
+            $transactionSuccess = false;
+            if (!empty($request->applicationModelType)) {
+                return DB::transaction(function () use ($request, &$transactionSuccess) {
+                    //Checking Model Type 
+                    if ($request->applicationModelType == 'DeedOfApartmentApplication') {
+                        //Checking Applicaiton Number & Model Id
+                        if (!empty($request->applicationNumber) && !empty($request->updateId)) {
+                            //Fetching application Record
+                            $applicationObj = DeedOfApartmentApplication::find($request->updateId);
+                            if (!empty($applicationObj)) {
+                                //Get Application details record
+                                $applicationDetails = Application::where('application_no', $applicationObj->application_no)->first();
+                                $oldApplicationObj = $applicationObj->getOriginal();
+                                $applicationObj->building_name = !empty($request->buildingName) ? $request->buildingName : $applicationObj->building_name;
+                                $applicationObj->original_buyer_name = !empty($request->originalBuyerName) ? $request->originalBuyerName : $applicationObj->original_buyer_name;
+                                $applicationObj->present_occupant_name = !empty($request->presentOccupantName) ? $request->presentOccupantName : $applicationObj->present_occupant_name;
+                                $applicationObj->purchased_from = !empty($request->purchasedFrom) ? $request->purchasedFrom : $applicationObj->purchased_from;
+                                $applicationObj->purchased_date = !empty($request->purchaseDate) ? $request->purchaseDate : $applicationObj->purchased_date;
+                                $applicationObj->flat_area = !empty($request->apartmentArea) ? $request->apartmentArea : $applicationObj->flat_area;
+                                $applicationObj->plot_area = !empty($request->plotArea) ? $request->plotArea : $applicationObj->plot_area;
+                                $applicationObj->status = getServiceType('APP_IP');
+                                if ($applicationObj->isDirty()) {
+                                    $applicationObj->save();
+                                    $changes = $applicationObj->getChanges();
+                                    //Update record into history table
+                                    $deedOfApartmentHistory = new DeedOfApartmentApplicationHistory();
+                                    $deedOfApartmentHistory->application_no = $request->applicationNumber;
+                                    foreach ($changes as $key => $change) {
+                                        if ($key != 'updated_at' && $key != 'updated_by' && $key != 'status') {
+                                            $deedOfApartmentHistory->$key = $oldApplicationObj[$key];
+                                            $newKey = 'new_' . $key;
+                                            $deedOfApartmentHistory->$newKey = $change;
+                                        }
                                     }
+                                    $deedOfApartmentHistory->updated_by = Auth::id();
+                                    $deedOfApartmentHistory->save();
                                 }
-                                $deedOfApartmentHistory->updated_by = Auth::id();
-                                $deedOfApartmentHistory->save();
+                                //Commen Function for Update Additonal Documents
+                                self::uploadAdditionalDocuments($request, $applicationDetails, $applicationObj);
+                                //Update Status In Progress in Main Applicaition Table
+                                self::updateMainApplicationStatus($request);
+                                //Update Status in progress in Own Application Status Like DOA,Subtitution mutation, luc, convertion table
+                                self::updateApplicationStatus($request);
+                                //Insert record into application movement table
+                                self::insertRecordApplicationMovement($applicationDetails, $request);
+                                //Insert Record into application status table
+                                self::insertRecordApplicationStatus($applicationDetails);
+                                // Delete record into App Latest Action table
+                                self::deleteAppLatestActionRecord($applicationDetails);
+                                $transactionSuccess = true;
                             }
-                            //Commen Function for Update Additonal Documents
-                            self::uploadAdditionalDocuments($request, $applicationDetails, $applicationObj);
-                            //Update Status In Progress in Main Applicaition Table
-                            self::updateMainApplicationStatus($request);
-                            //Update Status in progress in Own Application Status Like DOA,Subtitution mutation, luc, convertion table
-                            self::updateApplicationStatus($request);
-                            //Insert record into application movement table
-                            self::insertRecordApplicationMovement($applicationDetails, $request);
-                            //Insert Record into application status table
-                            self::insertRecordApplicationStatus($applicationDetails);
-                            // Delete record into App Latest Action table
-                            self::deleteAppLatestActionRecord($applicationDetails);
-                            $transactionSuccess = true;
                         }
-                    }
-                } elseif ($request->applicationModelType == 'MutationApplication') {
-                    // Code for MutationApplication
-                    // dd($request->all());
+                    } elseif ($request->applicationModelType == 'MutationApplication') {
+                        // Code for MutationApplication
+                        // dd($request->all());
 
-                    $messages = [
-                        'mutNameAsConLease.required' => 'Executed in favour of is required.',
-                        'mutExecutedOnAsConLease.required' => 'Executed on is required.',
-                        'mutRegnoAsConLease.required' => 'Registration no. is required.',
-                        'mutBooknoAsConLease.required' => 'Book no. is required.',
-                        'mutVolumenoAsConLease.required' => 'Volume no. is required.',
-                        'mutPagenoFrom.required' => 'Page no. from is required.',
-                        'mutPagenoTo.required' => 'Page no. to is required.',
-                        'mutRegdateAsConLease.required' => 'Registration date is required.',
-                    ];
+                        $messages = [
+                            'mutNameAsConLease.required' => 'Executed in favour of is required.',
+                            'mutExecutedOnAsConLease.required' => 'Executed on is required.',
+                            'mutRegnoAsConLease.required' => 'Registration no. is required.',
+                            'mutBooknoAsConLease.required' => 'Book no. is required.',
+                            'mutVolumenoAsConLease.required' => 'Volume no. is required.',
+                            'mutPagenoFrom.required' => 'Page no. from is required.',
+                            'mutPagenoTo.required' => 'Page no. to is required.',
+                            'mutRegdateAsConLease.required' => 'Registration date is required.',
+                        ];
 
-                    $validator = Validator::make($request->all(), [
-                        'mutNameAsConLease' => 'required',
-                        'mutExecutedOnAsConLease' => 'required',
-                        'mutRegnoAsConLease' => 'required',
-                        'mutBooknoAsConLease' => 'required',
-                        'mutVolumenoAsConLease' => 'required',
-                        'mutPagenoFrom' => 'required',
-                        'mutPagenoTo' => 'required',
-                        'mutRegdateAsConLease' => 'required',
-                    ], $messages);
+                        $validator = Validator::make($request->all(), [
+                            'mutNameAsConLease' => 'required',
+                            'mutExecutedOnAsConLease' => 'required',
+                            'mutRegnoAsConLease' => 'required',
+                            'mutBooknoAsConLease' => 'required',
+                            'mutVolumenoAsConLease' => 'required',
+                            'mutPagenoFrom' => 'required',
+                            'mutPagenoTo' => 'required',
+                            'mutRegdateAsConLease' => 'required',
+                        ], $messages);
 
-                    if ($validator->fails()) {
-                        // Log the error message if validation fails
-                        Log::info("| " . Auth::user()->email . " | Mutation step first all values not entered: " . json_encode($validator->errors()));
-                        return redirect()->back()->with('failure', $validator->errors()->first());
-                    }
-
-
-                    if (!empty($request->applicationNumber) && !empty($request->updateId)) {
-                        //Fetching application Record
-                        $applicationObj = MutationApplication::find($request->updateId);
-                        if (!empty($applicationObj)) {
-                            //Get Application details record
-                            $applicationDetails = Application::where('application_no', $applicationObj->application_no)->first();
-                            $oldApplicationObj = $applicationObj->getOriginal();
+                        if ($validator->fails()) {
+                            // Log the error message if validation fails
+                            Log::info("| " . Auth::user()->email . " | Mutation step first all values not entered: " . json_encode($validator->errors()));
+                            return redirect()->back()->with('failure', $validator->errors()->first());
+                        }
 
 
-                            $documentArray = [
-                                $request->deathCertificate_check,
-                                $request->saleDeed_check,
-                                $request->regdWillDeed_check,
-                                $request->unregdWillCodocil_check,
-                                $request->relinquishmentDeed_check,
-                                $request->giftDeed_check,
-                                $request->survivingMemberCertificate_check,
-                                $request->sanctionBuildingPlan_check,
-                                $request->anyOtherDocument_check,
-                            ];
-                            // dd($documentArray);
-                            $array = array_filter($documentArray);
-                            $array = array_values($array);
-                            $soughtByApplicantDocuments = json_encode($array);
-                            // dd($soughtByApplicantDocuments);
+                        if (!empty($request->applicationNumber) && !empty($request->updateId)) {
+                            //Fetching application Record
+                            $applicationObj = MutationApplication::find($request->updateId);
+                            if (!empty($applicationObj)) {
+                                //Get Application details record
+                                $applicationDetails = Application::where('application_no', $applicationObj->application_no)->first();
+                                $oldApplicationObj = $applicationObj->getOriginal();
 
-                            $applicationObj->name_as_per_lease_conv_deed = $request->mutNameAsConLease;
-                            $applicationObj->executed_on = $request->mutExecutedOnAsConLease;
-                            $applicationObj->reg_no_as_per_lease_conv_deed = $request->mutRegnoAsConLease;
-                            $applicationObj->book_no_as_per_lease_conv_deed = $request->mutBooknoAsConLease;
-                            $applicationObj->volume_no_as_per_lease_conv_deed = $request->mutVolumenoAsConLease;
-                            $applicationObj->page_no_as_per_deed = $request->mutPagenoFrom . '-' . $request->mutPagenoTo;
-                            $applicationObj->reg_date_as_per_lease_conv_deed = $request->mutRegdateAsConLease;
-                            $applicationObj->sought_on_basis_of_documents = $soughtByApplicantDocuments;
-                            $applicationObj->property_stands_mortgaged = $request->mutPropertyMortgaged;
-                            $applicationObj->mortgaged_remark = ($request->mutPropertyMortgaged == 1) ? $request->mutMortgagedRemarks : NULL;
-                            $applicationObj->is_basis_of_court_order = $request->courtorderMutation;
-                            if (isset($request->courtorderMutation)) {
-                                $applicationObj->court_case_no = $request->mutCaseNo;
-                                $applicationObj->court_case_details = $request->mutCaseDetail;
-                            } else {
-                                $applicationObj->court_case_no = null;
-                                $applicationObj->court_case_details = null;
-                            }
-                            $applicationObj->status = getServiceType('APP_IP');
-                            if ($applicationObj->isDirty()) {
-                                $applicationObj->save();
-                                $changes = $applicationObj->getChanges();
-                                //Update record into history table
-                                $mutationApplicationHistory = new MutationApplicationHistory();
-                                $mutationApplicationHistory->application_no = $request->applicationNumber;
-                                foreach ($changes as $key => $change) {
-                                    if ($key != 'updated_at' && $key != 'updated_by') {
-                                        $mutationApplicationHistory->$key = $oldApplicationObj[$key];
-                                        $newKey = 'new_' . $key;
-                                        $mutationApplicationHistory->$newKey = $change;
+
+                                $documentArray = [
+                                    $request->deathCertificate_check,
+                                    $request->saleDeed_check,
+                                    $request->regdWillDeed_check,
+                                    $request->unregdWillCodocil_check,
+                                    $request->relinquishmentDeed_check,
+                                    $request->giftDeed_check,
+                                    $request->survivingMemberCertificate_check,
+                                    $request->sanctionBuildingPlan_check,
+                                    $request->anyOtherDocument_check,
+                                ];
+                                // dd($documentArray);
+                                $array = array_filter($documentArray);
+                                $array = array_values($array);
+                                $soughtByApplicantDocuments = json_encode($array);
+                                // dd($soughtByApplicantDocuments);
+
+                                $applicationObj->name_as_per_lease_conv_deed = $request->mutNameAsConLease;
+                                $applicationObj->executed_on = $request->mutExecutedOnAsConLease;
+                                $applicationObj->reg_no_as_per_lease_conv_deed = $request->mutRegnoAsConLease;
+                                $applicationObj->book_no_as_per_lease_conv_deed = $request->mutBooknoAsConLease;
+                                $applicationObj->volume_no_as_per_lease_conv_deed = $request->mutVolumenoAsConLease;
+                                $applicationObj->page_no_as_per_deed = $request->mutPagenoFrom . '-' . $request->mutPagenoTo;
+                                $applicationObj->reg_date_as_per_lease_conv_deed = $request->mutRegdateAsConLease;
+                                $applicationObj->sought_on_basis_of_documents = $soughtByApplicantDocuments;
+                                $applicationObj->property_stands_mortgaged = $request->mutPropertyMortgaged;
+                                $applicationObj->mortgaged_remark = ($request->mutPropertyMortgaged == 1) ? $request->mutMortgagedRemarks : NULL;
+                                $applicationObj->is_basis_of_court_order = $request->courtorderMutation;
+                                if (isset($request->courtorderMutation)) {
+                                    $applicationObj->court_case_no = $request->mutCaseNo;
+                                    $applicationObj->court_case_details = $request->mutCaseDetail;
+                                } else {
+                                    $applicationObj->court_case_no = null;
+                                    $applicationObj->court_case_details = null;
+                                }
+                                $applicationObj->status = getServiceType('APP_IP');
+                                if ($applicationObj->isDirty()) {
+                                    $applicationObj->save();
+                                    $changes = $applicationObj->getChanges();
+                                    //Update record into history table
+                                    $mutationApplicationHistory = new MutationApplicationHistory();
+                                    $mutationApplicationHistory->application_no = $request->applicationNumber;
+                                    foreach ($changes as $key => $change) {
+                                        if ($key != 'updated_at' && $key != 'updated_by') {
+                                            $mutationApplicationHistory->$key = $oldApplicationObj[$key];
+                                            $newKey = 'new_' . $key;
+                                            $mutationApplicationHistory->$newKey = $change;
+                                        }
                                     }
+                                    $mutationApplicationHistory->created_by = Auth::id();
+                                    $mutationApplicationHistory->updated_by = Auth::id();
+                                    $mutationApplicationHistory->save();
                                 }
-                                $mutationApplicationHistory->created_by = Auth::id();
-                                $mutationApplicationHistory->updated_by = Auth::id();
-                                $mutationApplicationHistory->save();
-                            }
 
-                            //store mutation step three data
-                            $documentsSaved = self::updateMutationStepThree($request, $applicationDetails, $applicationObj, $soughtByApplicantDocuments);
-                            if ($documentsSaved == false) {
-                                $transactionSuccess = false;
-                                DB::rollback();
-                                return redirect()->back()->with('failure', 'Please upload all selected documents.');
-                            }
-
-                            //For update Coapplicants
-                            self::updateCoApplicants($request->coapplicant, $request->updateId, $applicationObj->old_property_id, 'mutation', 'MutationApplication', 'SUB_MUT');
-
-                            //Commen Function for Update Additonal Documents
-                            self::uploadAdditionalDocuments($request, $applicationDetails, $applicationObj);
-                            //Update Status In Progress in Main Applicaition Table
-                            self::updateMainApplicationStatus($request);
-                            //Insert record into application movement table
-                            self::insertRecordApplicationMovement($applicationDetails, $request);
-                            //Insert Record into application status table
-                            self::insertRecordApplicationStatus($applicationDetails);
-                            // Delete record into App Latest Action table
-                            self::deleteAppLatestActionRecord($applicationDetails);
-                            $transactionSuccess = true;
-                        }
-                    }
-                } elseif ($request->applicationModelType == 'LandUseChangeApplication') {
-                    if (!empty($request->applicationNumber) && !empty($request->updateId)) {
-                        //Fetching application Record
-                        $applicationObj = LandUseChangeApplication::find($request->updateId);
-                        if (!empty($applicationObj)) {
-                            //Get Application details record
-                            $applicationDetails = Application::where('application_no', $applicationObj->application_no)->first();
-                            $oldApplicationObj = $applicationObj->getOriginal();
-                            $applicationObj->property_type_change_to = !empty($request->lucpropertytypeto) ? $request->lucpropertytypeto : $applicationObj->property_type_change_to;
-                            $applicationObj->property_subtype_change_to = !empty($request->lucpropertysubtypeto) ? $request->lucpropertysubtypeto : $applicationObj->property_subtype_change_to;
-                            $applicationObj->status = getServiceType('APP_IP');
-                            if ($applicationObj->isDirty()) {
-                                $applicationObj->save();
-                                $changes = $applicationObj->getChanges();
-                                //Update record into history table
-                                $lucHistory = new LandUseChangeApplicationHistory();
-                                $lucHistory->application_no = $request->applicationNumber;
-                                unset($changes['updated_at'], $changes['status'], $changes['updated_by']);
-                                $keys = array_keys($changes);
-                                foreach ($keys as $i) {
-                                    $lucHistory->{$i} = $oldApplicationObj[$i];
-                                    $newKey = 'new_' . $i;
-                                    $lucHistory->{$newKey} = $changes[$i];
+                                //store mutation step three data
+                                $documentsSaved = self::updateMutationStepThree($request, $applicationDetails, $applicationObj, $soughtByApplicantDocuments);
+                                if ($documentsSaved == false) {
+                                    $transactionSuccess = false;
+                                    DB::rollback();
+                                    return redirect()->back()->with('failure', 'Please upload all selected documents.');
                                 }
-                                $lucHistory->save();
-                            }
-                            //Commen Function for Update Additonal Documents
-                            self::uploadAdditionalDocuments($request, $applicationDetails, $applicationObj);
-                            //Update Status In Progress in Main Applicaition Table
-                            self::updateMainApplicationStatus($request);
-                            //Update Status in progress in Own Application Status Like DOA,Subtitution mutation, luc, convertion table
-                            self::updateApplicationStatus($request);
-                            //Insert record into application movement table
-                            self::insertRecordApplicationMovement($applicationDetails, $request);
-                            //Insert Record into application status table
-                            self::insertRecordApplicationStatus($applicationDetails);
-                            // Delete record into App Latest Action table
-                            self::deleteAppLatestActionRecord($applicationDetails);
-                            $transactionSuccess = true;
-                        }
-                    }
-                } elseif ($request->applicationModelType == 'ConversionApplication') {
-                    // dd($request->convcoapplicant);
-                    // Code for ConversionApplication
-                    if (!empty($request->applicationNumber) && !empty($request->updateId)) {
-                        //Fetching application Record
-                        $applicationObj = ConversionApplication::find($request->updateId);
-                        if (!empty($applicationObj)) {
-                            //Get Application details record
-                            $applicationDetails = Application::where('application_no', $applicationObj->application_no)->first();
-                            $oldApplicationObj = $applicationObj->getOriginal();
-                            $applicationObj->applicant_name = $request->convNameAsOnLease;
-                            $applicationObj->relation_prefix = $request->convRelationPrefix;
-                            $applicationObj->relation_name = $request->convRelationName;
-                            $applicationObj->executed_on = $request->convExecutedOnAsOnLease;
-                            $applicationObj->reg_no = $request->convRegnoAsOnLease;
-                            $applicationObj->book_no = $request->convBooknoAsOnLease;
-                            $applicationObj->volume_no = $request->convVolumenoAsOnLease;
-                            $applicationObj->page_no = $request->convPagenoFrom . '-' . $request->convPagenoTo;
-                            $applicationObj->reg_date = $request->convRegdateAsOnLease;
 
-                            $applicationObj->status = getServiceType('APP_IP');
-                            if ($applicationObj->isDirty()) {
-                                $applicationObj->save();
-                                $changes = $applicationObj->getChanges();
-                                //Update record into history table
-                                $conversionApplicationHistory = new ConversionApplicationHistory();
-                                $conversionApplicationHistory->application_no = $request->applicationNumber;
-                                foreach ($changes as $key => $change) {
-                                    if ($key != 'updated_at' && $key != 'updated_by') {
-                                        $conversionApplicationHistory->$key = $oldApplicationObj[$key];
-                                        $newKey = 'new_' . $key;
-                                        $conversionApplicationHistory->$newKey = $change;
+                                //For update Coapplicants
+                                self::updateCoApplicants($request->coapplicant, $request->updateId, $applicationObj->old_property_id, 'mutation', 'MutationApplication', 'SUB_MUT');
+
+                                //Commen Function for Update Additonal Documents
+                                self::uploadAdditionalDocuments($request, $applicationDetails, $applicationObj);
+                                //Update Status In Progress in Main Applicaition Table
+                                self::updateMainApplicationStatus($request);
+                                //Insert record into application movement table
+                                self::insertRecordApplicationMovement($applicationDetails, $request);
+                                //Insert Record into application status table
+                                self::insertRecordApplicationStatus($applicationDetails);
+                                // Delete record into App Latest Action table
+                                self::deleteAppLatestActionRecord($applicationDetails);
+                                $transactionSuccess = true;
+                            }
+                        }
+                    } elseif ($request->applicationModelType == 'LandUseChangeApplication') {
+                        if (!empty($request->applicationNumber) && !empty($request->updateId)) {
+                            //Fetching application Record
+                            $applicationObj = LandUseChangeApplication::find($request->updateId);
+                            if (!empty($applicationObj)) {
+                                //Get Application details record
+                                $applicationDetails = Application::where('application_no', $applicationObj->application_no)->first();
+                                $oldApplicationObj = $applicationObj->getOriginal();
+                                $applicationObj->property_type_change_to = !empty($request->lucpropertytypeto) ? $request->lucpropertytypeto : $applicationObj->property_type_change_to;
+                                $applicationObj->property_subtype_change_to = !empty($request->lucpropertysubtypeto) ? $request->lucpropertysubtypeto : $applicationObj->property_subtype_change_to;
+                                $applicationObj->status = getServiceType('APP_IP');
+                                if ($applicationObj->isDirty()) {
+                                    $applicationObj->save();
+                                    $changes = $applicationObj->getChanges();
+                                    //Update record into history table
+                                    $lucHistory = new LandUseChangeApplicationHistory();
+                                    $lucHistory->application_no = $request->applicationNumber;
+                                    unset($changes['updated_at'], $changes['status'], $changes['updated_by']);
+                                    $keys = array_keys($changes);
+                                    foreach ($keys as $i) {
+                                        $lucHistory->{$i} = $oldApplicationObj[$i];
+                                        $newKey = 'new_' . $i;
+                                        $lucHistory->{$newKey} = $changes[$i];
                                     }
+                                    $lucHistory->save();
                                 }
-                                $conversionApplicationHistory->created_by = Auth::id();
-                                $conversionApplicationHistory->updated_by = Auth::id();
-                                $conversionApplicationHistory->save();
+                                //Commen Function for Update Additonal Documents
+                                self::uploadAdditionalDocuments($request, $applicationDetails, $applicationObj);
+                                //Update Status In Progress in Main Applicaition Table
+                                self::updateMainApplicationStatus($request);
+                                //Update Status in progress in Own Application Status Like DOA,Subtitution mutation, luc, convertion table
+                                self::updateApplicationStatus($request);
+                                //Insert record into application movement table
+                                self::insertRecordApplicationMovement($applicationDetails, $request);
+                                //Insert Record into application status table
+                                self::insertRecordApplicationStatus($applicationDetails);
+                                // Delete record into App Latest Action table
+                                self::deleteAppLatestActionRecord($applicationDetails);
+                                $transactionSuccess = true;
                             }
-
-
-                            //to update cooapplicants
-                            self::updateCoApplicants($request->convcoapplicant, $request->updateId, $applicationObj->old_property_id, 'CONVERSION', 'ConversionApplication', 'CONVERSION');
-
-                            //Commen Function for Update Additonal Documents
-                            self::uploadAdditionalDocuments($request, $applicationDetails, $applicationObj);
-                            //Update Status In Progress in Main Applicaition Table
-                            self::updateMainApplicationStatus($request);
-                            //Insert record into application movement table
-                            self::insertRecordApplicationMovement($applicationDetails, $request);
-                            //Insert Record into application status table
-                            self::insertRecordApplicationStatus($applicationDetails);
-                            // Delete record into App Latest Action table
-                            self::deleteAppLatestActionRecord($applicationDetails);
-                            $transactionSuccess = true;
                         }
-                    }
-                } elseif ($request->applicationModelType == 'NocApplication') {
-                    if (!empty($request->applicationNumber) && !empty($request->updateId)) {
-                        //Fetching application Record
-                        $applicationObj = NocApplication::find($request->updateId);
-                        if (!empty($applicationObj)) {
-                            //Get Application details record
-                            $applicationDetails = Application::where('application_no', $applicationObj->application_no)->first();
-                            $oldApplicationObj = $applicationObj->getOriginal();
-                            $applicationObj->name_as_per_noc_conv_deed = $request->conveyanceDeedName;
-                            $applicationObj->executed_on_as_per_noc_conv_deed = $request->conveyanceExecutedOn;
-                            $applicationObj->reg_no_as_per_noc_conv_deed = $request->conveyanceRegnoDeed;
-                            $applicationObj->book_no_as_per_noc_conv_deed = $request->conveyanceBookNoDeed;
-                            $applicationObj->volume_no_as_per_noc_conv_deed = $request->conveyanceVolumeNo;
-                            $applicationObj->page_no_as_per_noc_conv_deed = $request->conveyancePagenoFrom . '-' . $request->conveyancePagenoTo;
-                            $applicationObj->reg_date_as_per_noc_conv_deed = $request->conveyanceRegDate;
-                            $applicationObj->con_app_date_as_per_noc_conv_deed = $request->conveyanceConAppDate;
+                    } elseif ($request->applicationModelType == 'ConversionApplication') {
+                        // dd($request->convcoapplicant);
+                        // Code for ConversionApplication
+                        if (!empty($request->applicationNumber) && !empty($request->updateId)) {
+                            //Fetching application Record
+                            $applicationObj = ConversionApplication::find($request->updateId);
+                            if (!empty($applicationObj)) {
+                                //Get Application details record
+                                $applicationDetails = Application::where('application_no', $applicationObj->application_no)->first();
+                                $oldApplicationObj = $applicationObj->getOriginal();
+                                $applicationObj->applicant_name = $request->convNameAsOnLease;
+                                $applicationObj->relation_prefix = $request->convRelationPrefix;
+                                $applicationObj->relation_name = $request->convRelationName;
+                                $applicationObj->executed_on = $request->convExecutedOnAsOnLease;
+                                $applicationObj->reg_no = $request->convRegnoAsOnLease;
+                                $applicationObj->book_no = $request->convBooknoAsOnLease;
+                                $applicationObj->volume_no = $request->convVolumenoAsOnLease;
+                                $applicationObj->page_no = $request->convPagenoFrom . '-' . $request->convPagenoTo;
+                                $applicationObj->reg_date = $request->convRegdateAsOnLease;
 
-                            $applicationObj->status = getServiceType('APP_IP');
-                            if ($applicationObj->isDirty()) {
-                                $applicationObj->save();
-                                $changes = $applicationObj->getChanges();
-                                //Update record into history table
-                                $nocApplicationHistory = new NocApplicationHistory();
-                                $nocApplicationHistory->application_no = $request->applicationNumber;
-                                foreach ($changes as $key => $change) {
-                                    if ($key != 'updated_at' && $key != 'updated_by') {
-                                        $nocApplicationHistory->$key = $oldApplicationObj[$key];
-                                        $newKey = 'new_' . $key;
-                                        $nocApplicationHistory->$newKey = $change;
+                                $applicationObj->status = getServiceType('APP_IP');
+                                if ($applicationObj->isDirty()) {
+                                    $applicationObj->save();
+                                    $changes = $applicationObj->getChanges();
+                                    //Update record into history table
+                                    $conversionApplicationHistory = new ConversionApplicationHistory();
+                                    $conversionApplicationHistory->application_no = $request->applicationNumber;
+                                    foreach ($changes as $key => $change) {
+                                        if ($key != 'updated_at' && $key != 'updated_by') {
+                                            $conversionApplicationHistory->$key = $oldApplicationObj[$key];
+                                            $newKey = 'new_' . $key;
+                                            $conversionApplicationHistory->$newKey = $change;
+                                        }
                                     }
+                                    $conversionApplicationHistory->created_by = Auth::id();
+                                    $conversionApplicationHistory->updated_by = Auth::id();
+                                    $conversionApplicationHistory->save();
                                 }
-                                $nocApplicationHistory->created_by = Auth::id();
-                                $nocApplicationHistory->updated_by = Auth::id();
-                                $nocApplicationHistory->save();
+
+
+                                //to update cooapplicants
+                                self::updateCoApplicants($request->convcoapplicant, $request->updateId, $applicationObj->old_property_id, 'CONVERSION', 'ConversionApplication', 'CONVERSION');
+
+                                //Commen Function for Update Additonal Documents
+                                self::uploadAdditionalDocuments($request, $applicationDetails, $applicationObj);
+                                //Update Status In Progress in Main Applicaition Table
+                                self::updateMainApplicationStatus($request);
+                                //Insert record into application movement table
+                                self::insertRecordApplicationMovement($applicationDetails, $request);
+                                //Insert Record into application status table
+                                self::insertRecordApplicationStatus($applicationDetails);
+                                // Delete record into App Latest Action table
+                                self::deleteAppLatestActionRecord($applicationDetails);
+                                $transactionSuccess = true;
                             }
+                        }
+                    } elseif ($request->applicationModelType == 'NocApplication') {
+                        if (!empty($request->applicationNumber) && !empty($request->updateId)) {
+                            //Fetching application Record
+                            $applicationObj = NocApplication::find($request->updateId);
+                            if (!empty($applicationObj)) {
+                                //Get Application details record
+                                $applicationDetails = Application::where('application_no', $applicationObj->application_no)->first();
+                                $oldApplicationObj = $applicationObj->getOriginal();
+                                $applicationObj->name_as_per_noc_conv_deed = $request->conveyanceDeedName;
+                                $applicationObj->executed_on_as_per_noc_conv_deed = $request->conveyanceExecutedOn;
+                                $applicationObj->reg_no_as_per_noc_conv_deed = $request->conveyanceRegnoDeed;
+                                $applicationObj->book_no_as_per_noc_conv_deed = $request->conveyanceBookNoDeed;
+                                $applicationObj->volume_no_as_per_noc_conv_deed = $request->conveyanceVolumeNo;
+                                $applicationObj->page_no_as_per_noc_conv_deed = $request->conveyancePagenoFrom . '-' . $request->conveyancePagenoTo;
+                                $applicationObj->reg_date_as_per_noc_conv_deed = $request->conveyanceRegDate;
+                                $applicationObj->con_app_date_as_per_noc_conv_deed = $request->conveyanceConAppDate;
+
+                                $applicationObj->status = getServiceType('APP_IP');
+                                if ($applicationObj->isDirty()) {
+                                    $applicationObj->save();
+                                    $changes = $applicationObj->getChanges();
+                                    //Update record into history table
+                                    $nocApplicationHistory = new NocApplicationHistory();
+                                    $nocApplicationHistory->application_no = $request->applicationNumber;
+                                    foreach ($changes as $key => $change) {
+                                        if ($key != 'updated_at' && $key != 'updated_by') {
+                                            $nocApplicationHistory->$key = $oldApplicationObj[$key];
+                                            $newKey = 'new_' . $key;
+                                            $nocApplicationHistory->$newKey = $change;
+                                        }
+                                    }
+                                    $nocApplicationHistory->created_by = Auth::id();
+                                    $nocApplicationHistory->updated_by = Auth::id();
+                                    $nocApplicationHistory->save();
+                                }
 
 
-                            //to update cooapplicants
-                            self::updateNocCoApplicants($request->noccoapplicant, $request->updateId, $applicationObj->old_property_id, 'NOC', 'NocApplication', 'NOC');
+                                //to update cooapplicants
+                                self::updateNocCoApplicants($request->noccoapplicant, $request->updateId, $applicationObj->old_property_id, 'NOC', 'NocApplication', 'NOC');
 
-                            //Commen Function for Update Additonal Documents
-                            self::uploadAdditionalDocuments($request, $applicationDetails, $applicationObj);
-                            //Update Status In Progress in Main Applicaition Table
-                            self::updateMainApplicationStatus($request);
-                            //Insert record into application movement table
-                            self::insertRecordApplicationMovement($applicationDetails, $request);
-                            //Insert Record into application status table
-                            self::insertRecordApplicationStatus($applicationDetails);
-                            // Delete record into App Latest Action table
-                            self::deleteAppLatestActionRecord($applicationDetails);
-                            $transactionSuccess = true;
+                                //Commen Function for Update Additonal Documents
+                                self::uploadAdditionalDocuments($request, $applicationDetails, $applicationObj);
+                                //Update Status In Progress in Main Applicaition Table
+                                self::updateMainApplicationStatus($request);
+                                //Insert record into application movement table
+                                self::insertRecordApplicationMovement($applicationDetails, $request);
+                                //Insert Record into application status table
+                                self::insertRecordApplicationStatus($applicationDetails);
+                                // Delete record into App Latest Action table
+                                self::deleteAppLatestActionRecord($applicationDetails);
+                                $transactionSuccess = true;
+                            }
                         }
                     }
-                }
 
-                if ($transactionSuccess) {
-                    //for send notification - SOURAV CHAUHAN (19/Feb/2025)
-                    $data = [
-                        'application_no' =>  $request->applicationNumber,
-                    ];
+                    if ($transactionSuccess) {
+                        //for send notification - SOURAV CHAUHAN (19/Feb/2025)
+                        $data = [
+                            'application_no' =>  $request->applicationNumber,
+                        ];
 
-                    $action = "APP_OBJ_RES";
-                    $checkEmailTemplateExists = checkTemplateExists('email', $action);
-                    if (!empty($checkEmailTemplateExists)) {
-                        try {
-                        $mailSettings = app(SettingsService::class)->getMailSettings($action);
-                        $mailer = new \App\Mail\CommonPHPMail($data, $action, $communicationTrackingId ?? null);
-                        $mailResponse = $mailer->send(Auth::user()->email, $mailSettings);
+                        $action = "APP_OBJ_RES";
+                        $checkEmailTemplateExists = checkTemplateExists('email', $action);
+                        if (!empty($checkEmailTemplateExists)) {
+                            try {
+                                $mailSettings = app(SettingsService::class)->getMailSettings($action);
+                                $mailer = new \App\Mail\CommonPHPMail($data, $action, $communicationTrackingId ?? null);
+                                $mailResponse = $mailer->send(Auth::user()->email, $mailSettings);
 
-                        Log::info("Email sent successfully.", [
-                            'action' => $action,
-                            'email'  => Auth::user()->email,
-                            'data'   => $data,
-                        ]);
-                    } catch (\Exception $e) {
-                        Log::error("Email sending failed.", [
-                            'action' => $action,
-                            'email'  => Auth::user()->email,
-                            'error'  => $e->getMessage(),
-                        ]);
-                    }
-                    }
+                                Log::info("Email sent successfully.", [
+                                    'action' => $action,
+                                    'email'  => Auth::user()->email,
+                                    'data'   => $data,
+                                ]);
+                            } catch (\Exception $e) {
+                                Log::error("Email sending failed.", [
+                                    'action' => $action,
+                                    'email'  => Auth::user()->email,
+                                    'error'  => $e->getMessage(),
+                                ]);
+                            }
+                        }
 
-                    $mobileNo = Auth::user()->mobile_no;
-                    $checkSmsTemplateExists = checkTemplateExists('sms', $action);
-                    if (!empty($checkSmsTemplateExists)) {
-                        $this->communicationService->sendSmsMessage($data, $mobileNo, $action);
+                        $mobileNo = Auth::user()->mobile_no;
+                        $checkSmsTemplateExists = checkTemplateExists('sms', $action);
+                        if (!empty($checkSmsTemplateExists)) {
+                            $this->communicationService->sendSmsMessage($data, $mobileNo, $action);
+                        }
+                        $checkWhatsappTemplateExists = checkTemplateExists('whatsapp', $action);
+                        if (!empty($checkWhatsappTemplateExists)) {
+                            $this->communicationService->sendWhatsAppMessage($data, $mobileNo, $action);
+                        }
+                        return redirect()->route('applications.history.details')->with('success', 'Application successfully updated');
+                    } else {
+                        return redirect()->route('applications.history.details')->with('failure', 'An unexpected error occurred!');
                     }
-                    $checkWhatsappTemplateExists = checkTemplateExists('whatsapp', $action);
-                    if (!empty($checkWhatsappTemplateExists)) {
-                        $this->communicationService->sendWhatsAppMessage($data, $mobileNo, $action);
-                    }
-                    return redirect()->route('applications.history.details')->with('success', 'Application successfully updated');
-                } else {
-                    return redirect()->route('applications.history.details')->with('failure', 'An unexpected error occurred!');
-                }
-            });
-        }
+                });
+            }
         } catch (\Exception $e) {
             Log::info($e->getMessage());
             $response = ['status' => false, 'message' => $e->getMessage(), 'data' => 0];
@@ -8438,196 +7996,196 @@ class ApplicationController extends Controller
         $applicationDetails = $model::find($id);
         if ($applicationDetails) {
             $applicationAppointmentLink = ApplicationAppointmentLink::where('application_no', $applicationDetails['application_no'])->latest()->first();
-                $scheduleDate = Carbon::parse($applicationAppointmentLink->schedule_date);
-                $endDate = $scheduleDate->copy()->addDays(10);
-                // if (Carbon::today()->between($scheduleDate, $endDate)) {// commented by SOURAV CHAUHAN (07/May/2026) as per discussion with dhiraj sir
-                if (Carbon::today()->gte($scheduleDate)) {
+            $scheduleDate = Carbon::parse($applicationAppointmentLink->schedule_date);
+            $endDate = $scheduleDate->copy()->addDays(10);
+            // if (Carbon::today()->between($scheduleDate, $endDate)) {// commented by SOURAV CHAUHAN (07/May/2026) as per discussion with dhiraj sir
+            if (Carbon::today()->gte($scheduleDate)) {
 
-                    $applicationAppointmentLink->is_attended = 1;
-                    if ($applicationAppointmentLink->save()) {
+                $applicationAppointmentLink->is_attended = 1;
+                if ($applicationAppointmentLink->save()) {
 
-                        $application = Application::where('application_no', $applicationDetails['application_no'])->first();
-                        if ($application) {
-                            // dd($application->status,getServiceType('APP_HOLD'));
-                            if ($application->status == getServiceType('APP_HOLD')) {
-                                $application->status = getServiceType('APP_IP');
-                                if ($application->save()) {
-                                    $applicationDetails->status = getServiceType('APP_IP');
-                                    if ($applicationDetails->save()) {
+                    $application = Application::where('application_no', $applicationDetails['application_no'])->first();
+                    if ($application) {
+                        // dd($application->status,getServiceType('APP_HOLD'));
+                        if ($application->status == getServiceType('APP_HOLD')) {
+                            $application->status = getServiceType('APP_IP');
+                            if ($application->save()) {
+                                $applicationDetails->status = getServiceType('APP_IP');
+                                if ($applicationDetails->save()) {
 
-                                        $latestApplicationovement = ApplicationMovement::where('application_no', $applicationDetails['application_no'])->latest()->first();
-                                        $applicationMovement = ApplicationMovement::create([
-                                            'assigned_by' => Auth::user()->id,
-                                            'assigned_by_role' => Auth::user()->roles[0]->id,
-                                            'assigned_to' => $latestApplicationovement->assigned_to,
-                                            'assigned_to_role' => $latestApplicationovement->assigned_to_role,
-                                            'service_type' => $application->service_type, //for mutation,LUC,DOA etc
-                                            'model_id' => $application->model_id,
-                                            'status' => getServiceType('APP_IP'), //In progress status
-                                            'action' => 'UNHOLD', //for nUn Hold Action
-                                            'application_no' => $applicationDetails['application_no']
-                                        ]);
+                                    $latestApplicationovement = ApplicationMovement::where('application_no', $applicationDetails['application_no'])->latest()->first();
+                                    $applicationMovement = ApplicationMovement::create([
+                                        'assigned_by' => Auth::user()->id,
+                                        'assigned_by_role' => Auth::user()->roles[0]->id,
+                                        'assigned_to' => $latestApplicationovement->assigned_to,
+                                        'assigned_to_role' => $latestApplicationovement->assigned_to_role,
+                                        'service_type' => $application->service_type, //for mutation,LUC,DOA etc
+                                        'model_id' => $application->model_id,
+                                        'status' => getServiceType('APP_IP'), //In progress status
+                                        'action' => 'UNHOLD', //for nUn Hold Action
+                                        'application_no' => $applicationDetails['application_no']
+                                    ]);
 
 
-                                        $appLatestAction = AppLatestAction::where('application_no', $applicationDetails['application_no'])->first();
-                                        $latestAction = $appLatestAction->latest_action;
-                                        $latestActionBy = $appLatestAction->latest_action_by;
-                                        $appLatestAction->prev_action  = $latestAction;
-                                        $appLatestAction->prev_action_by  = $latestActionBy;
-                                        $appLatestAction->latest_action = 'UNHOLD';
-                                        $appLatestAction->latest_action_by = Auth::user()->id;
-                                        $appLatestAction->latest_role_id = Auth::user()->roles[0]->id;
-                                        $appLatestAction->save();
-                                    }
+                                    $appLatestAction = AppLatestAction::where('application_no', $applicationDetails['application_no'])->first();
+                                    $latestAction = $appLatestAction->latest_action;
+                                    $latestActionBy = $appLatestAction->latest_action_by;
+                                    $appLatestAction->prev_action  = $latestAction;
+                                    $appLatestAction->prev_action_by  = $latestActionBy;
+                                    $appLatestAction->latest_action = 'UNHOLD';
+                                    $appLatestAction->latest_action_by = Auth::user()->id;
+                                    $appLatestAction->latest_role_id = Auth::user()->roles[0]->id;
+                                    $appLatestAction->save();
                                 }
                             }
                         }
-
-                        //For logs - SOURAV CHAUHAN (13/Dec/2024) 
-                        $actionLink = url('edharti/applications/' . $id . '/start-proof-reading') . '?type=' . $request->type;
-                        UserActionLogHelper::UserActionLog(
-                            'Start Application Proof Reading',
-                            $actionLink,
-                            'adminApplication',
-                            "Proof reading for application <a target='_blank' href='" . $actionLink . "'>" . $applicationDetails['application_no'] . "</a> has been started by user " . Auth::user()->name . "."
-                        );
-
-                        $data = [];
-                        $data['application'] = $application;
-                        switch ($requestModel) {
-                            case 'MutationApplication':
-                                $applicationType = 'Mutation';
-                                $serviceType = getServiceType('SUB_MUT');
-                                $documents = Document::where('service_type', $serviceType)->where('model_name', $requestModel)->where('model_id', $id)->get();
-                                break;
-                            case 'LandUseChangeApplication':
-                                $applicationType = 'Land Use Change';
-                                $serviceType = getServiceType('LUC');
-
-                                $documentList = config('applicationDocumentType.LUC.documents');
-                                $requiredDocuments = collect($documentList)->where('required', 1)->all();
-                                $requiredDocumentTypes = array_map(function ($element) {
-                                    return $element['label'];
-                                }, $requiredDocuments);
-                                $uploadedDocuments = Document::where('service_type', $serviceType)->where('model_name', $requestModel)->where('model_id', $id)->get();
-
-                                $documents = [
-                                    'required' => [],
-                                    'optional' => [],
-                                ];
-
-                                // Required documents
-                                foreach ($requiredDocumentTypes as $requiredDocument) {
-                                    foreach ($uploadedDocuments as $uploadedDocument) {
-                                        if ($requiredDocument == $uploadedDocument->title) {
-                                            $documents['required'][] = [
-                                                'title' => $uploadedDocument->title,
-                                                'file_path' => $uploadedDocument->file_path
-                                            ];
-                                            break;
-                                        }
-                                    }
-                                }
-
-                                //optional documents
-                                $optionalDocuments = collect($documentList)->where('required', 0)->all();
-                                $optionalDocumentTypes = array_map(function ($element) {
-                                    return $element['label'];
-                                }, $optionalDocuments);
-
-                                foreach ($optionalDocumentTypes as $optionalDocument) {
-                                    $found = false;
-                                    foreach ($uploadedDocuments as $uploadedDocument) {
-                                        if ($optionalDocument == $uploadedDocument->title) {
-                                            $documents['optional'][] = [
-                                                'title' => $uploadedDocument->title,
-                                                'file_path' => $uploadedDocument->file_path
-                                            ];
-                                            $found = true;
-                                            break;
-                                        }
-                                    }
-                                    if (!$found) {
-                                        $documents['optional'][] = [
-                                            'title' => $optionalDocument,
-                                            'file_path' => null
-                                        ];
-                                    }
-                                }
-                                $data['documents'] = $documents;
-                                break;
-                            case 'DeedOfApartmentApplication':
-                                $applicationType = 'Deed Of Apartment';
-                                $serviceType = getServiceType('DOA');
-                                $requiredDocuments = config('applicationDocumentType.DOA.documents');
-                                $uploadedDocuments = Document::where('service_type', $serviceType)->where('model_name', $requestModel)->where('model_id', $id)->get();
-                                $documents = [
-                                    'required' => [],
-                                ];
-                                foreach ($requiredDocuments as $key => $requiredDocument) {
-                                    foreach ($uploadedDocuments as $uploadedDocument) {
-                                        // if ($key == $uploadedDocument->title) {
-                                        if ($key == $uploadedDocument->document_type) {
-                                            $documents['required'][] = [
-                                                'id' => $uploadedDocument->id,
-                                                'title' => $uploadedDocument->title,
-                                                'file_path' => $uploadedDocument->file_path,
-                                                'office_file_path' => $uploadedDocument->office_file_path,
-                                            ];
-                                            break;
-                                        }
-                                    }
-                                }
-                                $data['documents'] = $documents;
-                                break;
-                            case 'ConversionApplication':
-                                $applicationType = 'Conversion';
-                                $serviceType = getServiceType('CONVERSION');
-                                $requiredDocuments = config('applicationDocumentType.CONVERSION.Required');
-                                $uploadedDocuments = Document::where('service_type', $serviceType)->where('model_name', $requestModel)->where('model_id', $id)->get();
-                                $documents = [
-                                    'required' => [],
-                                ];
-                                foreach ($requiredDocuments as $key => $requiredDocument) {
-                                    foreach ($uploadedDocuments as $uploadedDocument) {
-                                        if ($key == $uploadedDocument->title) {
-                                            $documents['required'][] = [
-                                                'title' => $uploadedDocument->title,
-                                                'file_path' => $uploadedDocument->file_path
-                                            ];
-                                            break;
-                                        }
-                                    }
-                                }
-                                $data['documents'] = $documents;
-                                break;
-                            default:
-                                $applicationType = '';
-                                break;
-                        }
-
-                        $data['applicationType'] = $applicationType;
-                        $data['roles'] = Auth::user()->roles[0]->name;
-                        $property = PropertyMaster::find($applicationDetails['property_master_id']);
-                        $applicationDetails['serviceType'] = $serviceType;
-                        $data['details'] = $applicationDetails;
-                        $data['applicationMovementId'] = $id;
-                        // Specify the column to sort by
-                        $data['checkList'] = ApplicationStatus::where('service_type', $serviceType)->where('model_id', $id)->latest('created_at')->first();
-                        $oldPropertyId = (string) $applicationDetails['old_property_id'];
-                        $UserApplicationController = new UserApplicationController();
-                        $data['propertyCommonDetails'] = $UserApplicationController->getPropertyCommonDetails($oldPropertyId);
-
-                        $data['user'] = User::find($applicationDetails['created_by']);
-                        $data['latestAppAction'] = AppLatestAction::where('application_no', $applicationDetails['application_no'])->first();
-                        $data['encryptedModel'] = $encryptedModel;
-                        return view('application.admin.proof_reading.index', $data);
-                    } else {
-                        return redirect()->back()->with('failure', 'Something went wrong during Proof reading.');
                     }
+
+                    //For logs - SOURAV CHAUHAN (13/Dec/2024) 
+                    $actionLink = url('edharti/applications/' . $id . '/start-proof-reading') . '?type=' . $request->type;
+                    UserActionLogHelper::UserActionLog(
+                        'Start Application Proof Reading',
+                        $actionLink,
+                        'adminApplication',
+                        "Proof reading for application <a target='_blank' href='" . $actionLink . "'>" . $applicationDetails['application_no'] . "</a> has been started by user " . Auth::user()->name . "."
+                    );
+
+                    $data = [];
+                    $data['application'] = $application;
+                    switch ($requestModel) {
+                        case 'MutationApplication':
+                            $applicationType = 'Mutation';
+                            $serviceType = getServiceType('SUB_MUT');
+                            $documents = Document::where('service_type', $serviceType)->where('model_name', $requestModel)->where('model_id', $id)->get();
+                            break;
+                        case 'LandUseChangeApplication':
+                            $applicationType = 'Land Use Change';
+                            $serviceType = getServiceType('LUC');
+
+                            $documentList = config('applicationDocumentType.LUC.documents');
+                            $requiredDocuments = collect($documentList)->where('required', 1)->all();
+                            $requiredDocumentTypes = array_map(function ($element) {
+                                return $element['label'];
+                            }, $requiredDocuments);
+                            $uploadedDocuments = Document::where('service_type', $serviceType)->where('model_name', $requestModel)->where('model_id', $id)->get();
+
+                            $documents = [
+                                'required' => [],
+                                'optional' => [],
+                            ];
+
+                            // Required documents
+                            foreach ($requiredDocumentTypes as $requiredDocument) {
+                                foreach ($uploadedDocuments as $uploadedDocument) {
+                                    if ($requiredDocument == $uploadedDocument->title) {
+                                        $documents['required'][] = [
+                                            'title' => $uploadedDocument->title,
+                                            'file_path' => $uploadedDocument->file_path
+                                        ];
+                                        break;
+                                    }
+                                }
+                            }
+
+                            //optional documents
+                            $optionalDocuments = collect($documentList)->where('required', 0)->all();
+                            $optionalDocumentTypes = array_map(function ($element) {
+                                return $element['label'];
+                            }, $optionalDocuments);
+
+                            foreach ($optionalDocumentTypes as $optionalDocument) {
+                                $found = false;
+                                foreach ($uploadedDocuments as $uploadedDocument) {
+                                    if ($optionalDocument == $uploadedDocument->title) {
+                                        $documents['optional'][] = [
+                                            'title' => $uploadedDocument->title,
+                                            'file_path' => $uploadedDocument->file_path
+                                        ];
+                                        $found = true;
+                                        break;
+                                    }
+                                }
+                                if (!$found) {
+                                    $documents['optional'][] = [
+                                        'title' => $optionalDocument,
+                                        'file_path' => null
+                                    ];
+                                }
+                            }
+                            $data['documents'] = $documents;
+                            break;
+                        case 'DeedOfApartmentApplication':
+                            $applicationType = 'Deed Of Apartment';
+                            $serviceType = getServiceType('DOA');
+                            $requiredDocuments = config('applicationDocumentType.DOA.documents');
+                            $uploadedDocuments = Document::where('service_type', $serviceType)->where('model_name', $requestModel)->where('model_id', $id)->get();
+                            $documents = [
+                                'required' => [],
+                            ];
+                            foreach ($requiredDocuments as $key => $requiredDocument) {
+                                foreach ($uploadedDocuments as $uploadedDocument) {
+                                    // if ($key == $uploadedDocument->title) {
+                                    if ($key == $uploadedDocument->document_type) {
+                                        $documents['required'][] = [
+                                            'id' => $uploadedDocument->id,
+                                            'title' => $uploadedDocument->title,
+                                            'file_path' => $uploadedDocument->file_path,
+                                            'office_file_path' => $uploadedDocument->office_file_path,
+                                        ];
+                                        break;
+                                    }
+                                }
+                            }
+                            $data['documents'] = $documents;
+                            break;
+                        case 'ConversionApplication':
+                            $applicationType = 'Conversion';
+                            $serviceType = getServiceType('CONVERSION');
+                            $requiredDocuments = config('applicationDocumentType.CONVERSION.Required');
+                            $uploadedDocuments = Document::where('service_type', $serviceType)->where('model_name', $requestModel)->where('model_id', $id)->get();
+                            $documents = [
+                                'required' => [],
+                            ];
+                            foreach ($requiredDocuments as $key => $requiredDocument) {
+                                foreach ($uploadedDocuments as $uploadedDocument) {
+                                    if ($key == $uploadedDocument->title) {
+                                        $documents['required'][] = [
+                                            'title' => $uploadedDocument->title,
+                                            'file_path' => $uploadedDocument->file_path
+                                        ];
+                                        break;
+                                    }
+                                }
+                            }
+                            $data['documents'] = $documents;
+                            break;
+                        default:
+                            $applicationType = '';
+                            break;
+                    }
+
+                    $data['applicationType'] = $applicationType;
+                    $data['roles'] = Auth::user()->roles[0]->name;
+                    $property = PropertyMaster::find($applicationDetails['property_master_id']);
+                    $applicationDetails['serviceType'] = $serviceType;
+                    $data['details'] = $applicationDetails;
+                    $data['applicationMovementId'] = $id;
+                    // Specify the column to sort by
+                    $data['checkList'] = ApplicationStatus::where('service_type', $serviceType)->where('model_id', $id)->latest('created_at')->first();
+                    $oldPropertyId = (string) $applicationDetails['old_property_id'];
+                    $UserApplicationController = new UserApplicationController();
+                    $data['propertyCommonDetails'] = $UserApplicationController->getPropertyCommonDetails($oldPropertyId);
+
+                    $data['user'] = User::find($applicationDetails['created_by']);
+                    $data['latestAppAction'] = AppLatestAction::where('application_no', $applicationDetails['application_no'])->first();
+                    $data['encryptedModel'] = $encryptedModel;
+                    return view('application.admin.proof_reading.index', $data);
                 } else {
-                    return redirect()->back()->with('failure', 'Proof reading not scheduled for the application');
+                    return redirect()->back()->with('failure', 'Something went wrong during Proof reading.');
                 }
+            } else {
+                return redirect()->back()->with('failure', 'Proof reading not scheduled for the application');
+            }
         } else {
             return redirect()->back()->with('failure', 'Application Not Available');
         }
@@ -8928,7 +8486,7 @@ class ApplicationController extends Controller
         }
     } */
 
-        public function finalizeConversionApplication($conversionApplication)
+    public function finalizeConversionApplication($conversionApplication)
     {
         $user = User::find($conversionApplication['created_by']);
         $propertyMasterId = $conversionApplication->property_master_id;
@@ -9339,7 +8897,7 @@ class ApplicationController extends Controller
     //Get all disposed (Approved/Reject) applications - Lalit Tiwari (27/Feb/2025)
     public function applicationsDisposed(Request $request)
     {
-       $demandType = '';
+        $demandType = '';
         $getStatusId = '';
         $applicationType = '';
         $getApplicationTypeId = '';
@@ -9352,13 +8910,13 @@ class ApplicationController extends Controller
         // dd(trim(Crypt::decrypt($request->query('status'))));
         if ($request->query('status')) {
             // dd($items);
-             $items = getApplicationStatusList(true, false);
+            $items = getApplicationStatusList(true, false);
             $getStatusId = $items->where('item_code', trim(Crypt::decrypt($request->query('status'))))->value('id'); // trim added by Nitin to remove extra space and lines from descrypted string - on 04-2024
         }
         if ($request->query('applicationType')) {
             $applicationType = $request->query('applicationType');
         }
-       if ($request->query('demandType')) {
+        if ($request->query('demandType')) {
             $demandType = $request->query('demandType');
         }
         $user = Auth::user();
@@ -9827,9 +9385,9 @@ class ApplicationController extends Controller
                         'flats.flat_number as flat_number', // Add NULL for flat_id on dated 07/01/25 By Lalit Tiwari
                         DB::raw("'NocApplication' as model_name") // Add model_name for the first query
                     );
-                    $dateStart = '2006-02-14';  
-           		$dateEnd = '2017-05-01';
-					$query5->leftJoin(DB::raw("
+                $dateStart = '2006-02-14';
+                $dateEnd = '2017-05-01';
+                $query5->leftJoin(DB::raw("
 				    (
 				        SELECT ptld1.*
 				        FROM property_transferred_lessee_details ptld1
@@ -9849,40 +9407,39 @@ class ApplicationController extends Controller
                 }
                 if ($request->demandType) {
 
-				    $query5->where(function ($query) use ($request) {
+                    $query5->where(function ($query) use ($request) {
 
-				        if ($request->demandType == 'with_demand') {
-				            $query->whereNotNull('pld3.id');
-				        }
+                        if ($request->demandType == 'with_demand') {
+                            $query->whereNotNull('pld3.id');
+                        }
 
-				        if ($request->demandType == 'without_demand') {
-				            $query->whereNull('pld3.id');
-				        }
-
-				    });
-				}
+                        if ($request->demandType == 'without_demand') {
+                            $query->whereNull('pld3.id');
+                        }
+                    });
+                }
 
                 // if ($request->status) {
                 //     $query5 = $query5->where('noc.status', ($request->status));
                 // } else {
                 //     $query5 = $query5->whereIn('noc.status', ($itemsIdArr));
                 // }
-            //    if ($request->demandType) {
-            //             $dateStart = '2006-02-14';
-            //             $dateEnd   = '2017-05-01';
+                //    if ($request->demandType) {
+                //             $dateStart = '2006-02-14';
+                //             $dateEnd   = '2017-05-01';
 
-            //             $query5->where(function ($query) use ($request, $dateStart, $dateEnd) {
-            //                 if ($request->demandType == 'with_demand') {
-            //                     $query->whereBetween('pld.doe', [$dateStart, $dateEnd])
-            //                         ->orWhereNull('pld.doe');
-            //                 }
+                //             $query5->where(function ($query) use ($request, $dateStart, $dateEnd) {
+                //                 if ($request->demandType == 'with_demand') {
+                //                     $query->whereBetween('pld.doe', [$dateStart, $dateEnd])
+                //                         ->orWhereNull('pld.doe');
+                //                 }
 
-            //                 if ($request->demandType == 'without_demand') {
-            //                     $query->whereNotBetween('pld.doe', [$dateStart, $dateEnd])
-            //                         ->whereNotNull('pld.doe');
-            //                 }
-            //             });
-            //         } 
+                //                 if ($request->demandType == 'without_demand') {
+                //                     $query->whereNotBetween('pld.doe', [$dateStart, $dateEnd])
+                //                         ->whereNotNull('pld.doe');
+                //                 }
+                //             });
+                //         } 
 
                 // Add search filter if search.value is present
                 if ($request->input('search.value')) {
@@ -10474,7 +10031,7 @@ class ApplicationController extends Controller
 
             // Prepare actions
             $action = '<div class="d-flex gap-2">';
-            $action .= '<a href="'. route('applications.view', ['id' => $application->id, 'type' => $model]).' "
+            $action .= '<a href="' . route('applications.view', ['id' => $application->id, 'type' => $model]) . ' "
                             <button type="button" class="btn btn-primary px-5" onclick="handleViewApplication()">View</button>
                         </a>
                         <button type="button" class="btn btn-success" onclick="getFileMovement(\'' . $application->application_no . '\', this)">
@@ -10523,7 +10080,7 @@ class ApplicationController extends Controller
         if ($this->isUnpaidDemandForApplication($user->id, $applicationNo)) { //if pending demand then user can see application but can not take any further action
             return $canView;
         }
-         if (in_array($application->status, [getServiceType('APP_APR'), getServiceType('APP_REJ'), getServiceType('APP_CAN')])) { //if application is already disposed then allow access
+        if (in_array($application->status, [getServiceType('APP_APR'), getServiceType('APP_REJ'), getServiceType('APP_CAN')])) { //if application is already disposed then allow access
             return $canView;
         }
         if ($application->status == getServiceType('APP_HOLD') && $user->roles[0]->name == 'CDV') {
@@ -10540,39 +10097,39 @@ class ApplicationController extends Controller
         }
 
         $appServiceType = $application->service_type;
-        if (getServiceCodeById($appServiceType) == "NOC") 
-							      {
-							      	$dateStart = '2006-02-14';
-								    $dateEnd   = '2017-05-01';
-								    $allApplicationNos = Application::where('service_type', $appServiceType)
-										    ->whereIn('status', [
-										        getServiceType('APP_NEW'),
-										        getServiceType('APP_IP'),
-										        getServiceType('APP_PEN')
-										    ])
-										    ->pluck('application_no')
-										    ->toArray();
-							// $withDemandApplications = DB::table('noc_applications as noc')
-							//     ->join('property_masters as pm', 'pm.id', '=', 'noc.property_master_id')
+        if (getServiceCodeById($appServiceType) == "NOC") {
+            $dateStart = '2006-02-14';
+            $dateEnd   = '2017-05-01';
+            $allApplicationNos = Application::where('service_type', $appServiceType)
+                ->whereIn('status', [
+                    getServiceType('APP_NEW'),
+                    getServiceType('APP_IP'),
+                    getServiceType('APP_PEN')
+                ])
+                ->pluck('application_no')
+                ->toArray();
+            // $withDemandApplications = DB::table('noc_applications as noc')
+            //     ->join('property_masters as pm', 'pm.id', '=', 'noc.property_master_id')
 
-							//     ->join(DB::raw("
-							//         (
-							//             SELECT ptld1.*
-							//             FROM property_transferred_lessee_details ptld1
-							//             INNER JOIN (
-							//                 SELECT MAX(id) as max_id
-							//                 FROM property_transferred_lessee_details
-							//                 WHERE process_of_transfer = 'Conversion'
-							//                 AND transferDate BETWEEN '$dateStart' AND '$dateEnd'
-                            //                 AND deleted_at IS NULL  -- Only non-deleted records
-							//                 GROUP BY property_master_id
-							//             ) ptld2 ON ptld1.id = ptld2.max_id
-							//         ) as pld
-							//     "), 'pld.property_master_id', '=', 'pm.id')
-                             $withDemandApplications = DB::table('noc_applications as noc')
-							    ->join('property_masters as pm', 'pm.id', '=', 'noc.property_master_id')
-							    ->leftJoin('splited_property_details as spd', 'noc.splitted_id', '=', 'spd.id')
-							    ->join(DB::raw("
+            //     ->join(DB::raw("
+            //         (
+            //             SELECT ptld1.*
+            //             FROM property_transferred_lessee_details ptld1
+            //             INNER JOIN (
+            //                 SELECT MAX(id) as max_id
+            //                 FROM property_transferred_lessee_details
+            //                 WHERE process_of_transfer = 'Conversion'
+            //                 AND transferDate BETWEEN '$dateStart' AND '$dateEnd'
+            //                 AND deleted_at IS NULL  -- Only non-deleted records
+            //                 GROUP BY property_master_id
+            //             ) ptld2 ON ptld1.id = ptld2.max_id
+            //         ) as pld
+            //     "), 'pld.property_master_id', '=', 'pm.id')
+            $withDemandApplications = DB::table('noc_applications as noc')
+                ->join('property_masters as pm', 'pm.id', '=', 'noc.property_master_id')
+                ->leftJoin('splited_property_details as spd', 'noc.splitted_id', '=', 'spd.id')
+                ->join(
+                    DB::raw("
 							        (
 							            SELECT ptld1.*
 							            FROM property_transferred_lessee_details ptld1
@@ -10586,42 +10143,40 @@ class ApplicationController extends Controller
 							            ) ptld2 ON ptld1.id = ptld2.max_id
 							        ) as pld
 							    "),
-							    function ($join) {
+                    function ($join) {
 
-							        $join->on(function ($query) {
-							            $query->on('pm.id', '=', 'pld.property_master_id')
-							                  ->whereNull('noc.splitted_id');
-							        })
-							        ->orOn(function ($query) {
-							            $query->on('spd.id', '=', 'pld.splited_property_detail_id')
-							                  ->whereNotNull('noc.splitted_id');
-							        });
+                        $join->on(function ($query) {
+                            $query->on('pm.id', '=', 'pld.property_master_id')
+                                ->whereNull('noc.splitted_id');
+                        })
+                            ->orOn(function ($query) {
+                                $query->on('spd.id', '=', 'pld.splited_property_detail_id')
+                                    ->whereNotNull('noc.splitted_id');
+                            });
+                    }
+                )
+                ->whereIn('noc.application_no', $allApplicationNos)
+                ->distinct()
+                ->pluck('noc.application_no')
+                ->toArray();
 
-							    })
-							    ->whereIn('noc.application_no', $allApplicationNos)
-							    ->distinct()
-							    ->pluck('noc.application_no')
-							    ->toArray();
-							    
-								    $withoutDemandApplications = array_values(
-								        array_diff($allApplicationNos, $withDemandApplications)
-								    );
-								    $result = [
-								        'with_demand'    => $withDemandApplications,
-								        'without_demand' => $withoutDemandApplications,
-								    ];
-								    $currentApplicationNo = $application->application_no;
-								    $isWithDemand = in_array($currentApplicationNo, $withDemandApplications);
-								    $otherApplications = $isWithDemand
-														    ? $withDemandApplications
-														    : $withoutDemandApplications;
-					}
+            $withoutDemandApplications = array_values(
+                array_diff($allApplicationNos, $withDemandApplications)
+            );
+            $result = [
+                'with_demand'    => $withDemandApplications,
+                'without_demand' => $withoutDemandApplications,
+            ];
+            $currentApplicationNo = $application->application_no;
+            $isWithDemand = in_array($currentApplicationNo, $withDemandApplications);
+            $otherApplications = $isWithDemand
+                ? $withDemandApplications
+                : $withoutDemandApplications;
+        } else {
+            $otherApplications = Application::where('service_type', $appServiceType)->whereIn('status', [getServiceType('APP_NEW'), getServiceType('APP_IP'), getServiceType('APP_PEN')])->pluck('application_no')->toArray();
+        }
 
-		      else {
-		        $otherApplications = Application::where('service_type', $appServiceType)->whereIn('status', [getServiceType('APP_NEW'), getServiceType('APP_IP'), getServiceType('APP_PEN')])->pluck('application_no')->toArray();
-			}
-
-       // $otherApplications = Application::where('service_type', $appServiceType)->whereIn('status', [getServiceType('APP_NEW'), getServiceType('APP_IP'), getServiceType('APP_PEN')])->pluck('application_no')->toArray();
+        // $otherApplications = Application::where('service_type', $appServiceType)->whereIn('status', [getServiceType('APP_NEW'), getServiceType('APP_IP'), getServiceType('APP_PEN')])->pluck('application_no')->toArray();
         // dd($otherApplications);
         if (count($otherApplications) <= $fifoLimit) {
             return $canView;
@@ -10648,7 +10203,7 @@ class ApplicationController extends Controller
         //updated fifo logic - 19-08-2025
         $latestAssigned = $userAssigned->pluck('application_no')->toArray();
         // $earliestApplications = Application::whereIn('application_no', $latestAssigned)->orderBy('created_at')->take($fifoLimit)->pluck('application_no')->toArray();
-   
+
         //added by swati on 24022026
         // FIFO should be applied per assigned section of the user
         $assignedSectionIds = [];
@@ -10687,9 +10242,9 @@ class ApplicationController extends Controller
         }
         return $canView;
     }
-    
 
-     public function applicationSummary(Request $request)
+
+    public function applicationSummary(Request $request)
     {
         $user = Auth::user();
         $sections = $user->hasAnyRole(['super-admin', 'lndo', 'minister']) ? getRequiredSections() : $user->sections;
@@ -10727,7 +10282,7 @@ class ApplicationController extends Controller
                 return $quer->whereDate('disposed_at', '<=', Carbon::createFromFormat('d-m-Y', $filterDateTo)->format('Y-m-d'));
             })
             ->get();
-           
+
         $inProgressQueryResult = Application::whereIn('status', [getServiceType('APP_IP'), getServiceType('APP_OBJ'), getServiceType('APP_HOLD')])
             ->whereNotNull('created_at')
             ->when(!empty($filterSectionIds), function ($quer) use ($filterSectionIds) {
@@ -10740,30 +10295,30 @@ class ApplicationController extends Controller
                 return $quer->whereDate('created_at', '<=', Carbon::createFromFormat('d-m-Y', $filterDateTo)->format('Y-m-d'));
             })
             ->get();
-            
-            
-		$serviceTypeWiseApplicationQueryResult = DB::table('applications as a')
-				   ->where('status', '<>', getServiceType('APP_WD'))
-				    ->when(!empty($filterSectionIds), function ($quer) use ($filterSectionIds) {
-				        return $quer->whereIn('section_id', $filterSectionIds);
-				    })
-				    ->when(!is_null($filterDateFrom), function ($quer) use ($filterDateFrom) {
-				        return $quer->whereDate('a.created_at', '>=', Carbon::createFromFormat('d-m-Y', $filterDateFrom)->format('Y-m-d'));
-				    })
-				    ->when(!is_null($filterDateTo), function ($quer) use ($filterDateTo) {
-				        return $quer->whereDate('a.created_at', '<=', Carbon::createFromFormat('d-m-Y', $filterDateTo)->format('Y-m-d'));
-				    })
-				    ->select(
-				        'service_names.item_name as service',
-				        'status_names.item_name as status',
-				        'a.status as status_id',
-				        'a.service_type as service_type_id',
-				        DB::raw('COUNT(a.id) as count')
-				    )
-				    ->join('items as service_names', 'a.service_type', '=', 'service_names.id')
-				    ->join('items as status_names', 'a.status', '=', 'status_names.id')
-				    ->groupBy('a.service_type', 'a.status', 'service_names.item_name', 'status_names.item_name')
-				    ->get();
+
+
+        $serviceTypeWiseApplicationQueryResult = DB::table('applications as a')
+            ->where('status', '<>', getServiceType('APP_WD'))
+            ->when(!empty($filterSectionIds), function ($quer) use ($filterSectionIds) {
+                return $quer->whereIn('section_id', $filterSectionIds);
+            })
+            ->when(!is_null($filterDateFrom), function ($quer) use ($filterDateFrom) {
+                return $quer->whereDate('a.created_at', '>=', Carbon::createFromFormat('d-m-Y', $filterDateFrom)->format('Y-m-d'));
+            })
+            ->when(!is_null($filterDateTo), function ($quer) use ($filterDateTo) {
+                return $quer->whereDate('a.created_at', '<=', Carbon::createFromFormat('d-m-Y', $filterDateTo)->format('Y-m-d'));
+            })
+            ->select(
+                'service_names.item_name as service',
+                'status_names.item_name as status',
+                'a.status as status_id',
+                'a.service_type as service_type_id',
+                DB::raw('COUNT(a.id) as count')
+            )
+            ->join('items as service_names', 'a.service_type', '=', 'service_names.id')
+            ->join('items as status_names', 'a.status', '=', 'status_names.id')
+            ->groupBy('a.service_type', 'a.status', 'service_names.item_name', 'status_names.item_name')
+            ->get();
 
 
         $serviceTypeWiseDisposeQueryResult = DB::table('applications as a')
@@ -10771,20 +10326,20 @@ class ApplicationController extends Controller
             ->when(!empty($filterSectionIds), function ($quer) use ($filterSectionIds) {
                 return $quer->whereIn('section_id', $filterSectionIds);
             })
-           ->when(!is_null($filterDateFrom), function ($quer) use ($filterDateFrom) {
-				    return $quer->whereDate(
-				        'a.disposed_at',
-				        '>=',
-				        Carbon::createFromFormat('d-m-Y', $filterDateFrom)->format('Y-m-d')
-				    );
-				})
-				->when(!is_null($filterDateTo), function ($quer) use ($filterDateTo) {
-				    return $quer->whereDate(
-				        'a.disposed_at',
-				        '<=',
-				        Carbon::createFromFormat('d-m-Y', $filterDateTo)->format('Y-m-d')
-				    );
-				})
+            ->when(!is_null($filterDateFrom), function ($quer) use ($filterDateFrom) {
+                return $quer->whereDate(
+                    'a.disposed_at',
+                    '>=',
+                    Carbon::createFromFormat('d-m-Y', $filterDateFrom)->format('Y-m-d')
+                );
+            })
+            ->when(!is_null($filterDateTo), function ($quer) use ($filterDateTo) {
+                return $quer->whereDate(
+                    'a.disposed_at',
+                    '<=',
+                    Carbon::createFromFormat('d-m-Y', $filterDateTo)->format('Y-m-d')
+                );
+            })
             ->select(
                 'service_names.item_name as service',
                 'status_names.item_name as status',
@@ -10820,7 +10375,7 @@ class ApplicationController extends Controller
             // make sure every status key is present, even if count=0
             return array_merge(array_fill_keys($statuses->toArray(), 0), $row);
         });
-        
+
         $serviceTypeWiseDisposeStatus = [];
 
         // collect all unique statuses first
@@ -10846,8 +10401,8 @@ class ApplicationController extends Controller
             // make sure every status key is present, even if count=0
             return array_merge(array_fill_keys($statuses->toArray(), 0), $row);
         });
-       
-        
+
+
         $totalApplications = $queryResult->count();
         $newOrPendingApplications = $queryResult->whereIn('status', [getServiceType('APP_NEW'), getServiceType('APP_PEN')])->count();
         $applicationsReceived = $totalApplications - $newOrPendingApplications;
@@ -10861,7 +10416,7 @@ class ApplicationController extends Controller
             $rejectedApplicationCount = $disposeQueryResult->where('status', getServiceType('APP_REJ'))->count();
             $canceledApplicationCount = $disposeQueryResult->where('status', getServiceType('APP_CAN'))->count();
         }
-       // dd($totalApplications."- ".$newOrPendingApplications."-".$applicationsReceived."-".$totalDisposedApplicationCount."-".$totalinProgressApplicationCount);
+        // dd($totalApplications."- ".$newOrPendingApplications."-".$applicationsReceived."-".$totalDisposedApplicationCount."-".$totalinProgressApplicationCount);
 
         $data['sections'] = $sections;
         $data['totalApplications'] = $totalApplications;
@@ -10869,26 +10424,25 @@ class ApplicationController extends Controller
         $data['newOrPendingApplications'] = $newOrPendingApplications;
         $data['applicationsReceived'] = $applicationsReceived;
         $data['totalDisposedApplicationCount'] = $totalDisposedApplicationCount;
-        $data['totalinProgressApplicationCount']= $totalinProgressApplicationCount;
-        
-//        $data['approvedApplicationCount'] = $approvedApplicationCount;
-//        $data['rejectedApplicationCount'] = $rejectedApplicationCount;
-//        $data['canceledApplicationCount'] = $canceledApplicationCount;
+        $data['totalinProgressApplicationCount'] = $totalinProgressApplicationCount;
+
+        //        $data['approvedApplicationCount'] = $approvedApplicationCount;
+        //        $data['rejectedApplicationCount'] = $rejectedApplicationCount;
+        //        $data['canceledApplicationCount'] = $canceledApplicationCount;
         $data['serviceTypeWiseApplicationStatus'] = $serviceTypeWiseApplicationStatus;
         $data['serviceTypeWiseDisposeStatus'] = $serviceTypeWiseDisposeStatus;
 
         if (empty($filters)) {
-        	$data['applications'] = $queryResult;
+            $data['applications'] = $queryResult;
             return view('application.summary', $data);
-        } 
-        else {
+        } else {
             /**Service types */
             $serviceTypes = getItemsByGroupId(17001);
-            $serviceTypesFormatted = $serviceTypes->pluck('item_name', 'id')->toArray();            
+            $serviceTypesFormatted = $serviceTypes->pluck('item_name', 'id')->toArray();
             $statuses = getItemsByGroupId(1031);
             $statusList = $statuses->pluck('item_name', 'id')->toArray();
 
-            
+
             $data['serviceTypes'] = $serviceTypesFormatted;
             $data['statusList'] = $statusList;
         }
@@ -10896,352 +10450,352 @@ class ApplicationController extends Controller
         return empty($filters) ? view('application.summary', $data) : response()->json(['success' => true, 'data' => $data]);
     }
     public function applicationSummaryDetails(Request $request)
-			{
-			    $user = Auth::user();
-			    $filters = $request->all();
+    {
+        $user = Auth::user();
+        $filters = $request->all();
 
-			    $filterSectionIds = [];
+        $filterSectionIds = [];
 
-			    if (!empty($filters['section_id'])) {
-			        $filterSectionIds = [$filters['section_id']];
-			    } elseif (!$user->hasAnyRole(['super-admin', 'lndo', 'minister'])) {
-			        $filterSectionIds = $user->sections->pluck('id')->toArray();
-			    }
+        if (!empty($filters['section_id'])) {
+            $filterSectionIds = [$filters['section_id']];
+        } elseif (!$user->hasAnyRole(['super-admin', 'lndo', 'minister'])) {
+            $filterSectionIds = $user->sections->pluck('id')->toArray();
+        }
 
-			    $filterService = null;
-			    if (!empty($filters['service'])) {
-			        $filterService = getServiceType($filters['service']);
-			    }
+        $filterService = null;
+        if (!empty($filters['service'])) {
+            $filterService = getServiceType($filters['service']);
+        }
 
-			    $filterStatus = [];
-			    if (!empty($filters['status'])) {
-			        $normalizedStatus = preg_replace('/\s*,\s*/', ',', $filters['status']);
-			        $filterStatus = array_map('getServiceType', explode(',', $normalizedStatus));
-			    }
+        $filterStatus = [];
+        if (!empty($filters['status'])) {
+            $normalizedStatus = preg_replace('/\s*,\s*/', ',', $filters['status']);
+            $filterStatus = array_map('getServiceType', explode(',', $normalizedStatus));
+        }
 
-			    $filterDateFrom = $filters['date_from'] ?? null;
-			    $filterDateTo   = $filters['date_to'] ?? null;
+        $filterDateFrom = $filters['date_from'] ?? null;
+        $filterDateTo   = $filters['date_to'] ?? null;
 
-			    // Disposed statuses
-			    $disposedStatuses = [
-			        getServiceType('APP_APR'),
-			        getServiceType('APP_REJ'),
-			        getServiceType('APP_CAN'),
-			    ];
+        // Disposed statuses
+        $disposedStatuses = [
+            getServiceType('APP_APR'),
+            getServiceType('APP_REJ'),
+            getServiceType('APP_CAN'),
+        ];
 
-			    // Check if only disposed records are requested
-			    $useDisposedDate = !empty($filterStatus)
-			        && empty(array_diff($filterStatus, $disposedStatuses));
+        // Check if only disposed records are requested
+        $useDisposedDate = !empty($filterStatus)
+            && empty(array_diff($filterStatus, $disposedStatuses));
 
-			    $queryResult = Application::query()
+        $queryResult = Application::query()
 
-			        ->when(!empty($filterStatus), function ($q) use ($filterStatus) {
-			            $q->whereIn('status', $filterStatus);
-			        }, function ($q) {
-			            $q->where('status', '<>', getServiceType('APP_WD'));
-			        })
+            ->when(!empty($filterStatus), function ($q) use ($filterStatus) {
+                $q->whereIn('status', $filterStatus);
+            }, function ($q) {
+                $q->where('status', '<>', getServiceType('APP_WD'));
+            })
 
-			        ->when($filterService, function ($q) use ($filterService) {
-			            $q->where('service_type', $filterService);
-			        })
+            ->when($filterService, function ($q) use ($filterService) {
+                $q->where('service_type', $filterService);
+            })
 
-			        ->when(!empty($filterSectionIds), function ($q) use ($filterSectionIds) {
-			            $q->whereIn('section_id', $filterSectionIds);
-			        })
+            ->when(!empty($filterSectionIds), function ($q) use ($filterSectionIds) {
+                $q->whereIn('section_id', $filterSectionIds);
+            })
 
-			        // Date From
-			        ->when($filterDateFrom, function ($q) use ($filterDateFrom, $useDisposedDate) {
+            // Date From
+            ->when($filterDateFrom, function ($q) use ($filterDateFrom, $useDisposedDate) {
 
-			            $date = Carbon::createFromFormat('d-m-Y', $filterDateFrom)->format('Y-m-d');
+                $date = Carbon::createFromFormat('d-m-Y', $filterDateFrom)->format('Y-m-d');
 
-			            if ($useDisposedDate) {
-			                $q->whereDate('disposed_at', '>=', $date);
-			            } else {
-			                $q->whereDate('created_at', '>=', $date);
-			            }
-			        })
+                if ($useDisposedDate) {
+                    $q->whereDate('disposed_at', '>=', $date);
+                } else {
+                    $q->whereDate('created_at', '>=', $date);
+                }
+            })
 
-			        // Date To
-			        ->when($filterDateTo, function ($q) use ($filterDateTo, $useDisposedDate) {
+            // Date To
+            ->when($filterDateTo, function ($q) use ($filterDateTo, $useDisposedDate) {
 
-			            $date = Carbon::createFromFormat('d-m-Y', $filterDateTo)->format('Y-m-d');
+                $date = Carbon::createFromFormat('d-m-Y', $filterDateTo)->format('Y-m-d');
 
-			            if ($useDisposedDate) {
-			                $q->whereDate('disposed_at', '<=', $date);
-			            } else {
-			                $q->whereDate('created_at', '<=', $date);
-			            }
-			        })
+                if ($useDisposedDate) {
+                    $q->whereDate('disposed_at', '<=', $date);
+                } else {
+                    $q->whereDate('created_at', '<=', $date);
+                }
+            })
 
-			        ->latest()
-			        ->get();
+            ->latest()
+            ->get();
 
-			    return view('application.summary-details', [
-			        'applications' => $queryResult
-			    ]);
-			}
-
-
-//      public function applicationSummary(Request $request)
-//     {
-//         $user = Auth::user();
-//         $sections = $user->hasAnyRole(['super-admin', 'lndo', 'minister']) ? getRequiredSections() : $user->sections;
-//         $filters = $request->all();
-//         //dd($filters);
-//         $filterSectionIds = [];
-//         if (isset($filters['section_id'])) {
-//             $filterSectionIds = [$filters['section_id']];
-//         } else if (!$user->hasAnyRole(['super-admin', 'lndo', 'minister'])) {
-//             $filterSectionIds = $user->sections->pluck('id')->toArray();
-//         }
-//         $filterDateFrom = $filters['date_from'] ?? null;
-//         $filterDateTo = $filters['date_to'] ?? null;
-//         // dd($filterDateFrom, $filterDateTo);
-//         $queryResult = Application::where('status', '<>', getServiceType('APP_WD'))
-//             ->when(!empty($filterSectionIds), function ($quer) use ($filterSectionIds) {
-//                 return $quer->whereIn('section_id', $filterSectionIds);
-//             })
-//             ->when(!is_null($filterDateFrom), function ($quer) use ($filterDateFrom) {
-//                 return $quer->whereDate('applications.created_at', '>=', Carbon::createFromFormat('d-m-Y', $filterDateFrom)->format('Y-m-d'));
-//             })
-//             ->when(!is_null($filterDateTo), function ($quer) use ($filterDateTo) {
-//                 return $quer->whereDate('applications.created_at', '<=', Carbon::createFromFormat('d-m-Y', $filterDateTo)->format('Y-m-d'));
-//             }) //;
-//             //dd(vsprintf(str_replace('?', "'%s'", $queryResult->toSql()), $queryResult->getBindings()));
-//             ->get();
-
-//         $disposeQueryResult = Application::whereIn('status', [getServiceType('APP_APR'), getServiceType('APP_REJ'), getServiceType('APP_CAN')])
-//             ->whereNotNull('disposed_at')
-//             ->when(!empty($filterSectionIds), function ($quer) use ($filterSectionIds) {
-//                 return $quer->whereIn('section_id', $filterSectionIds);
-//             })
-//             ->when(!is_null($filterDateFrom), function ($quer) use ($filterDateFrom) {
-//                 return $quer->whereDate('created_at', '>=', Carbon::createFromFormat('d-m-Y', $filterDateFrom)->format('Y-m-d'));
-//             })
-//             ->when(!is_null($filterDateTo), function ($quer) use ($filterDateTo) {
-//                 return $quer->whereDate('created_at', '<=', Carbon::createFromFormat('d-m-Y', $filterDateTo)->format('Y-m-d'));
-//             })
-//             ->get();
-           
-//             $inProgressQueryResult = Application::whereIn('status', [getServiceType('APP_IP'), getServiceType('APP_OBJ'), getServiceType('APP_HOLD')])
-//             ->whereNotNull('created_at')
-//             ->when(!empty($filterSectionIds), function ($quer) use ($filterSectionIds) {
-//                 return $quer->whereIn('section_id', $filterSectionIds);
-//             })
-//             ->when(!is_null($filterDateFrom), function ($quer) use ($filterDateFrom) {
-//                 return $quer->whereDate('created_at', '>=', Carbon::createFromFormat('d-m-Y', $filterDateFrom)->format('Y-m-d'));
-//             })
-//             ->when(!is_null($filterDateTo), function ($quer) use ($filterDateTo) {
-//                 return $quer->whereDate('created_at', '<=', Carbon::createFromFormat('d-m-Y', $filterDateTo)->format('Y-m-d'));
-//             })
-//             ->get();
-// 				$serviceTypeWiseApplicationQueryResult = DB::table('applications as a')
-// 				    ->where('status', '<>', getServiceType('APP_WD'))
-// 				    ->when(!empty($filterSectionIds), function ($quer) use ($filterSectionIds) {
-// 				        return $quer->whereIn('section_id', $filterSectionIds);
-// 				    })
-// 				    ->when(!is_null($filterDateFrom), function ($quer) use ($filterDateFrom) {
-// 				        return $quer->whereDate('a.created_at', '>=', Carbon::createFromFormat('d-m-Y', $filterDateFrom)->format('Y-m-d'));
-// 				    })
-// 				    ->when(!is_null($filterDateTo), function ($quer) use ($filterDateTo) {
-// 				        return $quer->whereDate('a.created_at', '<=', Carbon::createFromFormat('d-m-Y', $filterDateTo)->format('Y-m-d'));
-// 				    })
-// 				    ->select(
-// 				        'service_names.item_name as service',
-// 				        'status_names.item_name as status',
-// 				        'a.status as status_id',
-// 				        'a.service_type as service_type_id',
-// 				        DB::raw('COUNT(a.id) as count')
-// 				    )
-// 				    ->join('items as service_names', 'a.service_type', '=', 'service_names.id')
-// 				    ->join('items as status_names', 'a.status', '=', 'status_names.id')
-// 				    ->groupBy('a.service_type', 'a.status', 'service_names.item_name', 'status_names.item_name')
-// 				    ->get();
+        return view('application.summary-details', [
+            'applications' => $queryResult
+        ]);
+    }
 
 
-//         $serviceTypeWiseDisposeQueryResult = DB::table('applications as a')
-//             ->whereIn('status', [getServiceType('APP_APR'), getServiceType('APP_REJ')])
-//             ->when(!empty($filterSectionIds), function ($quer) use ($filterSectionIds) {
-//                 return $quer->whereIn('section_id', $filterSectionIds);
-//             })
-//             ->when(!is_null($filterDateFrom), function ($quer) use ($filterDateFrom) {
-//                 return $quer->whereDate('disposed_at', '>=', $filterDateFrom);
-//             })
-//             ->when(!is_null($filterDateTo), function ($quer) use ($filterDateTo) {
-//                 return $quer->whereDate('disposed_at', '<=', $filterDateTo);
-//             })
-//             ->select(
-//                 'service_names.item_name as service',
-//                 'status_names.item_name as status',
-//                 DB::raw('COUNT(a.id) as count')
-//             )
-//             ->join('items as service_names', 'a.service_type', '=', 'service_names.id')
-//             ->join('items as status_names', 'a.status', '=', 'status_names.id')
-//             ->groupBy('service_names.item_name', 'status_names.item_name')
-//             ->get();
+    //      public function applicationSummary(Request $request)
+    //     {
+    //         $user = Auth::user();
+    //         $sections = $user->hasAnyRole(['super-admin', 'lndo', 'minister']) ? getRequiredSections() : $user->sections;
+    //         $filters = $request->all();
+    //         //dd($filters);
+    //         $filterSectionIds = [];
+    //         if (isset($filters['section_id'])) {
+    //             $filterSectionIds = [$filters['section_id']];
+    //         } else if (!$user->hasAnyRole(['super-admin', 'lndo', 'minister'])) {
+    //             $filterSectionIds = $user->sections->pluck('id')->toArray();
+    //         }
+    //         $filterDateFrom = $filters['date_from'] ?? null;
+    //         $filterDateTo = $filters['date_to'] ?? null;
+    //         // dd($filterDateFrom, $filterDateTo);
+    //         $queryResult = Application::where('status', '<>', getServiceType('APP_WD'))
+    //             ->when(!empty($filterSectionIds), function ($quer) use ($filterSectionIds) {
+    //                 return $quer->whereIn('section_id', $filterSectionIds);
+    //             })
+    //             ->when(!is_null($filterDateFrom), function ($quer) use ($filterDateFrom) {
+    //                 return $quer->whereDate('applications.created_at', '>=', Carbon::createFromFormat('d-m-Y', $filterDateFrom)->format('Y-m-d'));
+    //             })
+    //             ->when(!is_null($filterDateTo), function ($quer) use ($filterDateTo) {
+    //                 return $quer->whereDate('applications.created_at', '<=', Carbon::createFromFormat('d-m-Y', $filterDateTo)->format('Y-m-d'));
+    //             }) //;
+    //             //dd(vsprintf(str_replace('?', "'%s'", $queryResult->toSql()), $queryResult->getBindings()));
+    //             ->get();
 
-//         $serviceTypeWiseApplicationStatus = [];
+    //         $disposeQueryResult = Application::whereIn('status', [getServiceType('APP_APR'), getServiceType('APP_REJ'), getServiceType('APP_CAN')])
+    //             ->whereNotNull('disposed_at')
+    //             ->when(!empty($filterSectionIds), function ($quer) use ($filterSectionIds) {
+    //                 return $quer->whereIn('section_id', $filterSectionIds);
+    //             })
+    //             ->when(!is_null($filterDateFrom), function ($quer) use ($filterDateFrom) {
+    //                 return $quer->whereDate('created_at', '>=', Carbon::createFromFormat('d-m-Y', $filterDateFrom)->format('Y-m-d'));
+    //             })
+    //             ->when(!is_null($filterDateTo), function ($quer) use ($filterDateTo) {
+    //                 return $quer->whereDate('created_at', '<=', Carbon::createFromFormat('d-m-Y', $filterDateTo)->format('Y-m-d'));
+    //             })
+    //             ->get();
 
-//         // collect all unique statuses first
-//         $statuses = $serviceTypeWiseApplicationQueryResult->pluck('status')->unique();
-// //dd($statuses);
-//         foreach ($serviceTypeWiseApplicationQueryResult as $row) {
-//             $service = $row->service;
-//             $status  = $row->status;
-
-//             // ensure the service exists with all statuses initialized
-//             if (!isset($serviceTypeWiseApplicationStatus[$service])) {
-//                 $serviceTypeWiseApplicationStatus[$service] = array_fill_keys($statuses->toArray(), 0);
-//                 $serviceTypeWiseApplicationStatus[$service]['total'] = 0;
-//             }
-
-//             // set the count
-//             $serviceTypeWiseApplicationStatus[$service][$status] = $row->count;
-//             $serviceTypeWiseApplicationStatus[$service]['total'] += $row->count;
-//         }
-
-//         // optional: reset array keys for cleaner output
-//         $serviceTypeWiseApplicationStatus = collect($serviceTypeWiseApplicationStatus)->map(function ($row) use ($statuses) {
-//             // make sure every status key is present, even if count=0
-//             return array_merge(array_fill_keys($statuses->toArray(), 0), $row);
-//         });
-//          //dd($serviceTypeWiseApplicationStatus);
-//         $serviceTypeWiseDisposeStatus = [];
-
-//         // collect all unique statuses first
-//         $statuses = $serviceTypeWiseDisposeQueryResult->pluck('status')->unique();
-
-//         foreach ($serviceTypeWiseDisposeQueryResult as $row) {
-//             $service = $row->service;
-//             $status  = $row->status;
-
-//             // ensure the service exists with all statuses initialized
-//             if (!isset($serviceTypeWiseDisposeStatus[$service])) {
-//                 $serviceTypeWiseDisposeStatus[$service] = array_fill_keys($statuses->toArray(), 0);
-//                 $serviceTypeWiseDisposeStatus[$service]['total'] = 0;
-//             }
-
-//             // set the count
-//             $serviceTypeWiseDisposeStatus[$service][$status] = $row->count;
-//             $serviceTypeWiseDisposeStatus[$service]['total'] += $row->count;
-//         }
-
-//         // optional: reset array keys for cleaner output
-//         $serviceTypeWiseDisposeStatus = collect($serviceTypeWiseDisposeStatus)->map(function ($row) use ($statuses) {
-//             // make sure every status key is present, even if count=0
-//             return array_merge(array_fill_keys($statuses->toArray(), 0), $row);
-//         });
-
-//         // dd($serviceTypeWiseDisposeStatus);
-//         $totalApplications = $queryResult->count();
-//         //dd($totalApplications);
-//         $newOrPendingApplications = $queryResult->whereIn('status', [getServiceType('APP_NEW'), getServiceType('APP_PEN')])->count();
-//         $applicationsReceived = $totalApplications - $newOrPendingApplications;
+    //             $inProgressQueryResult = Application::whereIn('status', [getServiceType('APP_IP'), getServiceType('APP_OBJ'), getServiceType('APP_HOLD')])
+    //             ->whereNotNull('created_at')
+    //             ->when(!empty($filterSectionIds), function ($quer) use ($filterSectionIds) {
+    //                 return $quer->whereIn('section_id', $filterSectionIds);
+    //             })
+    //             ->when(!is_null($filterDateFrom), function ($quer) use ($filterDateFrom) {
+    //                 return $quer->whereDate('created_at', '>=', Carbon::createFromFormat('d-m-Y', $filterDateFrom)->format('Y-m-d'));
+    //             })
+    //             ->when(!is_null($filterDateTo), function ($quer) use ($filterDateTo) {
+    //                 return $quer->whereDate('created_at', '<=', Carbon::createFromFormat('d-m-Y', $filterDateTo)->format('Y-m-d'));
+    //             })
+    //             ->get();
+    // 				$serviceTypeWiseApplicationQueryResult = DB::table('applications as a')
+    // 				    ->where('status', '<>', getServiceType('APP_WD'))
+    // 				    ->when(!empty($filterSectionIds), function ($quer) use ($filterSectionIds) {
+    // 				        return $quer->whereIn('section_id', $filterSectionIds);
+    // 				    })
+    // 				    ->when(!is_null($filterDateFrom), function ($quer) use ($filterDateFrom) {
+    // 				        return $quer->whereDate('a.created_at', '>=', Carbon::createFromFormat('d-m-Y', $filterDateFrom)->format('Y-m-d'));
+    // 				    })
+    // 				    ->when(!is_null($filterDateTo), function ($quer) use ($filterDateTo) {
+    // 				        return $quer->whereDate('a.created_at', '<=', Carbon::createFromFormat('d-m-Y', $filterDateTo)->format('Y-m-d'));
+    // 				    })
+    // 				    ->select(
+    // 				        'service_names.item_name as service',
+    // 				        'status_names.item_name as status',
+    // 				        'a.status as status_id',
+    // 				        'a.service_type as service_type_id',
+    // 				        DB::raw('COUNT(a.id) as count')
+    // 				    )
+    // 				    ->join('items as service_names', 'a.service_type', '=', 'service_names.id')
+    // 				    ->join('items as status_names', 'a.status', '=', 'status_names.id')
+    // 				    ->groupBy('a.service_type', 'a.status', 'service_names.item_name', 'status_names.item_name')
+    // 				    ->get();
 
 
-//         $totalDisposedApplicationCount = $disposeQueryResult->count();
-//         $totalinProgressApplicationCount = $inProgressQueryResult->count();
-//         $approvedApplicationCount = $rejectedApplicationCount = $canceledApplicationCount = 0;
-//         if ($totalDisposedApplicationCount > 0) {
-//             $approvedApplicationCount = $disposeQueryResult->where('status', getServiceType('APP_APR'))->count();
-//             $rejectedApplicationCount = $disposeQueryResult->where('status', getServiceType('APP_REJ'))->count();
-//             $canceledApplicationCount = $disposeQueryResult->where('status', getServiceType('APP_CAN'))->count();
-//         }
+    //         $serviceTypeWiseDisposeQueryResult = DB::table('applications as a')
+    //             ->whereIn('status', [getServiceType('APP_APR'), getServiceType('APP_REJ')])
+    //             ->when(!empty($filterSectionIds), function ($quer) use ($filterSectionIds) {
+    //                 return $quer->whereIn('section_id', $filterSectionIds);
+    //             })
+    //             ->when(!is_null($filterDateFrom), function ($quer) use ($filterDateFrom) {
+    //                 return $quer->whereDate('disposed_at', '>=', $filterDateFrom);
+    //             })
+    //             ->when(!is_null($filterDateTo), function ($quer) use ($filterDateTo) {
+    //                 return $quer->whereDate('disposed_at', '<=', $filterDateTo);
+    //             })
+    //             ->select(
+    //                 'service_names.item_name as service',
+    //                 'status_names.item_name as status',
+    //                 DB::raw('COUNT(a.id) as count')
+    //             )
+    //             ->join('items as service_names', 'a.service_type', '=', 'service_names.id')
+    //             ->join('items as status_names', 'a.status', '=', 'status_names.id')
+    //             ->groupBy('service_names.item_name', 'status_names.item_name')
+    //             ->get();
+
+    //         $serviceTypeWiseApplicationStatus = [];
+
+    //         // collect all unique statuses first
+    //         $statuses = $serviceTypeWiseApplicationQueryResult->pluck('status')->unique();
+    // //dd($statuses);
+    //         foreach ($serviceTypeWiseApplicationQueryResult as $row) {
+    //             $service = $row->service;
+    //             $status  = $row->status;
+
+    //             // ensure the service exists with all statuses initialized
+    //             if (!isset($serviceTypeWiseApplicationStatus[$service])) {
+    //                 $serviceTypeWiseApplicationStatus[$service] = array_fill_keys($statuses->toArray(), 0);
+    //                 $serviceTypeWiseApplicationStatus[$service]['total'] = 0;
+    //             }
+
+    //             // set the count
+    //             $serviceTypeWiseApplicationStatus[$service][$status] = $row->count;
+    //             $serviceTypeWiseApplicationStatus[$service]['total'] += $row->count;
+    //         }
+
+    //         // optional: reset array keys for cleaner output
+    //         $serviceTypeWiseApplicationStatus = collect($serviceTypeWiseApplicationStatus)->map(function ($row) use ($statuses) {
+    //             // make sure every status key is present, even if count=0
+    //             return array_merge(array_fill_keys($statuses->toArray(), 0), $row);
+    //         });
+    //          //dd($serviceTypeWiseApplicationStatus);
+    //         $serviceTypeWiseDisposeStatus = [];
+
+    //         // collect all unique statuses first
+    //         $statuses = $serviceTypeWiseDisposeQueryResult->pluck('status')->unique();
+
+    //         foreach ($serviceTypeWiseDisposeQueryResult as $row) {
+    //             $service = $row->service;
+    //             $status  = $row->status;
+
+    //             // ensure the service exists with all statuses initialized
+    //             if (!isset($serviceTypeWiseDisposeStatus[$service])) {
+    //                 $serviceTypeWiseDisposeStatus[$service] = array_fill_keys($statuses->toArray(), 0);
+    //                 $serviceTypeWiseDisposeStatus[$service]['total'] = 0;
+    //             }
+
+    //             // set the count
+    //             $serviceTypeWiseDisposeStatus[$service][$status] = $row->count;
+    //             $serviceTypeWiseDisposeStatus[$service]['total'] += $row->count;
+    //         }
+
+    //         // optional: reset array keys for cleaner output
+    //         $serviceTypeWiseDisposeStatus = collect($serviceTypeWiseDisposeStatus)->map(function ($row) use ($statuses) {
+    //             // make sure every status key is present, even if count=0
+    //             return array_merge(array_fill_keys($statuses->toArray(), 0), $row);
+    //         });
+
+    //         // dd($serviceTypeWiseDisposeStatus);
+    //         $totalApplications = $queryResult->count();
+    //         //dd($totalApplications);
+    //         $newOrPendingApplications = $queryResult->whereIn('status', [getServiceType('APP_NEW'), getServiceType('APP_PEN')])->count();
+    //         $applicationsReceived = $totalApplications - $newOrPendingApplications;
 
 
-//         $data['sections'] = $sections;
-//         $data['totalApplications'] = $totalApplications;
-//         //dd($data['totalApplications']);
-//         $data['newOrPendingApplications'] = $newOrPendingApplications;
-//         $data['applicationsReceived'] = $applicationsReceived;
-//         $data['totalDisposedApplicationCount'] = $totalDisposedApplicationCount;
-//         $data['totalinProgressApplicationCount']= $totalinProgressApplicationCount;
-//         $data['approvedApplicationCount'] = $approvedApplicationCount;
-//         $data['rejectedApplicationCount'] = $rejectedApplicationCount;
-//         $data['canceledApplicationCount'] = $canceledApplicationCount;
-//         $data['serviceTypeWiseApplicationStatus'] = $serviceTypeWiseApplicationStatus;
-//         $data['serviceTypeWiseDisposeStatus'] = $serviceTypeWiseDisposeStatus;
+    //         $totalDisposedApplicationCount = $disposeQueryResult->count();
+    //         $totalinProgressApplicationCount = $inProgressQueryResult->count();
+    //         $approvedApplicationCount = $rejectedApplicationCount = $canceledApplicationCount = 0;
+    //         if ($totalDisposedApplicationCount > 0) {
+    //             $approvedApplicationCount = $disposeQueryResult->where('status', getServiceType('APP_APR'))->count();
+    //             $rejectedApplicationCount = $disposeQueryResult->where('status', getServiceType('APP_REJ'))->count();
+    //             $canceledApplicationCount = $disposeQueryResult->where('status', getServiceType('APP_CAN'))->count();
+    //         }
 
-//         if (empty($filters)) {
-//         	$data['applications'] = $queryResult;
-//             return view('application.summary', $data);
-//         } else {
-//             /**Service types */
-//             $serviceTypes = getItemsByGroupId(17001);
-//             $serviceTypesFormatted = $serviceTypes->pluck('item_name', 'id')->toArray();            
-//             $statuses = getItemsByGroupId(1031);
-//             $statusList = $statuses->pluck('item_name', 'id')->toArray();
 
-            
-//             $data['serviceTypes'] = $serviceTypesFormatted;
-//             $data['statusList'] = $statusList;
-//         }
-//         //dd($statusList);
-//         return empty($filters) ? view('application.summary', $data) : response()->json(['success' => true, 'data' => $data]);
-//     }
-//     public function applicationSummaryDetails(Request $request)
-//     {
-//         $user = Auth::user();
-//         $filters = $request->all();
-//         //dd($filters);
-//         $filterSectionIds = [];
-//         if (isset($filters['section_id'])) {
-//             $filterSectionIds = [$filters['section_id']];
-//         } else if (!$user->hasAnyRole(['super-admin', 'lndo', 'minister'])) {
-//             $filterSectionIds = $user->sections->pluck('id')->toArray();
-//         }
+    //         $data['sections'] = $sections;
+    //         $data['totalApplications'] = $totalApplications;
+    //         //dd($data['totalApplications']);
+    //         $data['newOrPendingApplications'] = $newOrPendingApplications;
+    //         $data['applicationsReceived'] = $applicationsReceived;
+    //         $data['totalDisposedApplicationCount'] = $totalDisposedApplicationCount;
+    //         $data['totalinProgressApplicationCount']= $totalinProgressApplicationCount;
+    //         $data['approvedApplicationCount'] = $approvedApplicationCount;
+    //         $data['rejectedApplicationCount'] = $rejectedApplicationCount;
+    //         $data['canceledApplicationCount'] = $canceledApplicationCount;
+    //         $data['serviceTypeWiseApplicationStatus'] = $serviceTypeWiseApplicationStatus;
+    //         $data['serviceTypeWiseDisposeStatus'] = $serviceTypeWiseDisposeStatus;
 
-//         $filterService = null;
-//         if (isset($filters['service'])) {
-//             $requestedServicee = $filters['service'];
-//             $filterService = getServiceType($filters['service']);
-//         }
-//         //dd($filterService);
-//         $filterStatus = [];
-// 			if (isset($filters['status'])) {
-// 			    // Normalize spaces after commas, then explode
-// 			    $normalizedStatus = preg_replace('/\s*,\s*/', ',', $filters['status']); // replaces comma + optional space with just comma
-// 			    $filterStatus = array_map('getServiceType', explode(',', $normalizedStatus));
-// 			}       
-//         $filterDateFrom = $filters['date_from'] ?? null;
-//         $filterDateTo = $filters['date_to'] ?? null;
-//         // dd($filterDateFrom, $filterDateTo);
+    //         if (empty($filters)) {
+    //         	$data['applications'] = $queryResult;
+    //             return view('application.summary', $data);
+    //         } else {
+    //             /**Service types */
+    //             $serviceTypes = getItemsByGroupId(17001);
+    //             $serviceTypesFormatted = $serviceTypes->pluck('item_name', 'id')->toArray();            
+    //             $statuses = getItemsByGroupId(1031);
+    //             $statusList = $statuses->pluck('item_name', 'id')->toArray();
 
-//         $queryResult = Application::when(!empty($filterStatus), function ($quer) use ($filterStatus) {
-//             return $quer->whereIn('status', $filterStatus); //applications with given status
-//         }, function ($quer) {
-//             $quer->where('status', '<>', getServiceType('APP_WD')); //all except withdrawn
-//         })
-//             ->when(!is_null($filterService), function ($quer) use ($filterService) {
-//                 return $quer->where('service_type', $filterService);
-//             })
-//             ->when(!empty($filterSectionIds), function ($quer) use ($filterSectionIds) {
-//                 return $quer->whereIn('section_id', $filterSectionIds);
-//             })
-//             ->when(!is_null($filterDateFrom), function ($quer) use ($filterDateFrom) {
-//                 return $quer->whereDate('applications.created_at', '>=', Carbon::createFromFormat('d-m-Y', $filterDateFrom)->format('Y-m-d'));
-//             })
-//             ->when(!is_null($filterDateTo), function ($quer) use ($filterDateTo) {
-//                 return $quer->whereDate('applications.created_at', '<=', Carbon::createFromFormat('d-m-Y', $filterDateTo)->format('Y-m-d'));
-//             }) //;
-//             //dd(vsprintf(str_replace('?', "'%s'", $queryResult->toSql()), $queryResult->getBindings()));
-//             ->get();
-//         $data['applications'] = $queryResult;
-//         //dd($queryResult);
-//         return  view('application.summary-details', $data);
-//     }
 
-//         private function getLocalScannedFiles($property_master_id, $splited_proprty_id = null)
-//     {
-//         $scannedFiles = PropertyScannedFile::where('property_master_id', $property_master_id)
-//             ->when(!is_null($splited_proprty_id), function ($query) use ($splited_proprty_id) {
-//                 return $query->where('splited_property_detail_id', $splited_proprty_id);
-//             })->select('document_name', 'document_path')->get()->toArray();
-//         return [
-//             'baseUrl' => url('/').'/storage/',
-//             'files' => $scannedFiles
-//         ];
-//     }
+    //             $data['serviceTypes'] = $serviceTypesFormatted;
+    //             $data['statusList'] = $statusList;
+    //         }
+    //         //dd($statusList);
+    //         return empty($filters) ? view('application.summary', $data) : response()->json(['success' => true, 'data' => $data]);
+    //     }
+    //     public function applicationSummaryDetails(Request $request)
+    //     {
+    //         $user = Auth::user();
+    //         $filters = $request->all();
+    //         //dd($filters);
+    //         $filterSectionIds = [];
+    //         if (isset($filters['section_id'])) {
+    //             $filterSectionIds = [$filters['section_id']];
+    //         } else if (!$user->hasAnyRole(['super-admin', 'lndo', 'minister'])) {
+    //             $filterSectionIds = $user->sections->pluck('id')->toArray();
+    //         }
+
+    //         $filterService = null;
+    //         if (isset($filters['service'])) {
+    //             $requestedServicee = $filters['service'];
+    //             $filterService = getServiceType($filters['service']);
+    //         }
+    //         //dd($filterService);
+    //         $filterStatus = [];
+    // 			if (isset($filters['status'])) {
+    // 			    // Normalize spaces after commas, then explode
+    // 			    $normalizedStatus = preg_replace('/\s*,\s*/', ',', $filters['status']); // replaces comma + optional space with just comma
+    // 			    $filterStatus = array_map('getServiceType', explode(',', $normalizedStatus));
+    // 			}       
+    //         $filterDateFrom = $filters['date_from'] ?? null;
+    //         $filterDateTo = $filters['date_to'] ?? null;
+    //         // dd($filterDateFrom, $filterDateTo);
+
+    //         $queryResult = Application::when(!empty($filterStatus), function ($quer) use ($filterStatus) {
+    //             return $quer->whereIn('status', $filterStatus); //applications with given status
+    //         }, function ($quer) {
+    //             $quer->where('status', '<>', getServiceType('APP_WD')); //all except withdrawn
+    //         })
+    //             ->when(!is_null($filterService), function ($quer) use ($filterService) {
+    //                 return $quer->where('service_type', $filterService);
+    //             })
+    //             ->when(!empty($filterSectionIds), function ($quer) use ($filterSectionIds) {
+    //                 return $quer->whereIn('section_id', $filterSectionIds);
+    //             })
+    //             ->when(!is_null($filterDateFrom), function ($quer) use ($filterDateFrom) {
+    //                 return $quer->whereDate('applications.created_at', '>=', Carbon::createFromFormat('d-m-Y', $filterDateFrom)->format('Y-m-d'));
+    //             })
+    //             ->when(!is_null($filterDateTo), function ($quer) use ($filterDateTo) {
+    //                 return $quer->whereDate('applications.created_at', '<=', Carbon::createFromFormat('d-m-Y', $filterDateTo)->format('Y-m-d'));
+    //             }) //;
+    //             //dd(vsprintf(str_replace('?', "'%s'", $queryResult->toSql()), $queryResult->getBindings()));
+    //             ->get();
+    //         $data['applications'] = $queryResult;
+    //         //dd($queryResult);
+    //         return  view('application.summary-details', $data);
+    //     }
+
+    //         private function getLocalScannedFiles($property_master_id, $splited_proprty_id = null)
+    //     {
+    //         $scannedFiles = PropertyScannedFile::where('property_master_id', $property_master_id)
+    //             ->when(!is_null($splited_proprty_id), function ($query) use ($splited_proprty_id) {
+    //                 return $query->where('splited_property_detail_id', $splited_proprty_id);
+    //             })->select('document_name', 'document_path')->get()->toArray();
+    //         return [
+    //             'baseUrl' => url('/').'/storage/',
+    //             'files' => $scannedFiles
+    //         ];
+    //     }
 
     public function removeApplication(Request $request)
     {
@@ -11312,7 +10866,7 @@ class ApplicationController extends Controller
 
     public function applicantDetailsUpdateByCdv(Request $request)
     {
-       
+
         $name = $request->name;
         $gender = $request->gender;
         $relation = $request->relation;
@@ -11346,7 +10900,6 @@ class ApplicationController extends Controller
             'comm_address' => $address,
         ]);
         return redirect()->back()->with('success', 'Applicant details updated successfully.');
-
     }
 
     private function applicationDelete($applicationNumber)
@@ -11447,5 +11000,3 @@ class ApplicationController extends Controller
         return $result;
     }
 }
-
-
