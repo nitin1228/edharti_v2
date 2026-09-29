@@ -212,7 +212,7 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
     @endif
 
 
-
+    {{-- @dd($demand) --}}
       <div class="col-lg-12">
         <div class="part-title">
           <h5>Property
@@ -670,8 +670,7 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
 
                                       </div>
                                       @foreach ($slectedSubheads['DEM_ENCH_CHG'] as $i=>$ench)
-                                      
-                                      {{-- <pre>{{print_r($ench)}}</pre> --}}
+
                                         <div class="row encroachment-row border rounded p-2 pb-3 m-1" style="background-color: #f1ffe7;">
                                           <input type="hidden" name="detail_id[DEM_ENCH_CHG][{{$i}}]" value="{{$ench['id'] ?? 0}}">
                                           <!-- Encroached Area -->
@@ -844,7 +843,216 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
                                 @break
 
                                 @case('DEM_UNAUTHCONS_CHG')
-                                  
+                                  @isset($slectedSubheads['DEM_UNAUTHCONS_CHG'])
+                                      <div class="unauthorized-construction-formula-card border rounded p-2 m-1 bg-light">
+                                        <div class="d-flex flex-wrap gap-4 small">
+                                          <div class="d-flex align-items-center">
+                                            <span style="width: 10px; height: 10px; background-color: #0d6efd; border-radius: 50%; display: inline-block; margin-right: 7px;flex-shrink: 0;"></span>
+                                            <span><strong>WPL Charges Per Annum:</strong>5% of(Area of Unauthorised Construction × Land Rate) ÷ FAR</span>
+                                          </div>
+                                          <div class="d-flex align-items-center">
+
+                                              <span style="
+                                                  width: 10px;
+                                                  height: 10px;
+                                                  background-color: #dc3545;
+                                                  border-radius: 50%;
+                                                  display: inline-block;
+                                                  margin-right: 7px;
+                                                  flex-shrink: 0;
+                                              "></span>
+
+                                              <span>
+                                                  <strong>
+                                                      BPL Charges Per Annum:
+                                                  </strong>
+
+                                                  10% of
+                                                  (Area of Unauthorised Construction × Land Rate)
+                                                  ÷ FAR
+                                              </span>
+
+                                          </div>
+                                          <div class="d-flex align-items-center">
+
+                                              <span style="
+                                                  width: 10px;
+                                                  height: 10px;
+                                                  background-color: #fd7e14;
+                                                  border-radius: 50%;
+                                                  display: inline-block;
+                                                  margin-right: 7px;
+                                                  flex-shrink: 0;
+                                              "></span>
+
+                                              <span>
+                                                  <strong>
+                                                      Amount:
+                                                  </strong>
+
+                                                  (Charges Per Annum ÷ 365) × No. of Days
+                                              </span>
+
+                                          </div>
+                                        </div>
+                                      </div>
+                                      @foreach ($slectedSubheads['DEM_UNAUTHCONS_CHG'] as $i=>$uachg)
+                                      
+                                        <div class="row unauthorized-construction-row border rounded p-2 pb-3 m-1" style="background-color: #f1ffe7;">
+                                          <input type="hidden" name="detail_id[DEM_UNAUTHCONS_CHG][{{$i}}]" value="{{$uachg['id'] ?? 0}}">
+                                          <div class="col-lg-3 col-md-6 mt-2">
+                                            <label class="form-label">Permissible Limit</label>
+                                            <select class="form-select unauthorized-manual-input" name="unauthorized_type[]">
+                                              <option value="">Select</option>
+                                              <option value="WPL" @if ($uachg['values']['unauthorized_type'] == "WPL")
+                                                  selected
+                                              @endif>Within Permissible Limit (WPL)</option>
+                                              <option value="BPL" @if ($uachg['values']['unauthorized_type'] == "BPL")
+                                                  selected
+                                              @endif>Beyond Permissible Limit (BPL)</option>
+                                            </select>
+                                          </div>
+                                          <div class="col-lg-3 col-md-6 mt-2">
+                                            <label class="form-label">From Date</label>
+                                            <input class="form-control unauthorized-manual-input" type="date" name="unauthorized_from_date[]" value="{{$uachg['values']['unauthorized_from_date']}}">
+                                          </div>
+                                          <div class="col-lg-3 col-md-6 mt-2">
+                                            <label class="form-label">To Date</label>
+                                            <input class="form-control unauthorized-manual-input" type="date" name="unauthorized_to_date[]" value="{{$uachg['values']['unauthorized_to_date']}}">
+                                          </div>
+                                          <div class="col-lg-3 col-md-6 mt-2">
+                                            <label class="form-label">No. of Days</label>
+                                            <input class="form-control bg-light" type="number" name="unauthorized_no_of_days[]" placeholder="Auto calculated" readonly value="{{$uachg['values']['unauthorized_no_of_days']}}">
+                                          </div>
+                                          <div class="col-lg-3 col-md-6 mt-2">
+                                            <label class="form-label">Area of Unauthorized Construction (in Sqm)</label>
+                                            <input class="form-control unauthorized-manual-input" type="number" name="unauthorized_area[]" placeholder="Enter area" min="0" step="0.01" value="{{$uachg['values']['unauthorized_area']}}">
+                                          </div>
+
+
+            <!-- Land Rate -->
+            <div class="col-lg-3 col-md-6 mt-2">
+
+                <label class="form-label">
+                    Land Rate per Sqm
+                </label>
+
+                <input
+                    class="form-control unauthorized-manual-input"
+                    type="number"
+                    name="unauthorized_land_rate[]"
+                    placeholder="Enter land rate"
+                    min="0"
+                    step="0.01"
+                    value="{{$uachg['values']['unauthorized_land_rate']}}"
+                >
+
+            </div>
+
+
+            <!-- FAR -->
+            <div class="col-lg-3 col-md-6 mt-2">
+
+                <label class="form-label">
+                    FAR
+                </label>
+
+                <input
+                    class="form-control unauthorized-manual-input"
+                    type="number"
+                    name="unauthorized_far[]"
+                    placeholder="Enter FAR"
+                    min="0"
+                    step="0.01"
+                    value="{{$uachg['values']['unauthorized_far']}}"
+                >
+
+            </div>
+
+
+            <!-- Charges Per Annum -->
+            <div class="col-lg-3 col-md-6 mt-2">
+
+                <label class="form-label">
+
+                    <span style="
+                        width: 9px;
+                        height: 9px;
+                        background-color: #0d6efd;
+                        border-radius: 50%;
+                        display: inline-block;
+                        margin-right: 4px;
+                    "></span>
+
+                    Charges Per Annum
+
+                </label>
+
+                <input
+                    class="form-control bg-light"
+                    type="number"
+                    name="unauthorized_rate_per_annum[]"
+                    placeholder="Auto calculated"
+                    readonly
+                    value="{{$uachg['values']['unauthorized_rate_per_annum']}}"
+                >
+
+            </div>
+
+
+            <!-- Final Amount -->
+            <div class="col-lg-3 col-md-6 mt-2">
+
+                <label class="form-label">
+
+                    <span style="
+                        width: 9px;
+                        height: 9px;
+                        background-color: #fd7e14;
+                        border-radius: 50%;
+                        display: inline-block;
+                        margin-right: 4px;
+                    "></span>
+
+                    Amount
+
+                </label>
+
+                <input
+                    class="form-control bg-light unauthorized_amount"
+                    type="number"
+                    name="unauthorized_amount[]"
+                    placeholder="Auto calculated"
+                    readonly
+                    value="{{$uachg['values']['unauthorized_amount']}}"
+                >
+
+                <span class="error"></span>
+
+            </div>
+
+
+            <!-- Action Buttons -->
+            <div class="col-lg-3 col-md-6 mt-2 d-flex align-items-end action-buttons">
+              @if($loop->last)
+                <button type="button" class="btn btn-success me-2 add-unauthorized-construction"> + </button>
+              @endif
+
+                <button
+                    type="button"
+                    class="btn btn-danger remove-unauthorized-construction">
+                    Remove
+                </button>
+
+            </div>
+
+        </div>
+
+
+
+                                      @endforeach
+                                    @else
+                                    @endisset
                                 @break
 
                                 @case('DEM_LUC_RC')
@@ -4089,6 +4297,9 @@ function calculateEncroachment(row) {
         case "DEM_SETTLED_AMOUNT":
           calculateSettledAmount(inputElements);
           break;
+
+        case "DEM_UNAUTHCONS_CHG":
+          calculateUnauthorizedConstructionCharges(inputElements);
         default:
           break;
       }
@@ -4468,6 +4679,49 @@ function calculateEncroachment(row) {
         return true;
     }
 
+    function calculateUnauthorizedConstructionCharges(inputElements)
+    {
+        let addedCharges = 0;
+        let hasInvalidAmount = false;
+
+        inputElements.find('.unauthorized-construction-row').each(function () {
+
+            const amountInput = $(this).find('.unauthorized_amount');
+            const error = amountInput.siblings('.error');
+            const amount = parseFloat(amountInput.val());
+
+            // Clear previous error
+            error.text('');
+
+            if (!amountInput.val() || isNaN(amount) || amount <= 0) {
+                error.text('Amount is required.');
+                hasInvalidAmount = true;
+                return;
+            }
+
+            addedCharges += amount;
+        });
+
+        if (hasInvalidAmount) {
+            return false;
+        }
+
+        const displayStatement =
+            `Total &#8377;${customNumFormat(addedCharges.toFixed(2))} added to demand`;
+
+        displayDemandCalculationResult(
+            inputElements,
+            displayStatement
+        );
+
+        fillDemandAmount(
+            inputElements,
+            addedCharges
+        );
+
+        return true;
+    }
+
     function calculateStandardPenalty(inputElements) {
       inputElements.find('.error').empty();
       let landValue = 0;
@@ -4652,6 +4906,8 @@ function calculateEncroachment(row) {
       }
 
     }
+
+    
 
     function displayDemandCalculationResult(target, result) {
       target.parent().find('.calculation_details').remove();

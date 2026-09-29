@@ -255,6 +255,8 @@
                     <td><strong>{{$loop->iteration}}</strong></td>
                     <td> @if(getServiceCodeById($dd->subhead_id) == "DEM_MANUAL")
                         {{$dd->subhead_keys['manual_title']}}
+                        @elseif(getServiceCodeById($dd->subhead_id) == "DEM_UNAUTHCONS_CHG")
+                            {{getServiceNameById($dd->subhead_id)}} ({{$dd->subhead_keys['unauthorized_type']}})
                         @else{{getServiceNameById($dd->subhead_id)}}
                         @endif
                     </td>
@@ -268,6 +270,9 @@
                             case 'DEM_ENCH_CHG':
                                 $dateFromKey = 'ench_from_date';
                                 $dateToKey = 'ench_to_date';
+                            case 'DEM_UNAUTHCONS_CHG':
+                                $dateFromKey = 'unauthorized_from_date';
+                                $dateToKey = 'unauthorized_to_date';
                             default:
                                 # code...
                                 break;

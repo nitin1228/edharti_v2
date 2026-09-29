@@ -261,11 +261,12 @@ class DemandController extends Controller
         $manualDemandSubheadIds = $demand->demandDetails->where('subhead_id', getServiceType('DEM_MANUAL'))->pluck('id')->toArray();
         $settledSubheadIds = $demand->demandDetails->where('subhead_id', getServiceType('DEM_SETTLED_AMOUNT'))->pluck('id')->toArray();
         $encroachmentSubheadIds = $demand->demandDetails->where('subhead_id', getServiceType('DEM_ENCH_CHG'))->pluck('id')->toArray();
+        $unauthConstructionSubheadIds = $demand->demandDetails->where('subhead_id', getServiceType('DEM_UNAUTHCONS_CHG'))->pluck('id')->toArray();
         foreach ($demandDetails as $i => $demandDetail) {
             if (is_null($demandDetail->carried_amount) || $demandDetail->carried_amount == 0) {
                 $headCode = $demandDetail->subhead_code;
                 // if ($headCode != 'DEM_MANUAL') { //specially handle manual demand and settled amounts
-                if (!in_array($headCode, ['DEM_MANUAL', 'DEM_SETTLED_AMOUNT', "DEM_ENCH_CHG"])) { //specially handle manual demand and settled amounts
+                if (!in_array($headCode, ['DEM_MANUAL', 'DEM_SETTLED_AMOUNT', "DEM_ENCH_CHG", "DEM_UNAUTHCONS_CHG"])) { //specially handle manual demand and settled amounts
                     if ($headCode == 'PNL_CHG') {
                         $penalties[] = $demandDetail;
                     } else {
@@ -306,7 +307,8 @@ class DemandController extends Controller
         $manualDemandKeys = DemandHeadKey::whereIn('head_id', $manualDemandSubheadIds)->get();
         $settledHeadKeys = DemandHeadKey::whereIn('head_id', $settledSubheadIds)->get();
         $encroachmentHeadKeys = DemandHeadKey::whereIn('head_id', $encroachmentSubheadIds)->get();
-        // dd($encroachmentHeadKeys);
+        $unauthConstructionHeadKeys = DemandHeadKey::whereIn('head_id', $unauthConstructionSubheadIds)->get();
+        // dd($unauthConstructionHeadKeys);
         foreach ($manualDemandKeys as $mdk) {
             $manualTargetIndex = null;
             foreach ($formattedDemandDetails['DEM_MANUAL'] as $ddKey => $demandDetail) {
@@ -336,7 +338,6 @@ class DemandController extends Controller
             //$formattedDemandDetails[getServiceType('DEM_MANUAL')]['values'][$mdk->head_id][$mdk->key] = $mdk->value;
         }
         foreach ($encroachmentHeadKeys as $ehk) {
-            // dd($formattedDemandDetails['DEM_SETTLED_AMOUNT'], $demandDetail);
             $encroachmentTargetIndex = null;
             foreach ($formattedDemandDetails['DEM_ENCH_CHG'] as $ehKey => $demandDetail) {
                 if ($demandDetail['id'] == $ehk->head_id) {
@@ -347,11 +348,24 @@ class DemandController extends Controller
             if (!is_null($encroachmentTargetIndex)) {
                 $formattedDemandDetails['DEM_ENCH_CHG'][$encroachmentTargetIndex]['values'][$ehk->key] = $ehk->value;
             }
-            //$formattedDemandDetails[getServiceType('DEM_MANUAL')]['values'][$mdk->head_id][$mdk->key] = $mdk->value;
+        }
+
+        foreach ($unauthConstructionHeadKeys as $uck) {
+            $unauthTargetIndex = null;
+            foreach ($formattedDemandDetails['DEM_UNAUTHCONS_CHG'] as $ucKey => $demandDetail) {
+                if ($demandDetail['id'] == $uck->head_id) {
+                    $unauthTargetIndex = $ucKey;
+                    break;
+                }
+            }
+            if (!is_null($unauthTargetIndex)) {
+                $formattedDemandDetails['DEM_UNAUTHCONS_CHG'][$unauthTargetIndex]['values'][$uck->key] = $uck->value;
+            }
         }
         $data['manualDemandKeys'] = $manualDemandKeys;
         $data['settledHeadKeys'] = $settledHeadKeys;
         $data['encroachmentHeadKeys'] = $encroachmentHeadKeys;
+        $data['unauthConstructionHeadKeys'] = $unauthConstructionHeadKeys;
 
         $data['slectedSubheads'] = $formattedDemandDetails;
         /** get land vlue and land area in advance for displaying calculations */
@@ -587,7 +601,7 @@ class DemandController extends Controller
     public function storeDemand(Request $request)
     {
         // dd($request->all());
-        $validator = Validator::make(
+        /* $validator = Validator::make(
             $request->all(),
             [
                 'demand_to' => 'required|string|max:255',
@@ -611,7 +625,7 @@ class DemandController extends Controller
                 'details' => $validator->errors()->first(), // first error message
                 'data' => 0
             ]);
-        }
+        } */
         // dd($request->all());
         // try {
         return DB::transaction(function () use ($request) {
@@ -899,10 +913,14 @@ class DemandController extends Controller
                         $isManual = in_array($subheadCode, [
                             'DEM_MANUAL',
                             'DEM_SETTLED_AMOUNT',
-                            'DEM_ENCH_CHG'
+                            'DEM_ENCH_CHG',
+                            'DEM_UNAUTHCONS_CHG'
                         ]);
                         if ($subheadCode == "DEM_ENCH_CHG") {
                             $amounts[$subheadCode] = $request->ench_amount;
+                        }
+                        if ($subheadCode == "DEM_UNAUTHCONS_CHG") {
+                            $amounts[$subheadCode] = $request->unauthorized_amount;
                         }
                         // $rows = $isManual ? ($amounts['DEM_MANUAL'] ?? []) : [$amounts[$subheadCode]];
                         $rows = $isManual
@@ -1019,10 +1037,14 @@ class DemandController extends Controller
                         $isManual = in_array($subheadCode, [
                             'DEM_MANUAL',
                             'DEM_SETTLED_AMOUNT',
-                            'DEM_ENCH_CHG'
+                            'DEM_ENCH_CHG',
+                            'DEM_UNAUTHCONS_CHG'
                         ]);
                         if ($subheadCode == "DEM_ENCH_CHG") {
                             $amounts[$subheadCode] = $request->ench_amount;
+                        }
+                        if ($subheadCode == "DEM_UNAUTHCONS_CHG") {
+                            $amounts[$subheadCode] = $request->unauthorized_amount;
                         }
                         $rows = $isManual
                             ? ($amounts[$subheadCode] ?? [])
