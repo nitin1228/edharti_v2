@@ -1443,6 +1443,66 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
       </div>
     </div>
   </div>
+
+
+
+  <div class="modal fade"
+     id="farTableModal"
+     tabindex="-1"
+     aria-labelledby="farTableModalLabel"
+     aria-hidden="true">
+
+    <div class="modal-dialog modal-xl modal-dialog-centered modal-dialog-scrollable">
+
+        <div class="modal-content">
+
+            <div class="modal-header">
+
+                <div>
+                    <h5 class="modal-title fw-bold" id="farTableModalLabel">
+                        Floor Area Ratio (FAR)
+                    </h5>
+
+                    <div class="small text-muted">
+                        FAR and Ground Coverage details
+                    </div>
+                </div>
+
+                <button type="button"
+                        class="btn-close"
+                        data-bs-dismiss="modal"
+                        aria-label="Close">
+                </button>
+
+            </div>
+
+
+            <div class="modal-body" id="farTableModalBody">
+
+                <!-- AJAX data will be loaded here -->
+
+            </div>
+
+
+            <div class="modal-footer">
+
+                <button type="button"
+                        class="btn btn-secondary"
+                        data-bs-dismiss="modal">
+                    Close
+                </button>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+
+
+  
   @endsection
   @section('footerScript')
   <script src="{{ asset('assets/js/bootstrap-select.min.js') }}"></script>
@@ -1951,7 +2011,7 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
                 }
 
               /** pending demand details */
-              if (response.data && (response.data.demand || (response.data.dues && response.data.dues > 0))) {
+              if (response.data && (response.data.demand || (response.data.dues && response.data.dues != 0))) {
               // if (response.data && (response.data.demand || (response.data.dues != 0))) {
                 if (response.data.demand) {
                   var oldDemand = response.data.demand;
@@ -2892,22 +2952,26 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
         let formulaHtml = `
             <div class="unauthorized-construction-formula-card border rounded p-2 m-1 bg-light">
 
+
+            <div class="d-flex justify-content-between align-items-center mb-2">
+
+                <div class="fw-semibold small">
+                    Unauthorized Construction Formula
+                </div>
+
+                <a href="javascript:void(0)"
+                   class="view-far-link small fw-semibold text-primary text-decoration-none">
+                    <i class="fa fa-table me-1"></i>
+                    View FAR
+                </a>
+
+            </div>
+
                 <div class="d-flex flex-wrap gap-4 small">
 
 
                     <!-- WPL Formula -->
                     <div class="d-flex align-items-center">
-
-                        <span style="
-                            width: 10px;
-                            height: 10px;
-                            background-color: #0d6efd;
-                            border-radius: 50%;
-                            display: inline-block;
-                            margin-right: 7px;
-                            flex-shrink: 0;
-                        "></span>
-
                         <span>
                             <strong>
                                 WPL Charges Per Annum:
@@ -2923,17 +2987,6 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
 
                     <!-- BPL Formula -->
                     <div class="d-flex align-items-center">
-
-                        <span style="
-                            width: 10px;
-                            height: 10px;
-                            background-color: #dc3545;
-                            border-radius: 50%;
-                            display: inline-block;
-                            margin-right: 7px;
-                            flex-shrink: 0;
-                        "></span>
-
                         <span>
                             <strong>
                                 BPL Charges Per Annum:
@@ -3132,14 +3185,7 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
 
                 <label class="form-label">
 
-                    <span style="
-                        width: 9px;
-                        height: 9px;
-                        background-color: #0d6efd;
-                        border-radius: 50%;
-                        display: inline-block;
-                        margin-right: 4px;
-                    "></span>
+                   
 
                     Charges Per Annum
 
@@ -3210,6 +3256,71 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
 
     targetElement.append(html);
 }
+
+
+
+
+
+
+
+
+
+$(document).on('click', '.view-far-link', function (e) {
+
+    e.preventDefault();
+
+    let modal = new bootstrap.Modal(
+        document.getElementById('farTableModal')
+    );
+
+    // Show modal immediately
+    modal.show();
+
+
+    // Show loader
+    $('#farTableModalBody').html(`
+        <div class="text-center py-5">
+
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+
+            <div class="mt-2 text-muted">
+                Loading FAR details...
+            </div>
+
+        </div>
+    `);
+
+
+    // Fetch FAR from database
+    $.ajax({
+
+        url: "{{ route('floor-area-ratios') }}",
+
+        type: "GET",
+
+        success: function (response) {
+
+            $('#farTableModalBody').html(response);
+
+        },
+
+        error: function (xhr) {
+
+            console.error(xhr.responseText);
+
+            $('#farTableModalBody').html(`
+                <div class="alert alert-danger mb-0">
+                    Unable to load FAR details. Please try again.
+                </div>
+            `);
+
+        }
+
+    });
+
+});
 
 
 

@@ -50,6 +50,7 @@ use App\Models\Flat;
 
 use function PHPUnit\Framework\isNull;
 use Illuminate\Support\Facades\Validator;
+use App\Models\FloorAreaRatio;
 
 class DemandController extends Controller
 {
@@ -63,6 +64,22 @@ class DemandController extends Controller
         $this->settingsService = $settingsService;
         $this->demandService = $demandService;
     }
+
+    public function getFloorAreaRatios()
+    {
+        $floorAreaRatios = FloorAreaRatio::orderByRaw(
+            'COALESCE(effective_from, "1900-01-01") ASC'
+        )
+        ->orderBy('area_from', 'ASC')
+        ->get();
+
+        return view(
+            'demand.floor-area-ratio-table',
+            compact('floorAreaRatios')
+        );
+    }
+
+
     public function createDemandView(Request $request, ColonyService $colonyService)
     {
         if (!empty($request->all())) {

@@ -863,6 +863,8 @@ Route::prefix('edharti')->group(function () {
             Route::get('/demand-summary/details', [DemandController::class, 'demandSummaryDetails'])->name('demandSummaryDetails');
         });
 
+        Route::get('/floor-area-ratios',[DemandController::class, 'getFloorAreaRatios'])->name('floor-area-ratios');
+
         // Dasboard by vivek ji on 16 september 
         Route::get('/dashboard/master', [DashboardController::class, 'masterDashboard'])->name('dashboard.master')->middleware('permission:master.dashboard');
         Route::get('/monthly-payments', [DashboardController::class, 'getMonthlyPayments'])->name('monthly.payments')->middleware('permission:master.dashboard');
