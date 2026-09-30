@@ -845,6 +845,19 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
                                 @case('DEM_UNAUTHCONS_CHG')
                                   @isset($slectedSubheads['DEM_UNAUTHCONS_CHG'])
                                       <div class="unauthorized-construction-formula-card border rounded p-2 m-1 bg-light">
+                                        <div class="d-flex justify-content-between align-items-center mb-2">
+
+                                          <div class="fw-semibold small">
+                                              Unauthorized Construction Formula
+                                          </div>
+
+                                          <a href="javascript:void(0)"
+                                            class="view-far-link small fw-semibold text-primary text-decoration-none">
+                                              <i class="fa fa-table me-1"></i>
+                                              View FAR
+                                          </a>
+
+                                        </div>
                                         <div class="d-flex flex-wrap gap-4 small">
                                           <div class="d-flex align-items-center">
                                             <span style="width: 10px; height: 10px; background-color: #0d6efd; border-radius: 50%; display: inline-block; margin-right: 7px;flex-shrink: 0;"></span>
