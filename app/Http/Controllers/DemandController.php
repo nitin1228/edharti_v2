@@ -70,8 +70,8 @@ class DemandController extends Controller
         $floorAreaRatios = FloorAreaRatio::orderByRaw(
             'COALESCE(effective_from, "1900-01-01") ASC'
         )
-        ->orderBy('area_from', 'ASC')
-        ->get();
+            ->orderBy('area_from', 'ASC')
+            ->get();
 
         return view(
             'demand.floor-area-ratio-table',
@@ -379,6 +379,8 @@ class DemandController extends Controller
                 $formattedDemandDetails['DEM_UNAUTHCONS_CHG'][$unauthTargetIndex]['values'][$uck->key] = $uck->value;
             }
         }
+
+        // dd($formattedDemandDetails['DEM_UNAUTHCONS_CHG']);
         $data['manualDemandKeys'] = $manualDemandKeys;
         $data['settledHeadKeys'] = $settledHeadKeys;
         $data['encroachmentHeadKeys'] = $encroachmentHeadKeys;
@@ -803,6 +805,14 @@ class DemandController extends Controller
                     })->whereNotIn('id', $idsToKeep)->delete();
                     DemandHeadKey::where('demand_id', $newDemandId)->whereNotIn('head_id', $idsToKeep)->delete();
 
+                    /* dd(
+                        $idsToKeep,
+                        DemandHeadKey::where('demand_id', $newDemandId)->whereNotIn('head_id', $idsToKeep)->pluck('head_id')->toArray(),
+                        DemandDetail::where('demand_id', $newDemandId)->where(function ($query) {
+                            return $query->whereNull('carried_amount')->orWhere('carried_amount', 0);
+                        })->whereNotIn('id', $idsToKeep)->pluck('id')->toArray()
+                    ); */
+
                     if (isset($oldDemand) && $oldDemand->status_code !== "DEM_DRAFT") {
                         $preveiousDemand = Demand::find($oldDemand->id);
                         if (in_array($preveiousDemand->status, [getServiceType('DEM_PENDING'), getServiceType('DEM_PART_PAID')])) { //check the status of previous demand is pending or partially paid. if yes then forward the demand to new demand, and subheads to new demand, add the remaining amount of old demand to new demand
@@ -1066,10 +1076,36 @@ class DemandController extends Controller
                         $rows = $isManual
                             ? ($amounts[$subheadCode] ?? [])
                             : [$amounts[$subheadCode]];
+                        // dd($rows, $request->detail_id, $subheadCode);
                         foreach ($rows as $ind => $amount) {
-                            $demandDetail = DemandDetail::updateOrCreate([
+                            /* echo "<pre>";
+                            print_r([
+                                'isManual' => $isManual ? 'true' : 'false',
+                                'detail_id' => $request->detail_id,
+                                'index' => $ind,
                                 'id' => $isManual
                                     ? ($request->detail_id[$subheadCode][$ind] ?? 0)
+                                    : ($request->detail_id[$subheadCode] ?? 0),
+
+                                'demand_id' => $newDemandId,
+                                'property_master_id' => $newDemand->property_master_id,
+                                'splited_property_detail_id' => $newDemand->splited_property_detail_id,
+                                'flat_id' => $flatId,
+                                'subhead_id' => getServiceType($subheadCode),
+                                'total' => $amount,
+                                'net_total' => $amount,
+                                'paid_amount' => null,
+                                'balance_amount' => $amount,
+                                'carried_amount' => null,
+                                'fy' => $fy,
+                                'formula_id' => $this->getDemandFormula($subheadCode),
+                                'created_by' => Auth::id(),
+                                'updated_by' => Auth::id()
+                            ]);
+                            echo "</pre>"; */
+                            $demandDetail = DemandDetail::updateOrCreate([
+                                'id' => $isManual
+                                    ? (array_values($request->detail_id[$subheadCode] ?? [])[$ind] ?? 0)
                                     : ($request->detail_id[$subheadCode] ?? 0),
                             ], [
                                 'demand_id' => $newDemandId,
@@ -1106,6 +1142,7 @@ class DemandController extends Controller
                                 DemandHeadKey::insert($insertData);
                             }
                         }
+                        // dd('inserted', $rows, $request->detail_id, $subheadCode);
                     }
 
 
