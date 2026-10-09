@@ -69,7 +69,7 @@
                                 <button class="btn btn-info">View</button>
                             </a>
 
-                             @if(getServiceCodeById($demand->status) == "DEM_DRAFT")
+                             @if(getServiceCodeById($demand->status) == "DEM_DRAFT" && ($demand->created_by == Auth::id() || Auth::user()->hasAnyRole('super-admin','lndo')))
                              <a href="{{route('deleteDemand',$demand->id)}}" onclick="withdrawConfirmModal('Are you sure to delete this demand?', this); return false;">
                                     <button class="btn btn-danger">Delete</button>
                                 </a>
