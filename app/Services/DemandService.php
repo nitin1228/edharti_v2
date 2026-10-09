@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Demand;
 use App\Models\CarriedDemandDetail;
+use App\Models\DemandHeadKey;
 use Illuminate\Support\Facades\Auth;
 
 class DemandService
@@ -52,5 +53,53 @@ class DemandService
         ]);
 
         return ['status' => true, 'message' => "Demand withdrawn successfully"];
+    }
+
+
+     public function deleteDemand($demandId, $userId = null, $isAutoCancel = null): array
+    {
+        $demand = Demand::find($demandId);
+        if (empty($demand)) {
+            return ['status' => false, 'message' => "No data found!!"];
+        }
+
+        // If carried forward
+        if ($demand->carried_amount && $demand->carried_amount > 0) {
+            $carriedDetails = CarriedDemandDetail::where('new_demand_id', $demandId)->first();
+
+            if (!empty($carriedDetails)) {
+                $oldDemand = Demand::find($carriedDetails->old_demand_id);
+
+                if (!empty($oldDemand)) {
+                    $statusToUpdate = getServiceType('DEM_PART_PAID');
+
+                    if ($oldDemand->net_total == $oldDemand->balance_amount) {
+                        $statusToUpdate = getServiceType('DEM_PENDING');
+                    }
+
+                    $oldDemand->update([
+                        'status'     => $statusToUpdate,
+                        'updated_by' => $userId ?? Auth::id()
+                    ]);
+                } else {
+                    return ['status' => false, 'message' => "Old demand not found"];
+                }
+            } else {
+                return ['status' => false, 'message' => "Carried demand details missing"];
+            }
+        }
+
+        //delete from Demand hed keys
+        DemandHeadKey::where('demand_id', $demandId)->delete();
+        
+
+        //Delete from demand details
+        $demand->demandDetails()->delete();
+
+
+        // delete from demand itself
+        $demand->delete();
+
+        return ['status' => true, 'message' => "Demand deleted successfully"];
     }
 }

@@ -68,15 +68,21 @@
                             <a href="{{route('ViewDemand',$demand->id)}}">
                                 <button class="btn btn-info">View</button>
                             </a>
+
+                             @if(getServiceCodeById($demand->status) == "DEM_DRAFT")
+                             <a href="{{route('deleteDemand',$demand->id)}}" onclick="withdrawConfirmModal('Are you sure to delete this demand?', this); return false;">
+                                    <button class="btn btn-danger">Delete</button>
+                                </a>
+                            @endif
                             @unlessrole('internal-audit-cell')
                                 @if(getServiceCodeById($demand->status) == "DEM_DRAFT" || getServiceCodeById($demand->status) == 'DEM_WD')
                                 <a href="{{route('EditDemand',$demand->id)}}">
-                                    <button class="btn btn-warning">Edit</button>
+                                    <button class="btn btn-primary">Edit</button>
                                 </a>
                                 @endif
                                 @if(getServiceCodeById($demand->status) == "DEM_PENDING")
                                 <a href="{{route('withdrawDemand',$demand->id)}}" onclick="withdrawConfirmModal('Are you sure to withdraw this demand?', this); return false;">
-                                    <button class="btn btn-danger">Withdraw</button>
+                                    <button class="btn btn-warning">Withdraw</button>
                                 </a>
                                 
                                 {{-- <a href="javascript;">

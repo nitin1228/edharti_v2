@@ -1744,6 +1744,16 @@ class DemandController extends Controller
     }
 
 
+    public function deleteDemand($demandId)
+    {
+        $result = $this->demandService->deleteDemand($demandId, Auth::id(), false);
+        if ($result['status']) {
+            return redirect()->back()->with('success', $result['message']);
+        }
+        return redirect()->back()->with('failure', $result['message']);
+    }
+
+
     public function index()
     {
         if (Auth::user()->hasAnyRole('lndo', 'super-admin'))

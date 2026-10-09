@@ -833,6 +833,7 @@ Route::prefix('edharti')->group(function () {
             Route::get('/demand/edit/{demandId}/{applicationData?}', [DemandController::class, 'EditDemand'])->name('EditDemand');
 
             Route::get('/demand/withdraw/{demandId}', [DemandController::class, 'withdrawDemand'])->name('withdrawDemand');
+            Route::get('/demand/delete/{demandId}', [DemandController::class, 'deleteDemand'])->name('deleteDemand');
             Route::get('/demand/approve/{demandId}', [DemandController::class, 'ApproveDemand'])->name('ApproveDemand');
             // Route::get('/demand/getExistingPropertyDemand/{oldPropertyId}', [DemandController::class, 'getExistingPropertyDemand'])->name('getExistingPropertyDemand');
             Route::get('/demand/getExistingPropertyDemand/{oldPropertyId}/{flatId?}', [DemandController::class, 'getExistingPropertyDemand'])->name('getExistingPropertyDemand');
