@@ -96,6 +96,15 @@ class DemandFormulaSeeder extends Seeder
                 'parent_head_code' => null,
             ],
             [
+                'head_code' => 'DEM_MISUSE_CHG',
+                'date_from' => date('Y-m-d', strtotime('2025-01-01')),
+                'date_to' => null,
+                'formula' => 'MUC = PA x (',
+                'description' => 'MUC = Misuse Charges, AUC = Area of Unauthorized Construction, LR = Land Rate, FAR = Floor Area Ratio, WPL = Within Permissible Limit, BPL = Beyond Permissible Limit ',
+                'for_allotment_type' => 0,
+                'parent_head_code' => null,
+            ],
+            [
                 'head_code' => 'DEM_PENAL_STANDARD',
                 'date_from' => date('Y-m-d', strtotime('2025-01-01')),
                 'date_to' => null,
