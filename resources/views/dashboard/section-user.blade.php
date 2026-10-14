@@ -457,6 +457,20 @@
                 'properties-icon-hand.svg',
                 'properties-icon-hand.svg',
                 'properties-icon-hand.svg',
+                'properties-icon-hand.svg',
+                'properties-icon-hand.svg',
+                'properties-icon-hand.svg',
+                'properties-icon-hand.svg',
+                'properties-icon-hand.svg',
+                'properties-icon-hand.svg',
+                'properties-icon-hand.svg',
+                'properties-icon-hand.svg',
+                'properties-icon-hand.svg',
+                'properties-icon-hand.svg',
+                'properties-icon-hand.svg',
+                'properties-icon-hand.svg',
+                'properties-icon-hand.svg',
+                'properties-icon-hand.svg',
                 
                 ]
                 @endphp

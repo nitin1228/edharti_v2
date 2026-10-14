@@ -3804,7 +3804,7 @@ class ApplicationController extends Controller
 
 
 
-// dd($applicationDetails);
+        // dd($applicationDetails);
             /** get pending demands amount with flat condition - SOURAV CHAUHAN (02 June 2026) */
             $pendingAmount = 0;
 
@@ -3861,7 +3861,7 @@ class ApplicationController extends Controller
             $isNewDemand = true;
             if ($demands->isEmpty() && empty($applicationDetails->flat_id)) {
                 $isNewDemand = false;
-                $oldDemand = OldDemand::where('property_id', $applicationDetails['old_property_id'])->where('outstanding', '!=', 0)->first();
+                $oldDemand = OldDemand::where('property_id', $applicationDetails['old_property_id'])->whereNotNull('new_demand_id')->where('outstanding', '!=', 0)->first();
                 $pendingAmount = $oldDemand['outstanding'] ?? 0;
                 $demandAmount = $oldDemand['amount'] ?? 0;
                 $paidAmount = $oldDemand['paid_amount'] ?? 0;

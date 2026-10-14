@@ -1046,6 +1046,7 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
 
 
             <!-- Action Buttons -->
+            @if(!isset($openInReadOnlyMode))
             <div class="col-lg-3 col-md-6 mt-2 d-flex align-items-end action-buttons">
               @if($loop->last)
                 <button type="button" class="btn btn-success me-2 add-unauthorized-construction"> + </button>
@@ -1058,7 +1059,7 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
                 </button>
 
             </div>
-
+          @endif
         </div>
 
 
@@ -3982,7 +3983,6 @@ $(document).on('click', '.add-encroachment', function () {
         .parent();
     const demandContainer = $(this).closest('.demand-item-container');
     appendEnchroachmentInput(container);
-    console.log(demandContainer);
     markAmountNotIncluded(demandContainer);
 });
 
