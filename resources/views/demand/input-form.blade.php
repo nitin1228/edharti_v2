@@ -2478,6 +2478,9 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
           case "DEM_UNAUTHCONS_CHG":
           appendUnauthorizedConstructionInput(targetElement);
           break;
+           case "DEM_MISUSE_CHG":
+          appendMisuseChargesInput(targetElement);
+          break;
         case "DEM_PENAL_STANDARD":
           appendStandatdPenaltyInput(targetElement);
           break;
@@ -2936,6 +2939,763 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
       targetElement.append(html);
     }
 
+
+
+
+
+
+
+
+    /*
+|--------------------------------------------------------------------------
+| MISUSE CHARGES
+|--------------------------------------------------------------------------
+*/
+
+
+/*
+|--------------------------------------------------------------------------
+| Append Misuse Charges Input
+|--------------------------------------------------------------------------
+*/
+
+function appendMisuseChargesInput(targetElement) {
+
+    // Remove + button from previous rows
+    targetElement.find('.add-misuse-charges').remove();
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Add Formula Card ONLY ONCE
+    |--------------------------------------------------------------------------
+    */
+
+    /*
+|--------------------------------------------------------------------------
+| Add Formula Card ONLY ONCE
+|--------------------------------------------------------------------------
+*/
+
+if (
+    targetElement.find('.misuse-charges-formula-card').length === 0
+) {
+
+    let formulaHtml = `
+        <div class="misuse-charges-formula-card border rounded p-2 m-1 bg-light">
+
+            <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+
+                <!-- Formulas -->
+                <div class="d-flex flex-wrap gap-4 small">
+
+                    <!-- Misuse Charges Formula -->
+                    <div class="d-flex align-items-center">
+
+                        <span style="
+                            width: 10px;
+                            height: 10px;
+                            background-color: #0d6efd;
+                            border-radius: 50%;
+                            display: inline-block;
+                            margin-right: 7px;
+                            flex-shrink: 0;
+                        "></span>
+
+                        <span>
+
+                            <strong>
+                                Misuse Charges Per Annum:
+                            </strong>
+
+                            [(Plot Area) ×
+                            (Area of Misuse ÷ Permissible Covered Area) ×
+                            (Land Rate as per Misuse −
+                            Land Rate at the time of Last Transaction)]
+                            × 12.5%
+
+                        </span>
+
+                    </div>
+
+
+                    <!-- Final Amount Formula -->
+                    <div class="d-flex align-items-center">
+
+                        <span style="
+                            width: 10px;
+                            height: 10px;
+                            background-color: #fd7e14;
+                            border-radius: 50%;
+                            display: inline-block;
+                            margin-right: 7px;
+                            flex-shrink: 0;
+                        "></span>
+
+                        <span>
+
+                            <strong>
+                                Amount:
+                            </strong>
+
+                            (Charges Per Annum ÷ 365) × No. of Days
+
+                        </span>
+
+                    </div>
+
+                </div>
+
+
+                <!-- View FAR Button -->
+                <div class="ms-auto">
+
+                    <a href="javascript:void(0)"
+                   class="view-far-link small fw-semibold text-primary text-decoration-none">
+                    <i class="fa fa-table me-1"></i>
+                    View FAR
+                </a>
+
+                </div>
+
+            </div>
+
+        </div>
+    `;
+
+    targetElement.append(formulaHtml);
+}
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Misuse Charges Repeater Card
+    |--------------------------------------------------------------------------
+    */
+
+    let html = `
+
+        <div class="row misuse-charges-row border rounded p-2 pb-3 m-1"
+             style="background-color: #f1ffe7;">
+
+
+            <!-- Misuse Area -->
+            <div class="col-lg-3 col-md-6 mt-2">
+
+                <label class="form-label">
+                    Misuse Area (in Sqm)
+                </label>
+
+                <input
+                    class="form-control misuse-manual-input"
+                    type="number"
+                    name="misuse_area[]"
+                    placeholder="Enter misuse area"
+                    min="0"
+                    step="0.01"
+                >
+
+            </div>
+
+
+            <!-- Permissible Covered Area -->
+            <div class="col-lg-3 col-md-6 mt-2">
+
+                <label class="form-label">
+                    Permissible Covered Area (in Sqm)
+                </label>
+
+                
+
+                    <input
+                        class="form-control misuse-manual-input"
+                        type="number"
+                        name="misuse_permissible_covered_area[]"
+                        placeholder="Enter permissible covered area"
+                        min="0"
+                        step="0.01"
+                    >
+
+            </div>
+
+
+            <!-- Plot Area -->
+            <div class="col-lg-3 col-md-6 mt-2">
+
+                <label class="form-label">
+                    Plot Area (in Sqm)
+                </label>
+
+                <input
+                    class="form-control misuse-manual-input"
+                    type="number"
+                    name="misuse_plot_area[]"
+                    placeholder="Enter plot area"
+                    min="0"
+                    step="0.01"
+                >
+
+            </div>
+
+
+            <!-- Last Transaction Value -->
+            <div class="col-lg-3 col-md-6 mt-2">
+
+                <label class="form-label">
+                    Last Transaction Value (LTV)
+                </label>
+
+                <input
+                    class="form-control misuse-manual-input"
+                    type="number"
+                    name="misuse_ltv[]"
+                    placeholder="Enter LTV"
+                    min="0"
+                    step="0.01"
+                >
+
+            </div>
+
+
+            <!-- From Date -->
+            <div class="col-lg-3 col-md-6 mt-2">
+
+                <label class="form-label">
+                    From Date
+                </label>
+
+                <input
+                    class="form-control misuse-manual-input"
+                    type="date"
+                    name="misuse_from_date[]"
+                >
+
+            </div>
+
+
+            <!-- To Date -->
+            <div class="col-lg-3 col-md-6 mt-2">
+
+                <label class="form-label">
+                    To Date
+                </label>
+
+                <input
+                    class="form-control misuse-manual-input"
+                    type="date"
+                    name="misuse_to_date[]"
+                >
+
+            </div>
+
+
+            <!-- Number of Days -->
+            <div class="col-lg-3 col-md-6 mt-2">
+
+                <label class="form-label">
+                    No. of Days
+                </label>
+
+                <input
+                    class="form-control bg-light"
+                    type="number"
+                    name="misuse_no_of_days[]"
+                    placeholder="Auto calculated"
+                    readonly
+                >
+
+            </div>
+
+
+            <!-- Land Rate as per Misuse -->
+            <div class="col-lg-3 col-md-6 mt-2">
+
+                <label class="form-label">
+                    Land Rate as per Misuse
+                </label>
+
+                <input
+                    class="form-control misuse-manual-input"
+                    type="number"
+                    name="misuse_land_rate[]"
+                    placeholder="Enter land rate"
+                    min="0"
+                    step="0.01"
+                >
+
+            </div>
+
+
+            <!-- Charges Per Annum -->
+            <div class="col-lg-3 col-md-6 mt-2">
+
+                <label class="form-label">
+
+                    <span style="
+                        width: 9px;
+                        height: 9px;
+                        background-color: #0d6efd;
+                        border-radius: 50%;
+                        display: inline-block;
+                        margin-right: 4px;
+                    "></span>
+
+                    Charges Per Annum
+
+                </label>
+
+                <input
+                    class="form-control bg-light"
+                    type="number"
+                    name="misuse_rate_per_annum[]"
+                    placeholder="Auto calculated"
+                    readonly
+                >
+
+            </div>
+
+
+            <!-- Amount -->
+            <div class="col-lg-3 col-md-6 mt-2">
+
+                <label class="form-label">
+
+                    <span style="
+                        width: 9px;
+                        height: 9px;
+                        background-color: #fd7e14;
+                        border-radius: 50%;
+                        display: inline-block;
+                        margin-right: 4px;
+                    "></span>
+
+                    Amount
+
+                </label>
+
+                <input
+                    class="form-control bg-light misuse_amount"
+                    type="number"
+                    name="misuse_amount[]"
+                    placeholder="Auto calculated"
+                    readonly
+                >
+
+                <span class="error"></span>
+
+            </div>
+
+
+            <!-- Action Buttons -->
+            <div class="col-lg-3 col-md-6 mt-2 d-flex align-items-end action-buttons">
+
+                <button
+                    type="button"
+                    class="btn btn-success me-2 add-misuse-charges">
+                    +
+                </button>
+
+                <button
+                    type="button"
+                    class="btn btn-danger remove-misuse-charges">
+                    Remove
+                </button>
+
+            </div>
+
+
+        </div>
+    `;
+
+
+    targetElement.append(html);
+}
+
+
+
+/*
+|--------------------------------------------------------------------------
+| Add More Misuse Charges
+|--------------------------------------------------------------------------
+*/
+
+$(document).on(
+    'click',
+    '.add-misuse-charges',
+    function () {
+
+        let container = $(this)
+            .closest('.misuse-charges-row')
+            .parent();
+
+
+        const demandContainer = $(this)
+            .closest('.demand-item-container');
+
+
+        appendMisuseChargesInput(container);
+
+
+        markAmountNotIncluded(demandContainer);
+
+    }
+);
+
+
+
+/*
+|--------------------------------------------------------------------------
+| Remove Misuse Charges
+|--------------------------------------------------------------------------
+*/
+
+$(document).on(
+    'click',
+    '.remove-misuse-charges',
+    function () {
+
+        let container = $(this)
+            .closest('.misuse-charges-row')
+            .parent();
+
+
+        const demandContainer = $(this)
+            .closest('.demand-item-container');
+
+
+        $(this)
+            .closest('.misuse-charges-row')
+            .remove();
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Add + button to last remaining row
+        |--------------------------------------------------------------------------
+        */
+
+        let lastRow = container
+            .find('.misuse-charges-row')
+            .last();
+
+
+        if (
+            lastRow.length &&
+            lastRow.find('.add-misuse-charges').length === 0
+        ) {
+
+            lastRow.find('.action-buttons').prepend(`
+
+                <button
+                    type="button"
+                    class="btn btn-success me-2 add-misuse-charges">
+                    +
+                </button>
+
+            `);
+        }
+
+
+        markAmountNotIncluded(demandContainer);
+
+    }
+);
+
+
+
+/*
+|--------------------------------------------------------------------------
+| Recalculate Whenever Any Editable Field Changes
+|--------------------------------------------------------------------------
+*/
+
+$(document).on(
+    'input change',
+    '.misuse-manual-input',
+    function () {
+
+        // Get ONLY the row where value changed
+        let row = $(this)
+            .closest('.misuse-charges-row');
+
+
+        calculateMisuseCharges(row);
+
+    }
+);
+
+
+
+/*
+|--------------------------------------------------------------------------
+| Calculate Misuse Charges
+|--------------------------------------------------------------------------
+*/
+
+function calculateMisuseCharges(row) {
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Get Values From THIS Card Only
+    |--------------------------------------------------------------------------
+    */
+
+    let misuseArea = parseFloat(
+        row.find(
+            'input[name^="misuse_area"]'
+        ).val()
+    ) || 0;
+
+
+    let permissibleCoveredArea = parseFloat(
+        row.find(
+            'input[name^="misuse_permissible_covered_area"]'
+        ).val()
+    ) || 0;
+
+
+    let plotArea = parseFloat(
+        row.find(
+            'input[name^="misuse_plot_area"]'
+        ).val()
+    ) || 0;
+
+
+    let ltv = parseFloat(
+        row.find(
+            'input[name^="misuse_ltv"]'
+        ).val()
+    ) || 0;
+
+
+    let landRate = parseFloat(
+        row.find(
+            'input[name^="misuse_land_rate"]'
+        ).val()
+    ) || 0;
+
+
+    let fromDate = row.find(
+        'input[name^="misuse_from_date"]'
+    ).val();
+
+
+    let toDate = row.find(
+        'input[name^="misuse_to_date"]'
+    ).val();
+
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | 1. Calculate Number of Days
+    |--------------------------------------------------------------------------
+    */
+
+    let numberOfDays = 0;
+
+
+    if (fromDate && toDate) {
+
+        let start = new Date(
+            fromDate + 'T00:00:00'
+        );
+
+
+        let end = new Date(
+            toDate + 'T00:00:00'
+        );
+
+
+        if (end >= start) {
+
+            let difference =
+                end.getTime() - start.getTime();
+
+
+            numberOfDays =
+                Math.floor(
+                    difference /
+                    (1000 * 60 * 60 * 24)
+                ) + 1;
+
+
+            row.find(
+                'input[name^="misuse_no_of_days"]'
+            ).val(numberOfDays);
+
+        } else {
+
+            // Invalid date range
+
+            row.find(
+                'input[name^="misuse_no_of_days"]'
+            ).val('');
+
+
+            row.find(
+                'input[name^="misuse_amount"]'
+            ).val('');
+
+
+            numberOfDays = 0;
+
+        }
+
+    } else {
+
+        row.find(
+            'input[name^="misuse_no_of_days"]'
+        ).val('');
+
+    }
+
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | 2. Calculate Misuse Charges Per Annum
+    |--------------------------------------------------------------------------
+    |
+    | Formula:
+    |
+    | [
+    |   Plot Area
+    |   ×
+    |   (Misuse Area / Permissible Covered Area)
+    |   ×
+    |   (Land Rate as per Misuse - LTV)
+    | ]
+    | × 12.5%
+    |
+    |--------------------------------------------------------------------------
+    */
+
+    let chargesPerAnnum = 0;
+
+
+    if (
+        misuseArea > 0 &&
+        permissibleCoveredArea > 0 &&
+        plotArea > 0 &&
+        landRate > 0
+    ) {
+
+        /*
+        |--------------------------------------------------------------------------
+        | Land Rate Difference
+        |--------------------------------------------------------------------------
+        */
+
+        let landRateDifference =
+            landRate - ltv;
+
+
+        /*
+        |--------------------------------------------------------------------------
+        | Misuse Charges Per Annum
+        |--------------------------------------------------------------------------
+        */
+
+        chargesPerAnnum =
+            (
+                plotArea *
+                (misuseArea / permissibleCoveredArea) *
+                landRateDifference
+            ) * (12.5 / 100);
+
+
+        row.find(
+            'input[name^="misuse_rate_per_annum"]'
+        ).val(
+            chargesPerAnnum.toFixed(2)
+        );
+
+    } else {
+
+        row.find(
+            'input[name^="misuse_rate_per_annum"]'
+        ).val('');
+
+    }
+
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | 3. Calculate Final Amount
+    |--------------------------------------------------------------------------
+    |
+    | Formula:
+    |
+    | (Charges Per Annum / 365) × No. of Days
+    |
+    |--------------------------------------------------------------------------
+    */
+
+    let amount = 0;
+
+
+    if (
+        chargesPerAnnum !== 0 &&
+        numberOfDays > 0
+    ) {
+
+        amount =
+            (chargesPerAnnum / 365)
+            * numberOfDays;
+
+
+        row.find(
+            'input[name^="misuse_amount"]'
+        ).val(
+            amount.toFixed(2)
+        );
+
+    } else {
+
+        row.find(
+            'input[name^="misuse_amount"]'
+        ).val('');
+
+    }
+
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | Debug - Optional
+    |--------------------------------------------------------------------------
+    */
+
+    console.log({
+
+        misuseArea: misuseArea,
+
+        permissibleCoveredArea: permissibleCoveredArea,
+
+        plotArea: plotArea,
+
+        ltv: ltv,
+
+        landRate: landRate,
+
+        landRateDifference: landRateDifference,
+
+        fromDate: fromDate,
+
+        toDate: toDate,
+
+        numberOfDays: numberOfDays,
+
+        chargesPerAnnum: chargesPerAnnum,
+
+        amount: amount
+
+    });
+
+}
 
 
 

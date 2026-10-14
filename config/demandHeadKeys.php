@@ -278,6 +278,69 @@ return [
             'required' => true
         ],
     ],
+    'DEM_MISUSE_CHG' => [
+        [
+            'key' => 'misuse_area',
+            'label' => 'Misuse Area (in Sqm)',
+            'type' => 'number',
+            'required' => true
+        ],
+        [
+            'key' => 'misuse_permissible_covered_area',
+            'label' => 'Permissible Covered Area (in Sqm)',
+            'type' => 'number',
+            'required' => true
+        ],
+        [
+            'key' => 'misuse_plot_area',
+            'label' => 'Plot Area (in Sqm)',
+            'type' => 'number',
+            'required' => true
+        ],
+        [
+            'key' => 'misuse_last_transaction_value',
+            'label' => 'Last Transaction Value (LTV)',
+            'type' => 'number',
+            'required' => true
+        ],
+        [
+            'key' => 'misuse_from_date',
+            'label' => 'From Date',
+            'type' => 'date',
+            'required' => true
+        ],
+        [
+            'key' => 'misuse_to_date',
+            'label' => 'To Date',
+            'type' => 'date',
+            'required' => true
+        ],
+        [
+            'key' => 'misuse_no_of_days',
+            'label' => 'No. of Days',
+            'type' => 'number',
+            'required' => true
+        ],
+       
+        [
+            'key' => 'misuse_land_rate',
+            'label' => 'Land Rate as per Misuse (in Rs/Sqm)',
+            'type' => 'number',
+            'required' => true
+        ],
+        [
+            'key' => 'misuse_rate_per_annum',
+            'label' => 'Charges Per Annum',
+            'type' => 'number',
+            'required' => true
+        ],
+        [
+            'key' => 'misuse_amount',
+            'label' => 'Amount',
+            'type' => 'number',
+            'required' => true
+        ],
+    ],
     'DEM_PENAL_STANDARD' => [
         [
             'key' => 'standard_penalty_land_value',
