@@ -265,7 +265,7 @@ return [
             'type' => 'number',
             'required' => true
         ],
-         [
+        [
             'key' => 'unauthorized_rate_per_annum',
             'label' => 'Charges Per Annum',
             'type' => 'number',
@@ -298,7 +298,7 @@ return [
             'required' => true
         ],
         [
-            'key' => 'misuse_last_transaction_value',
+            'key' => 'misuse_ltv',
             'label' => 'Last Transaction Value (LTV)',
             'type' => 'number',
             'required' => true
@@ -321,7 +321,7 @@ return [
             'type' => 'number',
             'required' => true
         ],
-       
+
         [
             'key' => 'misuse_land_rate',
             'label' => 'Land Rate as per Misuse (in Rs/Sqm)',

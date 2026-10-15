@@ -273,6 +273,9 @@
                             case 'DEM_UNAUTHCONS_CHG':
                                 $dateFromKey = 'unauthorized_from_date';
                                 $dateToKey = 'unauthorized_to_date';
+                            case 'DEM_MISUSE_CHG':
+                                $dateFromKey = 'misuse_from_date';
+                                $dateToKey = 'misuse_to_date';
                             default:
                                 # code...
                                 break;

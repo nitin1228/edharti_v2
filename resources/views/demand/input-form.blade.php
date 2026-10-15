@@ -943,127 +943,423 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
                                           </div>
 
 
-            <!-- Land Rate -->
-            <div class="col-lg-3 col-md-6 mt-2">
+                                          <!-- Land Rate -->
+                                          <div class="col-lg-3 col-md-6 mt-2">
 
-                <label class="form-label">
-                    Land Rate per Sqm
-                </label>
+                                            <label class="form-label">
+                                                Land Rate per Sqm
+                                            </label>
 
-                <input
-                    class="form-control unauthorized-manual-input"
-                    type="number"
-                    name="unauthorized_land_rate[]"
-                    placeholder="Enter land rate"
-                    min="0"
-                    step="0.01"
-                    value="{{$uachg['values']['unauthorized_land_rate']}}"
-                >
+                                            <input
+                                                class="form-control unauthorized-manual-input"
+                                                type="number"
+                                                name="unauthorized_land_rate[]"
+                                                placeholder="Enter land rate"
+                                                min="0"
+                                                step="0.01"
+                                                value="{{$uachg['values']['unauthorized_land_rate']}}">
 
-            </div>
-
-
-            <!-- FAR -->
-            <div class="col-lg-3 col-md-6 mt-2">
-
-                <label class="form-label">
-                    FAR
-                </label>
-
-                <input
-                    class="form-control unauthorized-manual-input"
-                    type="number"
-                    name="unauthorized_far[]"
-                    placeholder="Enter FAR"
-                    min="0"
-                    step="0.01"
-                    value="{{$uachg['values']['unauthorized_far']}}"
-                >
-
-            </div>
+                                          </div>
 
 
-            <!-- Charges Per Annum -->
-            <div class="col-lg-3 col-md-6 mt-2">
+                                          <!-- FAR -->
+                                          <div class="col-lg-3 col-md-6 mt-2">
 
-                <label class="form-label">
+                                            <label class="form-label">FAR</label>
 
-                    <span style="
-                        width: 9px;
-                        height: 9px;
-                        background-color: #0d6efd;
-                        border-radius: 50%;
-                        display: inline-block;
-                        margin-right: 4px;
-                    "></span>
+                                            <input
+                                                class="form-control unauthorized-manual-input"
+                                                type="number"
+                                                name="unauthorized_far[]"
+                                                placeholder="Enter FAR"
+                                                min="0"
+                                                step="0.01"
+                                                value="{{$uachg['values']['unauthorized_far']}}">
 
-                    Charges Per Annum
-
-                </label>
-
-                <input
-                    class="form-control bg-light"
-                    type="number"
-                    name="unauthorized_rate_per_annum[]"
-                    placeholder="Auto calculated"
-                    readonly
-                    value="{{$uachg['values']['unauthorized_rate_per_annum']}}"
-                >
-
-            </div>
+                                          </div>
 
 
-            <!-- Final Amount -->
-            <div class="col-lg-3 col-md-6 mt-2">
+                                          <!-- Charges Per Annum -->
+                                          <div class="col-lg-3 col-md-6 mt-2">
 
-                <label class="form-label">
+                                              <label class="form-label">
 
-                    <span style="
-                        width: 9px;
-                        height: 9px;
-                        background-color: #fd7e14;
-                        border-radius: 50%;
-                        display: inline-block;
-                        margin-right: 4px;
-                    "></span>
+                                                  <span style="
+                                                      width: 9px;
+                                                      height: 9px;
+                                                      background-color: #0d6efd;
+                                                      border-radius: 50%;
+                                                      display: inline-block;
+                                                      margin-right: 4px;
+                                                  "></span>
 
-                    Amount
+                                                  Charges Per Annum
 
-                </label>
+                                              </label>
 
-                <input
-                    class="form-control bg-light unauthorized_amount"
-                    type="number"
-                    name="unauthorized_amount[]"
-                    placeholder="Auto calculated"
-                    readonly
-                    value="{{$uachg['values']['unauthorized_amount']}}"
-                >
+                                              <input
+                                                  class="form-control bg-light"
+                                                  type="number"
+                                                  name="unauthorized_rate_per_annum[]"
+                                                  placeholder="Auto calculated"
+                                                  readonly
+                                                  value="{{$uachg['values']['unauthorized_rate_per_annum']}}"
+                                              >
 
-                <span class="error"></span>
-
-            </div>
+                                          </div>
 
 
-            <!-- Action Buttons -->
-            @if(!isset($openInReadOnlyMode))
-            <div class="col-lg-3 col-md-6 mt-2 d-flex align-items-end action-buttons">
-              @if($loop->last)
-                <button type="button" class="btn btn-success me-2 add-unauthorized-construction"> + </button>
-              @endif
+                                          <!-- Final Amount -->
+                                          <div class="col-lg-3 col-md-6 mt-2">
 
-                <button
-                    type="button"
-                    class="btn btn-danger remove-unauthorized-construction">
-                    Remove
-                </button>
+                                              <label class="form-label">
 
-            </div>
-          @endif
-        </div>
+                                                  <span style="
+                                                      width: 9px;
+                                                      height: 9px;
+                                                      background-color: #fd7e14;
+                                                      border-radius: 50%;
+                                                      display: inline-block;
+                                                      margin-right: 4px;
+                                                  "></span>
+
+                                                  Amount
+
+                                              </label>
+
+                                              <input
+                                                  class="form-control bg-light unauthorized_amount"
+                                                  type="number"
+                                                  name="unauthorized_amount[]"
+                                                  placeholder="Auto calculated"
+                                                  readonly
+                                                  value="{{$uachg['values']['unauthorized_amount']}}"
+                                              >
+
+                                              <span class="error"></span>
+
+                                          </div>
+
+
+                                          <!-- Action Buttons -->
+                                          @if(!isset($openInReadOnlyMode))
+                                          <div class="col-lg-3 col-md-6 mt-2 d-flex align-items-end action-buttons">
+                                            @if($loop->last)
+                                              <button type="button" class="btn btn-success me-2 add-unauthorized-construction"> + </button>
+                                            @endif
+
+                                              <button
+                                                  type="button"
+                                                  class="btn btn-danger remove-unauthorized-construction">
+                                                  Remove
+                                              </button>
+
+                                          </div>
+                                        @endif
+                                      </div>
 
 
 
+                                      @endforeach
+                                    @else
+                                    @endisset
+                                @break
+                          
+                                @case('DEM_MISUSE_CHG')
+                                  @isset($slectedSubheads['DEM_MISUSE_CHG'])
+                                      <div class="misuse-charges-formula-card border rounded p-2 m-1 bg-light">
+                                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
+                                            <!-- Formulas -->
+                                            <div class="d-flex flex-wrap gap-4 small">
+                                                <!-- Misuse Charges Formula -->
+                                                <div class="d-flex align-items-center">
+
+                                                    <span style="
+                                                        width: 10px;
+                                                        height: 10px;
+                                                        background-color: #0d6efd;
+                                                        border-radius: 50%;
+                                                        display: inline-block;
+                                                        margin-right: 7px;
+                                                        flex-shrink: 0;
+                                                    "></span>
+
+                                                    <span>
+
+                                                        <strong>
+                                                            Misuse Charges Per Annum:
+                                                        </strong>
+
+                                                        [(Plot Area) ×
+                                                        (Area of Misuse ÷ Permissible Covered Area) ×
+                                                        (Land Rate as per Misuse −
+                                                        Land Rate at the time of Last Transaction)]
+                                                        × 12.5%
+
+                                                    </span>
+
+                                                </div>
+
+
+                                                <!-- Final Amount Formula -->
+                                                <div class="d-flex align-items-center">
+
+                                                    <span style="
+                                                        width: 10px;
+                                                        height: 10px;
+                                                        background-color: #fd7e14;
+                                                        border-radius: 50%;
+                                                        display: inline-block;
+                                                        margin-right: 7px;
+                                                        flex-shrink: 0;
+                                                    "></span>
+
+                                                    <span>
+
+                                                        <strong>
+                                                            Amount:
+                                                        </strong>
+
+                                                        (Charges Per Annum ÷ 365) × No. of Days
+
+                                                    </span>
+
+                                                </div>
+
+                                            </div>
+
+
+                                            <!-- View FAR Button -->
+                                            <div class="ms-auto">
+
+                                                <a href="javascript:void(0)"
+                                              class="view-far-link small fw-semibold text-primary text-decoration-none">
+                                                <i class="fa fa-table me-1"></i>
+                                                View FAR
+                                            </a>
+
+                                            </div>
+
+                                        </div>
+
+                                      </div>
+                                      @foreach ($slectedSubheads['DEM_MISUSE_CHG'] as $i=>$much)
+                                        <input type="hidden" name="detail_id[DEM_MISUSE_CHG][{{$i}}]" value="{{$much['id'] ?? 0}}">
+                                        <div class="row misuse-charges-row border rounded p-2 pb-3 m-1" style="background-color: #f1ffe7;">
+                                          <!-- Misuse Area -->
+                                          <div class="col-lg-3 col-md-6 mt-2">
+
+                                              <label class="form-label">Misuse Area (in Sqm)</label>
+
+                                              <input
+                                                  class="form-control misuse-manual-input"
+                                                  type="number"
+                                                  name="misuse_area[{{$i}}]"
+                                                  placeholder="Enter misuse area"
+                                                  min="0"
+                                                  step="0.01"
+                                                  value="{{$much['values']['misuse_area']}}">
+
+                                          </div>
+                                          <!-- Permissible Covered Area -->
+                                          <div class="col-lg-3 col-md-6 mt-2">
+
+                                            <label class="form-label">
+                                                Permissible Covered Area (in Sqm)
+                                            </label>
+
+                                            
+
+                                            <input
+                                                class="form-control misuse-manual-input"
+                                                type="number"
+                                                name="misuse_permissible_covered_area[{{$i}}]"
+                                                placeholder="Enter permissible covered area"
+                                                min="0"
+                                                step="0.01"
+                                                value="{{$much['values']['misuse_permissible_covered_area']}}">
+
+                                          </div>
+
+
+                                          <!-- Plot Area -->
+                                          <div class="col-lg-3 col-md-6 mt-2">
+
+                                            <label class="form-label">
+                                                Plot Area (in Sqm)
+                                            </label>
+
+                                            <input
+                                                class="form-control misuse-manual-input"
+                                                type="number"
+                                                name="misuse_plot_area[{{$i}}]"
+                                                placeholder="Enter plot area"
+                                                min="0"
+                                                step="0.01"
+                                                value="{{$much['values']['misuse_plot_area']}}">
+
+                                          </div>
+
+
+                                          <!-- Last Transaction Value -->
+                                          <div class="col-lg-3 col-md-6 mt-2">
+                                              <label class="form-label">Last Transaction Value (LTV)</label>
+                                              <input class="form-control misuse-manual-input" type="number" name="misuse_ltv[{{$i}}]" placeholder="Enter LTV" min="0"step="0.01" value="{{$much['values']['misuse_ltv']}}">
+                                          </div>
+
+
+                                          <!-- From Date -->
+                                          <div class="col-lg-3 col-md-6 mt-2">
+
+                                              <label class="form-label">
+                                                  From Date
+                                              </label>
+
+                                              <input
+                                                  class="form-control misuse-manual-input"
+                                                  type="date"
+                                                  name="misuse_from_date[{{$i}}]"
+                                                  value="{{$much['values']['misuse_from_date']}}"
+                                              >
+
+                                          </div>
+
+
+                                          <!-- To Date -->
+                                          <div class="col-lg-3 col-md-6 mt-2">
+
+                                              <label class="form-label">
+                                                  To Date
+                                              </label>
+
+                                              <input
+                                                  class="form-control misuse-manual-input"
+                                                  type="date"
+                                                  name="misuse_to_date[{{$i}}]"
+                                                  value="{{$much['values']['misuse_to_date']}}"
+                                              >
+
+                                          </div>
+
+
+                                          <!-- Number of Days -->
+                                          <div class="col-lg-3 col-md-6 mt-2">
+
+                                            <label class="form-label">
+                                                No. of Days
+                                            </label>
+
+                                            <input
+                                                class="form-control bg-light"
+                                                type="number"
+                                                name="misuse_no_of_days[{{$i}}]"
+                                                placeholder="Auto calculated"
+                                                readonly
+                                                value="{{$much['values']['misuse_no_of_days']}}">
+
+                                          </div>
+
+
+                                          <!-- Land Rate as per Misuse -->
+                                          <div class="col-lg-3 col-md-6 mt-2">
+
+                                              <label class="form-label">
+                                                  Land Rate as per Misuse
+                                              </label>
+
+                                              <input
+                                                  class="form-control misuse-manual-input"
+                                                  type="number"
+                                                  name="misuse_land_rate[{{$i}}]"
+                                                  placeholder="Enter land rate"
+                                                  min="0"
+                                                  step="0.01"
+                                                  value="{{$much['values']['misuse_land_rate']}}">
+
+                                          </div>
+
+
+                                          <!-- Charges Per Annum -->
+                                          <div class="col-lg-3 col-md-6 mt-2">
+
+                                              <label class="form-label">
+
+                                                  <span style="
+                                                      width: 9px;
+                                                      height: 9px;
+                                                      background-color: #0d6efd;
+                                                      border-radius: 50%;
+                                                      display: inline-block;
+                                                      margin-right: 4px;
+                                                  "></span>
+
+                                                  Charges Per Annum
+
+                                              </label>
+
+                                              <input
+                                                  class="form-control bg-light"
+                                                  type="number"
+                                                  name="misuse_rate_per_annum[{{$i}}]"
+                                                  placeholder="Auto calculated"
+                                                  readonly
+                                                  value="{{$much['values']['misuse_rate_per_annum']}}">
+
+                                          </div>
+
+
+                                          <!-- Amount -->
+                                          <div class="col-lg-3 col-md-6 mt-2">
+
+                                              <label class="form-label">
+
+                                                  <span style="
+                                                      width: 9px;
+                                                      height: 9px;
+                                                      background-color: #fd7e14;
+                                                      border-radius: 50%;
+                                                      display: inline-block;
+                                                      margin-right: 4px;
+                                                  "></span>
+
+                                                  Amount
+
+                                              </label>
+
+                                              <input
+                                                  class="form-control bg-light misuse_amount"
+                                                  type="number"
+                                                  name="misuse_amount[{{$i}}]"
+                                                  placeholder="Auto calculated"
+                                                  readonly
+                                                  value="{{$much['values']['misuse_amount']}}">
+
+                                              <span class="error"></span>
+
+                                          </div>
+
+                                          @if(!isset($openInReadOnlyMode))
+                                            <!-- Action Buttons -->
+                                            <div class="col-lg-3 col-md-6 mt-2 d-flex align-items-end action-buttons">
+                                                @if($loop->last)
+                                                  <button
+                                                      type="button"
+                                                      class="btn btn-success me-2 add-misuse-charges">
+                                                      +
+                                                  </button>
+                                                @endif
+
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-danger remove-misuse-charges">
+                                                    Remove
+                                                </button>
+
+                                            </div>
+                                          @endif
+
+
+                                        </div>
                                       @endforeach
                                     @else
                                     @endisset
@@ -5184,6 +5480,10 @@ function calculateEncroachment(row) {
 
         case "DEM_UNAUTHCONS_CHG":
           calculateUnauthorizedConstructionCharges(inputElements);
+        break;
+        case "DEM_MISUSE_CHG":
+          calculateMisuseChargesInput(inputElements);
+        break;
         default:
           break;
       }
@@ -5571,6 +5871,49 @@ function calculateEncroachment(row) {
         inputElements.find('.unauthorized-construction-row').each(function () {
 
             const amountInput = $(this).find('.unauthorized_amount');
+            const error = amountInput.siblings('.error');
+            const amount = parseFloat(amountInput.val());
+
+            // Clear previous error
+            error.text('');
+
+            if (!amountInput.val() || isNaN(amount) || amount <= 0) {
+                error.text('Amount is required.');
+                hasInvalidAmount = true;
+                return;
+            }
+
+            addedCharges += amount;
+        });
+
+        if (hasInvalidAmount) {
+            return false;
+        }
+
+        const displayStatement =
+            `Total &#8377;${customNumFormat(addedCharges.toFixed(2))} added to demand`;
+
+        displayDemandCalculationResult(
+            inputElements,
+            displayStatement
+        );
+
+        fillDemandAmount(
+            inputElements,
+            addedCharges
+        );
+
+        return true;
+    }
+
+    function calculateMisuseChargesInput(inputElements)
+    {
+        let addedCharges = 0;
+        let hasInvalidAmount = false;
+
+        inputElements.find('.misuse-charges-row').each(function () {
+
+            const amountInput = $(this).find('.misuse_amount');
             const error = amountInput.siblings('.error');
             const amount = parseFloat(amountInput.val());
 
