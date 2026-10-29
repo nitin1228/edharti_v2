@@ -364,14 +364,14 @@
         </tbody>
     </table> --}}
     <br/>
-
+ 
     <h4>TERMS & CONDITIONS :</h4>
     <ol>
         <li>The above charges have been calculated against your application or otherwise.</li>
         <li>The charges are to be paid on or before the due date without penalty or with a penalty of 10% upto 60 days beyond the due date. After this period, the demand letter will be automatically withdrawn and the underlying request will be rejected by the system.</li>
         <li>Land & Development Office will initiate action as per the prevailing policy on non-receipt of due charges.</li>
         <li>The payment of the above charges shall be done using the Demand Details and Login Credentials from the edharti 2.0 portal of the Land & Development Office which is accessible from the website of the office i.e. <a href="https://ldo.mohua.gov.in/" target="_blank">www.ldo.mohua.gov.in</a></li>
-        <li>Any errors or ommissions shall be brought to the notice of Land & Development Office through written communication well before the due date. However, the written communication shall not act as deterance to the Land & Development Office to levy penalty on delay in making payments of the charges.</li>
+        <li>Any errors or ommissi  ons shall be brought to the notice of Land & Development Office through written communication well before the due date. However, the written communication shall not act as deterance to the Land & Development Office to levy penalty on delay in making payments of the charges.</li>
         <li>This is a computer-generated demand letter and does not require any signature.</li>
     </ol>
 

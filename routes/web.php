@@ -842,6 +842,7 @@ Route::prefix('edharti')->group(function () {
             Route::get('/demand/old-demand-data/{oldDemands}', [DemandController::class, 'oldDemandData'])->name('oldDemandData');
             Route::get('/demand/get-demand-heads/{newAllotment}', [DemandController::class, 'getDemandHeads'])->name('getDemandHeads');
             Route::get('/demand/get-land-value-at-date', [CommonController::class, 'getLandValueAtDate'])->name('getLandValueAtDate');
+            Route::get('/demand/unauthorized-inspection-report/{propertyId}', [DemandController::class, 'unauthorizedConstructionInspectionReport'])->name('unauthorizedConstructionInspectionReport');
             // Route::get('/demand/manual-demand-create', [DemandController::class, 'manualDemandCreate'])->name('manualDemandCreate');
             // Route::get('/land-use-change/commercial-land-value/{propertyId}', [LandUseChangeCalculationController::class, 'getCommercialLandValue'])->name('getCommercialLandValue');
             Route::get('/land-use-change/land-value', [LandUseChangeCalculationController::class, 'getSaughtLandValue'])->name('getSaughtLandValue');
@@ -864,7 +865,7 @@ Route::prefix('edharti')->group(function () {
             Route::get('/demand-summary/details', [DemandController::class, 'demandSummaryDetails'])->name('demandSummaryDetails');
         });
 
-        Route::get('/floor-area-ratios',[DemandController::class, 'getFloorAreaRatios'])->name('floor-area-ratios');
+        Route::get('/floor-area-ratios', [DemandController::class, 'getFloorAreaRatios'])->name('floor-area-ratios');
 
         // Dasboard by vivek ji on 16 september 
         Route::get('/dashboard/master', [DashboardController::class, 'masterDashboard'])->name('dashboard.master')->middleware('permission:master.dashboard');

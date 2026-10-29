@@ -51,6 +51,10 @@ use App\Models\Flat;
 use function PHPUnit\Framework\isNull;
 use Illuminate\Support\Facades\Validator;
 use App\Models\FloorAreaRatio;
+use App\Models\InspectionReport;
+use App\Models\InspectionReportUnauthorisedDetail;
+use App\Models\InspectionRequest;
+use App\Services\LandRateService;
 
 class DemandController extends Controller
 {
@@ -635,7 +639,7 @@ class DemandController extends Controller
 
     public function storeDemand(Request $request)
     {
-        // dd($request->all());
+        dd($request->all());
         /* $validator = Validator::make(
             $request->all(),
             [
@@ -1108,7 +1112,7 @@ class DemandController extends Controller
                                 'detail_id' => $request->detail_id,
                                 'index' => $ind,
                                 'id' => $isManual
-                                    ? ($request->detail_id[$subheadCode][$ind] ?? 0)
+                                    ? (($request->detail_id[$subheadCode] ?? [])[$ind] ?? 0)
                                     : ($request->detail_id[$subheadCode] ?? 0),
 
                                 'demand_id' => $newDemandId,
@@ -1168,7 +1172,7 @@ class DemandController extends Controller
                         }
                         // dd('inserted', $rows, $request->detail_id, $subheadCode);
                     }
-
+                    // exit;
 
                     // }
                     /* if ($manualDemand) {
@@ -2967,5 +2971,65 @@ class DemandController extends Controller
                 'message' => 'Email sending failed.'
             ]);
         }
+    }
+
+    public function unauthorizedConstructionInspectionReport($propertyId)
+    {
+        if ($propertyId) {
+            $lrs = new LandRateService();
+            $landRateStatus = $lrs->getLandRateForProperty($propertyId);
+            if (!$landRateStatus['status']) {
+                return $landRateStatus;
+            } else {
+                $landRate = $landRateStatus['landRate'];
+            }
+            $propertyFAR = $lrs->getFloorAreaRatioForProperty($propertyId);
+            if (!$propertyFAR['status']) {
+                return $propertyFAR;
+            } else {
+                $far = (int)$propertyFAR['FAR'];
+            }
+
+            // dd($far);
+            $inspectionRecordIds = InspectionRequest::where('property_id', $propertyId)->pluck('id')->toArray();
+            if (count($inspectionRecordIds) > 0) {
+                $inspectionReportIds = InspectionReport::whereIn('inspection_id', $inspectionRecordIds)->pluck('id')->toArray();
+                if (count($inspectionReportIds) > 0) {
+                    $inspectionRows = InspectionReportUnauthorisedDetail::whereIn('inspection_report_id', $inspectionReportIds)
+                        //->whereNull('demand_id') //column to be added in migration
+                        ->get();
+                    // dd($inspectionRows, $landRate);
+                    $result = [];
+                    if ($inspectionRows->count() > 0) {
+                        foreach ($inspectionRows as $row) {
+
+                            //$rowData=['landRate'=>$landRate];
+                            if ($row['wpl'] > 0) {
+                                $areaInSqm = areaInSqMtr($row['wpl'], $row['aunit']);
+                                // dd($areaInSqm);
+                                $rowData = ['limit' => 'wpl', 'area' => $areaInSqm, 'landRate' => $landRate, 'FAR' => $far];
+                                $result[] = $rowData;
+                            }
+                            if ($row['bpl'] > 0) {
+                                $areaInSqm = areaInSqMtr($row['bpl'], $row['aunit']);
+                                // dd($areaInSqm);
+                                $rowData = ['limit' => 'bpl', 'area' => $areaInSqm, 'landRate' => $landRate, 'FAR' => $far];
+                                $result[] = $rowData;
+                            }
+                        }
+                        return ['status' => true, 'data' => $result];
+                    } else {
+                        return ['status' => false, 'message' => 'Unathorized construction record not found for this property'];
+                    }
+                }
+            } else {
+                return ['status' => false, 'message' => 'Inspection record not found for this property'];
+            }
+        } else {
+            return ['status' => false, 'message' => 'Property Id not given'];
+        }
+        // dd($propertyId);
+
+
     }
 }

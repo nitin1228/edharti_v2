@@ -842,7 +842,7 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
 
                                 @break
 
-                                @case('DEM_UNAUTHCONS_CHG')
+                                 @case('DEM_UNAUTHCONS_CHG')
                                   @isset($slectedSubheads['DEM_UNAUTHCONS_CHG'])
                                       <div class="unauthorized-construction-formula-card border rounded p-2 m-1 bg-light">
                                         <div class="d-flex justify-content-between align-items-center mb-2">
@@ -915,7 +915,7 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
                                           <input type="hidden" name="detail_id[DEM_UNAUTHCONS_CHG][{{$i}}]" value="{{$uachg['id'] ?? 0}}">
                                           <div class="col-lg-3 col-md-6 mt-2">
                                             <label class="form-label">Permissible Limit</label>
-                                            <select class="form-select unauthorized-manual-input" name="unauthorized_type[]">
+                                            <select class="form-select unauthorized-manual-input" name="unauthorized_type[{{$i}}]">
                                               <option value="">Select</option>
                                               <option value="WPL" @if ($uachg['values']['unauthorized_type'] == "WPL")
                                                   selected
@@ -927,19 +927,19 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
                                           </div>
                                           <div class="col-lg-3 col-md-6 mt-2">
                                             <label class="form-label">From Date</label>
-                                            <input class="form-control unauthorized-manual-input" type="date" name="unauthorized_from_date[]" value="{{$uachg['values']['unauthorized_from_date']}}">
+                                            <input class="form-control unauthorized-manual-input" type="date" name="unauthorized_from_date[{{$i}}]" value="{{$uachg['values']['unauthorized_from_date']}}">
                                           </div>
                                           <div class="col-lg-3 col-md-6 mt-2">
                                             <label class="form-label">To Date</label>
-                                            <input class="form-control unauthorized-manual-input" type="date" name="unauthorized_to_date[]" value="{{$uachg['values']['unauthorized_to_date']}}">
+                                            <input class="form-control unauthorized-manual-input" type="date" name="unauthorized_to_date[{{$i}}]" value="{{$uachg['values']['unauthorized_to_date']}}">
                                           </div>
                                           <div class="col-lg-3 col-md-6 mt-2">
                                             <label class="form-label">No. of Days</label>
-                                            <input class="form-control bg-light" type="number" name="unauthorized_no_of_days[]" placeholder="Auto calculated" readonly value="{{$uachg['values']['unauthorized_no_of_days']}}">
+                                            <input class="form-control bg-light" type="number" name="unauthorized_no_of_days[{{$i}}]" placeholder="Auto calculated" readonly value="{{$uachg['values']['unauthorized_no_of_days']}}">
                                           </div>
                                           <div class="col-lg-3 col-md-6 mt-2">
                                             <label class="form-label">Area of Unauthorized Construction (in Sqm)</label>
-                                            <input class="form-control unauthorized-manual-input" type="number" name="unauthorized_area[]" placeholder="Enter area" min="0" step="0.01" value="{{$uachg['values']['unauthorized_area']}}">
+                                            <input class="form-control unauthorized-manual-input" type="number" name="unauthorized_area[{{$i}}]" placeholder="Enter area" min="0" step="0.01" value="{{$uachg['values']['unauthorized_area']}}">
                                           </div>
 
 
@@ -953,7 +953,7 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
                                             <input
                                                 class="form-control unauthorized-manual-input"
                                                 type="number"
-                                                name="unauthorized_land_rate[]"
+                                                name="unauthorized_land_rate[{{$i}}]"
                                                 placeholder="Enter land rate"
                                                 min="0"
                                                 step="0.01"
@@ -970,7 +970,7 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
                                             <input
                                                 class="form-control unauthorized-manual-input"
                                                 type="number"
-                                                name="unauthorized_far[]"
+                                                name="unauthorized_far[{{$i}}]"
                                                 placeholder="Enter FAR"
                                                 min="0"
                                                 step="0.01"
@@ -1000,7 +1000,7 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
                                               <input
                                                   class="form-control bg-light"
                                                   type="number"
-                                                  name="unauthorized_rate_per_annum[]"
+                                                  name="unauthorized_rate_per_annum[{{$i}}]"
                                                   placeholder="Auto calculated"
                                                   readonly
                                                   value="{{$uachg['values']['unauthorized_rate_per_annum']}}"
@@ -1030,7 +1030,7 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
                                               <input
                                                   class="form-control bg-light unauthorized_amount"
                                                   type="number"
-                                                  name="unauthorized_amount[]"
+                                                  name="unauthorized_amount[{{$i}}]"
                                                   placeholder="Auto calculated"
                                                   readonly
                                                   value="{{$uachg['values']['unauthorized_amount']}}"
@@ -1144,8 +1144,8 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
 
                                       </div>
                                       @foreach ($slectedSubheads['DEM_MISUSE_CHG'] as $i=>$much)
-                                        <input type="hidden" name="detail_id[DEM_MISUSE_CHG][{{$i}}]" value="{{$much['id'] ?? 0}}">
                                         <div class="row misuse-charges-row border rounded p-2 pb-3 m-1" style="background-color: #f1ffe7;">
+                                        <input type="hidden" name="detail_id[DEM_MISUSE_CHG][{{$i}}]" value="{{$much['id'] ?? 0}}">
                                           <!-- Misuse Area -->
                                           <div class="col-lg-3 col-md-6 mt-2">
 
@@ -2773,7 +2773,8 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
           appendEnchroachmentInput(targetElement);
           break;
           case "DEM_UNAUTHCONS_CHG":
-          appendUnauthorizedConstructionInput(targetElement);
+          // appendUnauthorizedConstructionInput(targetElement);
+          loadUnauthorizedConstructionInputs(targetElement);
           break;
            case "DEM_MISUSE_CHG":
           appendMisuseChargesInput(targetElement);
@@ -4002,23 +4003,18 @@ function calculateMisuseCharges(row) {
 
 
 
-
-    function appendUnauthorizedConstructionInput(targetElement) {
-
-    // Remove + button from previous rows
-    targetElement.find('.add-unauthorized-construction').remove();
+    async function loadUnauthorizedConstructionInputs(targetElement) {
+      // Remove + button from previous rows
+      targetElement.find('.add-unauthorized-construction').remove();
 
 
-    /*
-    |--------------------------------------------------------------------------
-    | Add Formula Card ONLY ONCE
-    |--------------------------------------------------------------------------
-    */
-
-    if (
-        targetElement.find('.unauthorized-construction-formula-card').length === 0
-    ) {
-
+      /*
+      |--------------------------------------------------------------------------
+      | Add Formula Card ONLY ONCE
+      |--------------------------------------------------------------------------
+      */
+      if (targetElement.find('.unauthorized-construction-formula-card').length === 0)
+      {
         let formulaHtml = `
             <div class="unauthorized-construction-formula-card border rounded p-2 m-1 bg-light">
 
@@ -4099,233 +4095,275 @@ function calculateMisuseCharges(row) {
         `;
 
         targetElement.append(formulaHtml);
+      }
+
+      let unauthorizedConstructionDataRows = await getunauthorizedConstructionData(propertyId, targetElement);
+      console.table(unauthorizedConstructionDataRows);
+      if (unauthorizedConstructionDataRows.length > 0) {
+
+          unauthorizedConstructionDataRows.forEach(row => {
+            appendUnauthorizedConstructionInput(targetElement, row);
+            let newRow = targetElement.find('.unauthorized-construction-row').last();
+            calculateUnauthorizedConstruction(newRow);
+            $('.add-unauthorized-construction').hide();
+          });
+
+      } else {
+
+          appendUnauthorizedConstructionInput(targetElement);
+      }
+
+      $('.add-unauthorized-construction').last().show();
     }
 
+    function appendUnauthorizedConstructionInput(targetElement, row=null) {
 
-    /*
-    |--------------------------------------------------------------------------
-    | Unauthorized Construction Repeater Card
-    |--------------------------------------------------------------------------
-    */
+      /*structure of row is not finazed yet*/
+      let html = `
 
-    let html = `
+          <div class="row unauthorized-construction-row border rounded p-2 pb-3 m-1"
+              style="background-color: #f1ffe7;">
 
-        <div class="row unauthorized-construction-row border rounded p-2 pb-3 m-1"
-             style="background-color: #f1ffe7;">
 
+              <!-- WPL / BPL -->
+              <div class="col-lg-3 col-md-6 mt-2">
 
-            <!-- WPL / BPL -->
-            <div class="col-lg-3 col-md-6 mt-2">
+                  <label class="form-label">
+                      Permissible Limit
+                  </label>
 
-                <label class="form-label">
-                    Permissible Limit
-                </label>
+                  <select
+                      class="form-select unauthorized-manual-input"
+                      name="unauthorized_type[]"
+                  >
 
-                <select
-                    class="form-select unauthorized-manual-input"
-                    name="unauthorized_type[]"
-                >
+                      <option value="">
+                          Select
+                      </option>
 
-                    <option value="">
-                        Select
-                    </option>
+                      <option value="WPL" ${row?.limit === 'wpl' ? 'selected' : ''}>
+                          Within Permissible Limit (WPL)
+                      </option>
 
-                    <option value="WPL">
-                        Within Permissible Limit (WPL)
-                    </option>
+                      <option value="BPL" ${row?.limit === 'bpl' ? 'selected' : ''}>
+                          Beyond Permissible Limit (BPL)
+                      </option>
 
-                    <option value="BPL">
-                        Beyond Permissible Limit (BPL)
-                    </option>
+                  </select>
 
-                </select>
+              </div>
 
-            </div>
 
+              <!-- From Date -->
+              <div class="col-lg-3 col-md-6 mt-2">
 
-            <!-- From Date -->
-            <div class="col-lg-3 col-md-6 mt-2">
+                  <label class="form-label">
+                      From Date
+                  </label>
 
-                <label class="form-label">
-                    From Date
-                </label>
+                  <input
+                      class="form-control unauthorized-manual-input"
+                      type="date"
+                      name="unauthorized_from_date[]"
+                  >
 
-                <input
-                    class="form-control unauthorized-manual-input"
-                    type="date"
-                    name="unauthorized_from_date[]"
-                >
+              </div>
 
-            </div>
 
+              <!-- To Date -->
+              <div class="col-lg-3 col-md-6 mt-2">
 
-            <!-- To Date -->
-            <div class="col-lg-3 col-md-6 mt-2">
+                  <label class="form-label">
+                      To Date
+                  </label>
 
-                <label class="form-label">
-                    To Date
-                </label>
+                  <input
+                      class="form-control unauthorized-manual-input"
+                      type="date"
+                      name="unauthorized_to_date[]"
+                  >
 
-                <input
-                    class="form-control unauthorized-manual-input"
-                    type="date"
-                    name="unauthorized_to_date[]"
-                >
+              </div>
 
-            </div>
 
+              <!-- Number of Days -->
+              <div class="col-lg-3 col-md-6 mt-2">
 
-            <!-- Number of Days -->
-            <div class="col-lg-3 col-md-6 mt-2">
+                  <label class="form-label">
+                      No. of Days
+                  </label>
 
-                <label class="form-label">
-                    No. of Days
-                </label>
+                  <input
+                      class="form-control bg-light"
+                      type="number"
+                      name="unauthorized_no_of_days[]"
+                      placeholder="Auto calculated"
+                      readonly
+                  >
 
-                <input
-                    class="form-control bg-light"
-                    type="number"
-                    name="unauthorized_no_of_days[]"
-                    placeholder="Auto calculated"
-                    readonly
-                >
+              </div>
 
-            </div>
 
+              <!-- Area -->
+              <div class="col-lg-3 col-md-6 mt-2">
 
-            <!-- Area -->
-            <div class="col-lg-3 col-md-6 mt-2">
+                  <label class="form-label">
+                      Area of Unauthorized Construction (in Sqm)
+                  </label>
 
-                <label class="form-label">
-                    Area of Unauthorized Construction (in Sqm)
-                </label>
+                  <input
+                      class="form-control unauthorized-manual-input"
+                      type="number"
+                      name="unauthorized_area[]"
+                      placeholder="Enter area"
+                      min="0"
+                      step="0.01"
+                      value="${row?.area ?? ''}"
+                  >
 
-                <input
-                    class="form-control unauthorized-manual-input"
-                    type="number"
-                    name="unauthorized_area[]"
-                    placeholder="Enter area"
-                    min="0"
-                    step="0.01"
-                >
+              </div>
 
-            </div>
 
+              <!-- Land Rate -->
+              <div class="col-lg-3 col-md-6 mt-2">
 
-            <!-- Land Rate -->
-            <div class="col-lg-3 col-md-6 mt-2">
+                  <label class="form-label">
+                      Land Rate per Sqm
+                  </label>
 
-                <label class="form-label">
-                    Land Rate per Sqm
-                </label>
+                  <input
+                      class="form-control unauthorized-manual-input"
+                      type="number"
+                      name="unauthorized_land_rate[]"
+                      placeholder="Enter land rate"
+                      min="0"
+                      step="0.01"
+                      value="${row?.landRate ?? ''}"
+                  >
 
-                <input
-                    class="form-control unauthorized-manual-input"
-                    type="number"
-                    name="unauthorized_land_rate[]"
-                    placeholder="Enter land rate"
-                    min="0"
-                    step="0.01"
-                >
+              </div>
 
-            </div>
 
+              <!-- FAR -->
+              <div class="col-lg-3 col-md-6 mt-2">
 
-            <!-- FAR -->
-            <div class="col-lg-3 col-md-6 mt-2">
+                  <label class="form-label">
+                      FAR
+                  </label>
 
-                <label class="form-label">
-                    FAR
-                </label>
+                  <input
+                      class="form-control unauthorized-manual-input"
+                      type="number"
+                      name="unauthorized_far[]"
+                      placeholder="Enter FAR"
+                      min="0"
+                      step="0.01"
+                       value="${row?.FAR ?? ''}"
+                  >
 
-                <input
-                    class="form-control unauthorized-manual-input"
-                    type="number"
-                    name="unauthorized_far[]"
-                    placeholder="Enter FAR"
-                    min="0"
-                    step="0.01"
-                >
+              </div>
 
-            </div>
 
+              <!-- Charges Per Annum -->
+              <div class="col-lg-3 col-md-6 mt-2">
 
-            <!-- Charges Per Annum -->
-            <div class="col-lg-3 col-md-6 mt-2">
+                  <label class="form-label">
 
-                <label class="form-label">
+                    
 
-                   
+                      Charges Per Annum
 
-                    Charges Per Annum
+                  </label>
 
-                </label>
+                  <input
+                      class="form-control bg-light"
+                      type="number"
+                      name="unauthorized_rate_per_annum[]"
+                      placeholder="Auto calculated"
+                      readonly
+                  >
 
-                <input
-                    class="form-control bg-light"
-                    type="number"
-                    name="unauthorized_rate_per_annum[]"
-                    placeholder="Auto calculated"
-                    readonly
-                >
+              </div>
 
-            </div>
 
+              <!-- Final Amount -->
+              <div class="col-lg-3 col-md-6 mt-2">
 
-            <!-- Final Amount -->
-            <div class="col-lg-3 col-md-6 mt-2">
+                  <label class="form-label">
 
-                <label class="form-label">
+                      <span style="
+                          width: 9px;
+                          height: 9px;
+                          background-color: #fd7e14;
+                          border-radius: 50%;
+                          display: inline-block;
+                          margin-right: 4px;
+                      "></span>
 
-                    <span style="
-                        width: 9px;
-                        height: 9px;
-                        background-color: #fd7e14;
-                        border-radius: 50%;
-                        display: inline-block;
-                        margin-right: 4px;
-                    "></span>
+                      Amount
 
-                    Amount
+                  </label>
 
-                </label>
+                  <input
+                      class="form-control bg-light unauthorized_amount"
+                      type="number"
+                      name="unauthorized_amount[]"
+                      placeholder="Auto calculated"
+                      readonly
+                  >
 
-                <input
-                    class="form-control bg-light unauthorized_amount"
-                    type="number"
-                    name="unauthorized_amount[]"
-                    placeholder="Auto calculated"
-                    readonly
-                >
+                  <span class="error"></span>
 
-                <span class="error"></span>
+              </div>
 
-            </div>
 
+              <!-- Action Buttons -->
+              <div class="col-lg-3 col-md-6 mt-2 d-flex align-items-end action-buttons">
 
-            <!-- Action Buttons -->
-            <div class="col-lg-3 col-md-6 mt-2 d-flex align-items-end action-buttons">
+                  <button
+                      type="button"
+                      class="btn btn-success me-2 add-unauthorized-construction">
+                      +
+                  </button>
 
-                <button
-                    type="button"
-                    class="btn btn-success me-2 add-unauthorized-construction">
-                    +
-                </button>
+                  <button
+                      type="button"
+                      class="btn btn-danger remove-unauthorized-construction">
+                      Remove
+                  </button>
 
-                <button
-                    type="button"
-                    class="btn btn-danger remove-unauthorized-construction">
-                    Remove
-                </button>
+              </div>
 
-            </div>
+          </div>
+      `;
 
-        </div>
-    `;
 
+      targetElement.append(html);
+    }
 
-    targetElement.append(html);
-}
+    function getunauthorizedConstructionData(propertyId, targetElement){
+      let url = "{{ route('unauthorizedConstructionInspectionReport', ['propertyId' => '__ID__']) }}";
+      let route = url.replace('__ID__', propertyId);
+      'select[name^="unauthorized_type"]'
+      // let targetElement = $('div[class^="unauthorized-construction"]').parents('.user-inputs')
+      return $.ajax({
+        type: 'GET',
+        url: route
+      }).then(response => {
+
+          if (response.status === false) {
+              showError(response.message);
+              return [];
+          }
+
+          return response.data || [];
+
+      }).catch(error => {
+
+          console.log(error);
+          return [];
+      });
+    }
 
 
 

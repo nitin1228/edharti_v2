@@ -266,14 +266,14 @@ if (!function_exists('getAge')) {
 if (!function_exists('getItemsByGroupId')) {
     function getItemsByGroupId($id)
     {
-       return Item::where('group_id', $id)->where('is_active', 1)->orderByRaw('CAST(item_order AS UNSIGNED) ASC')->get();
+        return Item::where('group_id', $id)->where('is_active', 1)->orderByRaw('CAST(item_order AS UNSIGNED) ASC')->get();
     }
 }
 
 if (!function_exists('getAllItemsByGroupId')) {
     function getAllItemsByGroupId($id)
     {
-        return Item::where('group_id', $id)->orderBy('item_order')->whereIn('item_code',['NOC','SUB_MUT','CONVERSION','DOA'])->get();
+        return Item::where('group_id', $id)->orderBy('item_order')->whereIn('item_code', ['NOC', 'SUB_MUT', 'CONVERSION', 'DOA'])->get();
     }
 }
 
@@ -489,7 +489,7 @@ if (!function_exists('getUserAssignedSections')) {
     function getUserAssignedSections()
     {
         $user = Auth::user();
-        $filterUserSections = $user->hasAnyRole('section-officer','assistant-section-officer', 'deputy-lndo', 'super-admin', 'minister', 'lndo');
+        $filterUserSections = $user->hasAnyRole('section-officer', 'assistant-section-officer', 'deputy-lndo', 'super-admin', 'minister', 'lndo');
         $userSectionIdList = $user->sections->where('has_property', 1)->pluck('id')->toArray();
         return [$filterUserSections, $userSectionIdList];
     }
@@ -522,7 +522,7 @@ if (!function_exists('getMisDoneColoniesCount')) {
     function getMisDoneColoniesCount()
     {
         $count_of_colonies = PropertyMaster::distinct('new_colony_name')->count('new_colony_name');
-       return $count_of_colonies ?? 0;
+        return $count_of_colonies ?? 0;
     }
 }
 if (!function_exists('getAddressDropdownData')) {
@@ -581,14 +581,14 @@ if (!function_exists('getProperyStatusFromOldPropetyId')) {
 
 
 //For checking is user can view the application - SOURAV CHAUHAN 01-05-2025
-if(!function_exists('isOfficeViewTheApplication')){
+if (!function_exists('isOfficeViewTheApplication')) {
     function isOfficeViewTheApplication($applicationNo)
     {
 
         $authuser = Auth::user();
         $userId = $authuser->id;
-        $allMovements = ApplicationMovement::whereNotIn('service_type',[1478,1479])->orderBy('created_at', 'desc')
-        ->get();
+        $allMovements = ApplicationMovement::whereNotIn('service_type', [1478, 1479])->orderBy('created_at', 'desc')
+            ->get();
         $latestMovements = $allMovements->unique('application_no');
         // dd($latestMovements);
         $userAssigned = $latestMovements->where('assigned_to', $userId);
@@ -598,26 +598,25 @@ if(!function_exists('isOfficeViewTheApplication')){
         foreach ($userAssigned as $movement) {
             if ($movement->application_no == $applicationNo) {
                 $currentApplicationDate = $movement->created_at;
-                break; 
-            } 
+                break;
+            }
         }
 
 
         $otherApplicationDate = null;
         $currentApplicationNo = null;
         $currentActionableApplicationNo = null;
-        if(count($userAssigned) > 1){
+        if (count($userAssigned) > 1) {
             foreach ($userAssigned as $movement) {
                 if ($movement->application_no != $applicationNo) {
                     $otherApplicationDate = $movement->created_at;
                     $currentApplicationNo = $movement->application_no;
-                } 
-                if($currentApplicationDate < $otherApplicationDate){
+                }
+                if ($currentApplicationDate < $otherApplicationDate) {
                     $canView =  true;
                 } else {
                     $canView =  false;
                     $currentActionableApplicationNo = $currentApplicationNo;
-
                 }
             }
         } else {
@@ -634,17 +633,17 @@ if(!function_exists('isOfficeViewTheApplication')){
 }
 
 
-if(!function_exists('userCurrentActionableApplication')){
+if (!function_exists('userCurrentActionableApplication')) {
     function userCurrentActionableApplication()
     {
 
         $authuser = Auth::user();
         $userId = $authuser->id;
-        $allMovements = ApplicationMovement::where('service_type','!=',1479)->orderBy('created_at', 'desc')->get();
+        $allMovements = ApplicationMovement::where('service_type', '!=', 1479)->orderBy('created_at', 'desc')->get();
         $latestMovements = $allMovements->unique('application_no');
         $userAssigned = $latestMovements->where('assigned_to', $userId);
         $latestAssigned = $userAssigned->sortBy('created_at')->first();
-        if(is_null($latestAssigned)){
+        if (is_null($latestAssigned)) {
             return null;
         }
         return $latestAssigned['application_no'];
@@ -655,7 +654,7 @@ if (!function_exists('decryptString')) {
     {
         if (strlen($str) == 0)
             return $str;
-         $decoded = base64_decode($str, true);
+        $decoded = base64_decode($str, true);
         if ($decoded === false || strlen($decoded) < 16) {
             return $str; // not encrypted (too short or invalid base64)
         }
@@ -699,15 +698,15 @@ if (!function_exists('downloadPaymentReceiptPdf')) {
                 'property.newColony',
                 'application.serviceTypeItem'
             ])->where('application_no', $application_no)
-              ->where('status', $successStatusId) // ✅ only success
-              ->orderBy('created_at', 'asc')
-              ->get();
+                ->where('status', $successStatusId) // ✅ only success
+                ->orderBy('created_at', 'asc')
+                ->get();
         } else {
             // Otherwise keep single record as current behavior
             $payments = collect([$payment]);
         }
 
-   
+
         // Convert amount to words (with paisa support)
         $amount = number_format((float) $payment->amount, 2, '.', '');
         $amountParts = explode('.', $amount);
@@ -724,7 +723,7 @@ if (!function_exists('downloadPaymentReceiptPdf')) {
         // Generate PDF
         $pdf = Pdf::loadView('payment.payment_receipt', [
             'payment' => $payment,
-            'payments' => $payments,  
+            'payments' => $payments,
             'amount_in_words' => $amountInWords
         ]);
 
@@ -835,65 +834,64 @@ if (!function_exists('convertNumberToWords')) {
 
         return $string;
     }
-
 }
 
 // This is use less, we are not using this.
 if (!function_exists('checkUpdatedPaymentStatus')) {
-     function checkUpdatedPaymentStatus($paymentId)
-        {
+    function checkUpdatedPaymentStatus($paymentId)
+    {
 
-            $payment = Payment::find($paymentId);
-            $orderId = $payment->unique_payment_id;
-            $purposeId = '15777';
-            // $url = "http://164.100.129.32/bharatkosh/getstatus";
-            $url = config('constants.paymentStatusURL');
-            $data = array("OrderId" => $orderId, "PurposeId" => $purposeId);
-            $ch = curl_init();
-            curl_setopt($ch, CURLOPT_URL, $url);
-            curl_setopt($ch, CURLOPT_POST, true);
-            curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
-            curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+        $payment = Payment::find($paymentId);
+        $orderId = $payment->unique_payment_id;
+        $purposeId = '15777';
+        // $url = "http://164.100.129.32/bharatkosh/getstatus";
+        $url = config('constants.paymentStatusURL');
+        $data = array("OrderId" => $orderId, "PurposeId" => $purposeId);
+        $ch = curl_init();
+        curl_setopt($ch, CURLOPT_URL, $url);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, $data);
+        curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
-            if (curl_errno($ch)) {
-                echo 'Curl error: ' . curl_error($ch);
-            } else {
-                $curl_output = trim(curl_exec($ch), '"');
-                $apiResponse = explode('|', $curl_output);
-                // dd($apiResponse);
-                curl_close($ch);
-                if (count($apiResponse) > 1) {
-                    list($orderId, $orderStatus, $transactionId) = $apiResponse;
-                    // dd($orderId, $orderStatus, $transactionId);
-                    /* if($paymentId == 24 && strtoupper($orderStatus) == "SUCCESS"){
+        if (curl_errno($ch)) {
+            echo 'Curl error: ' . curl_error($ch);
+        } else {
+            $curl_output = trim(curl_exec($ch), '"');
+            $apiResponse = explode('|', $curl_output);
+            // dd($apiResponse);
+            curl_close($ch);
+            if (count($apiResponse) > 1) {
+                list($orderId, $orderStatus, $transactionId) = $apiResponse;
+                // dd($orderId, $orderStatus, $transactionId);
+                /* if($paymentId == 24 && strtoupper($orderStatus) == "SUCCESS"){
                         Log::info("Payment inside if");
                         Log::info($paymentId." _ ". strtoupper($orderStatus));
                     } else {
                         Log::info("Payment inside else");
                         Log::info($paymentId." _ ". strtoupper($orderStatus));
                     } */
-                    if (strtoupper($orderStatus) == "SUCCESS") {
-                        $paymentData = Payment::where('unique_payment_id', $orderId)->first();
-                        if (!empty($paymentData)) {
-                            $paymentData->update([
-                                'status' => getServiceType('PAY_' . $orderStatus) ?? getServiceType('PAY_PENDING') ,
-                                'response' => $curl_output,
-                                'transaction_id' => $transactionId,
-                            ]);
+                if (strtoupper($orderStatus) == "SUCCESS") {
+                    $paymentData = Payment::where('unique_payment_id', $orderId)->first();
+                    if (!empty($paymentData)) {
+                        $paymentData->update([
+                            'status' => getServiceType('PAY_' . $orderStatus) ?? getServiceType('PAY_PENDING'),
+                            'response' => $curl_output,
+                            'transaction_id' => $transactionId,
+                        ]);
 
-                            $paymentService = new PaymentService();
-                            $paymentService->processSuccessfulPayment($paymentData);
-                        }
-                    } else {
+                        $paymentService = new PaymentService();
+                        $paymentService->processSuccessfulPayment($paymentData);
                     }
                 } else {
-                    dd($curl_output, $apiResponse);
-                    /* print_r($response_api);
-                    echo "</pre>"; */
                 }
+            } else {
+                dd($curl_output, $apiResponse);
+                /* print_r($response_api);
+                    echo "</pre>"; */
             }
         }
     }
+}
 
 
 function convertToIndianCurrencyWords($number)
@@ -902,15 +900,39 @@ function convertToIndianCurrencyWords($number)
     $point = round($number - $no, 2) * 100;
 
     $words = [
-        '', 'One', 'Two', 'Three', 'Four', 'Five', 'Six',
-        'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve',
-        'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen',
-        'Eighteen', 'Nineteen'
+        '',
+        'One',
+        'Two',
+        'Three',
+        'Four',
+        'Five',
+        'Six',
+        'Seven',
+        'Eight',
+        'Nine',
+        'Ten',
+        'Eleven',
+        'Twelve',
+        'Thirteen',
+        'Fourteen',
+        'Fifteen',
+        'Sixteen',
+        'Seventeen',
+        'Eighteen',
+        'Nineteen'
     ];
 
     $tens = [
-        '', '', 'Twenty', 'Thirty', 'Forty', 'Fifty',
-        'Sixty', 'Seventy', 'Eighty', 'Ninety'
+        '',
+        '',
+        'Twenty',
+        'Thirty',
+        'Forty',
+        'Fifty',
+        'Sixty',
+        'Seventy',
+        'Eighty',
+        'Ninety'
     ];
 
     $digits = ['', 'Thousand', 'Lakh', 'Crore'];
@@ -970,11 +992,11 @@ function convertToIndianCurrencyWords($number)
     return $result . ' Only';
 }
 
-if (!function_exists('sqmToSqyard'))
-{
-function sqmToSqyard($sqm) {
-    return $sqm * 1.19599;
-}
+if (!function_exists('sqmToSqyard')) {
+    function sqmToSqyard($sqm)
+    {
+        return $sqm * 1.19599;
+    }
 }
 
 /** this function is added by nitin - 23-04-2025 */
@@ -989,13 +1011,12 @@ if (!function_exists('camelToTitle')) {
 if (!function_exists('getPaymentSummaryByStatus')) {
     function getPaymentSummaryByStatus($payments, string $status)
     {
-         $filtered = $payments->where('status', getServiceType($status));
+        $filtered = $payments->where('status', getServiceType($status));
 
         return [
             'count' => $filtered->count(),
             'amount' => $filtered->sum('amount'),
         ];
-        
     }
 }
 
@@ -1003,32 +1024,31 @@ if (!function_exists('getPaymentSummaryByStatus')) {
 if (!function_exists('getBreakup')) {
     function getBreakup($collection, string $needle)
     {
-          $filtered = $collection->filter(fn($item) => stripos($item->model, $needle) !== false);
-		//dd($filtered);
-		    return [
-		        'total' => [
-		            'count' => $filtered->count(),
-		            'amount' => $filtered->sum('amount'),
-		        ],
-		        'pending' => [
-		            'count' => $filtered->where('status', getServiceType('PAY_PENDING'))->count(),
-		            'amount' => $filtered->where('status', getServiceType('PAY_PENDING'))->sum('amount'),
-		        ],
-		        'success' => [
-		            'count' => $filtered->where('status', getServiceType('PAY_SUCCESS'))->count(),
-		            'amount' => $filtered->where('status', getServiceType('PAY_SUCCESS'))->sum('amount'),
-		        ],
-		    ];
-        
+        $filtered = $collection->filter(fn($item) => stripos($item->model, $needle) !== false);
+        //dd($filtered);
+        return [
+            'total' => [
+                'count' => $filtered->count(),
+                'amount' => $filtered->sum('amount'),
+            ],
+            'pending' => [
+                'count' => $filtered->where('status', getServiceType('PAY_PENDING'))->count(),
+                'amount' => $filtered->where('status', getServiceType('PAY_PENDING'))->sum('amount'),
+            ],
+            'success' => [
+                'count' => $filtered->where('status', getServiceType('PAY_SUCCESS'))->count(),
+                'amount' => $filtered->where('status', getServiceType('PAY_SUCCESS'))->sum('amount'),
+            ],
+        ];
     }
 }
 if (!function_exists('getSectionsName')) {
- function getSectionsName($id)
-    {        
-    	$item=  Section::where('id', $id)->first();
-         if ($item) {
+    function getSectionsName($id)
+    {
+        $item =  Section::where('id', $id)->first();
+        if ($item) {
             return $item->section_code;
-        } 
+        }
     }
 }
 
@@ -1054,13 +1074,13 @@ if (!function_exists('getRevenueDetails')) {
         $endDate = ($request && $request->filled('end_date'))
             ? Carbon::parse($request->end_date)->format('Y-m-d')
             : $fyEnd->format('Y-m-d');
-       
+
         $paymentQuery = Payment::when($startDate, function ($q) use ($startDate) {
             return $q->whereDate('created_at', '>=', $startDate);
         })
-        ->when($endDate, function ($q) use ($endDate) {
-            return $q->whereDate('created_at', '<=', $endDate);
-        });
+            ->when($endDate, function ($q) use ($endDate) {
+                return $q->whereDate('created_at', '<=', $endDate);
+            });
 
         $payments = $paymentQuery->whereIn('status', [getServiceType('PAY_PENDING'), getServiceType('PAY_SUCCESS')])->get();
 
@@ -1077,92 +1097,96 @@ if (!function_exists('getRevenueDetails')) {
         $data['typewiseAmount'] = $payments->groupBy('type')->map(fn($group) => $group->sum('amount'));
         $applicationPayments = $payments->where('type', getServiceType('PAY_APP_CHG'));
         $headwise = DemandDetail::query()
-						    ->join('items as i', 'demand_details.subhead_id', '=', 'i.id')
-						    ->select(
-						        DB::raw('i.id as code'),  
-						        'i.item_name as name',
-						        DB::raw('SUM(demand_details.paid_amount) as amount')
-						    )
-						   ->when($startDate, function ($q) use ($startDate) {
-                                $q->where('demand_details.updated_at', '>=',
-                                    Carbon::createFromFormat('Y-m-d', $startDate)->startOfDay()
-                                );
-                            })
-                            ->when($endDate, function ($q) use ($endDate) {
-                                $q->where('demand_details.updated_at', '<=',
-                                    Carbon::createFromFormat('Y-m-d', $endDate)->endOfDay()
-                                );
-                            })
+            ->join('items as i', 'demand_details.subhead_id', '=', 'i.id')
+            ->select(
+                DB::raw('i.id as code'),
+                'i.item_name as name',
+                DB::raw('SUM(demand_details.paid_amount) as amount')
+            )
+            ->when($startDate, function ($q) use ($startDate) {
+                $q->where(
+                    'demand_details.updated_at',
+                    '>=',
+                    Carbon::createFromFormat('Y-m-d', $startDate)->startOfDay()
+                );
+            })
+            ->when($endDate, function ($q) use ($endDate) {
+                $q->where(
+                    'demand_details.updated_at',
+                    '<=',
+                    Carbon::createFromFormat('Y-m-d', $endDate)->endOfDay()
+                );
+            })
 
-						    ->groupBy('i.id', 'i.item_name')
-						    ->get();
+            ->groupBy('i.id', 'i.item_name')
+            ->get();
 
 
         $processingfee = Payment::select(
-                            DB::raw('type as code'),
-                            DB::raw('SUM(amount) as amount')
-                        )
-                        ->whereIn('type', [
-                            getStatusName('GROUND_RENT'),
-                            getStatusName('PAY_APP_CHG'),
-                            getStatusName('PAY_RENT_SUB'),
-                            getStatusName('PAY_TEMP_ALLOT'),
-                            getStatusName('PAY_LAND_ALLOT')
-                        ])
-                        ->where('status', getStatusName('PAY_SUCCESS'))
-                        ->when($startDate, function ($q) use ($startDate) {
-                            $q->whereDate('updated_at', '>=', $startDate);
-                        })
-                        ->when($endDate, function ($q) use ($endDate) {
-                            $q->whereDate('updated_at', '<=', $endDate);
-                        })
+            DB::raw('type as code'),
+            DB::raw('SUM(amount) as amount')
+        )
+            ->whereIn('type', [
+                getStatusName('GROUND_RENT'),
+                getStatusName('PAY_APP_CHG'),
+                getStatusName('PAY_RENT_SUB'),
+                getStatusName('PAY_TEMP_ALLOT'),
+                getStatusName('PAY_LAND_ALLOT')
+            ])
+            ->where('status', getStatusName('PAY_SUCCESS'))
+            ->when($startDate, function ($q) use ($startDate) {
+                $q->whereDate('updated_at', '>=', $startDate);
+            })
+            ->when($endDate, function ($q) use ($endDate) {
+                $q->whereDate('updated_at', '<=', $endDate);
+            })
 
-                        ->groupBy('type')
-                        ->get()
-                        ->map(function ($row) {
-                            return (object)[
-                                'code'   => $row->code,
-                                'name'   => getServiceNameById($row->code), 
-                                'amount' => $row->amount,
-                            ];
-                        });
+            ->groupBy('type')
+            ->get()
+            ->map(function ($row) {
+                return (object)[
+                    'code'   => $row->code,
+                    'name'   => getServiceNameById($row->code),
+                    'amount' => $row->amount,
+                ];
+            });
 
         $final = $headwise
-                ->concat($processingfee)
-                ->groupBy('code')
-                ->map(function ($rows) {
-                    return [
-                        'code'   => $rows->first()->code,
-                        'name'   => $rows->first()->name,
-                        'amount' => $rows->sum('amount'),
-                    ];
-                })
-                ->values()
-                ->sortBy('name') 
-                ->values(); 
+            ->concat($processingfee)
+            ->groupBy('code')
+            ->map(function ($rows) {
+                return [
+                    'code'   => $rows->first()->code,
+                    'name'   => $rows->first()->name,
+                    'amount' => $rows->sum('amount'),
+                ];
+            })
+            ->values()
+            ->sortBy('name')
+            ->values();
         $data['summary'] = $final;
         $data['applicationwiseBreakup'] = [
-                    'Conversion' => getBreakup($applicationPayments, 'conversion'),
-                    'LUC' => getBreakup($applicationPayments, 'landUseChange'),
-                    'Mutation' => getBreakup($applicationPayments, 'mutation'),
-                    'NOC' => getBreakup($applicationPayments, 'NOC'),
-                ];
+            'Conversion' => getBreakup($applicationPayments, 'conversion'),
+            'LUC' => getBreakup($applicationPayments, 'landUseChange'),
+            'Mutation' => getBreakup($applicationPayments, 'mutation'),
+            'NOC' => getBreakup($applicationPayments, 'NOC'),
+        ];
         $demandQuery  = Demand::when($startDate, function ($q) use ($startDate) {
-                            $q->whereDate('created_at', '>=', $startDate);
-                        })
-                        ->when($endDate, function ($q) use ($endDate) {
-                            $q->whereDate('created_at', '<=', $endDate);
-                        });
-		
+            $q->whereDate('created_at', '>=', $startDate);
+        })
+            ->when($endDate, function ($q) use ($endDate) {
+                $q->whereDate('created_at', '<=', $endDate);
+            });
+
         $demandTotal = $demandQuery->whereIn('status', [
-                            getServiceType('DEM_PENDING'),
-                            getServiceType('DEM_PAID'),
-                            getServiceType('DEM_PART_PAID')
-                        ])->sum('net_total');
+            getServiceType('DEM_PENDING'),
+            getServiceType('DEM_PAID'),
+            getServiceType('DEM_PART_PAID')
+        ])->sum('net_total');
         $demandPaid = $demandQuery->whereIn('status', [
-                        getServiceType('DEM_PAID'),
-                        getServiceType('DEM_PART_PAID')
-                    ])->sum('paid_amount');
+            getServiceType('DEM_PAID'),
+            getServiceType('DEM_PART_PAID')
+        ])->sum('paid_amount');
         $demandPending = $demandTotal - $demandPaid;
         $data['demandData'] = [
             'total' => $demandTotal,
@@ -1171,23 +1195,22 @@ if (!function_exists('getRevenueDetails')) {
         ];
         $data['request'] = $request;
         return $data;
-        
     }
 }
 
 
 if (!function_exists('getRoleIdByName')) {
-/**
- * Get role id by role name (case-insensitive).
- *
- * @throws \Exception
- */
-function getRoleIdByName(string $name): int
+    /**
+     * Get role id by role name (case-insensitive).
+     *
+     * @throws \Exception
+     */
+    function getRoleIdByName(string $name): int
     {
         $id = DB::table('roles')
             ->whereRaw('LOWER(name) = ?', [strtolower($name)])
             ->value('id');
-            
+
 
         if (!$id) {
             throw new \Exception("Role '{$name}' not found in roles table.");
@@ -1201,86 +1224,108 @@ function getRoleIdByName(string $name): int
 | GET PROPERTY SECTION DETAILS - added by swati on 13052026
 */
 
-    if (!function_exists('getPropertySectionDetails')) {
+if (!function_exists('getPropertySectionDetails')) {
 
-        function getPropertySectionDetails($propertyId)
-        {
+    function getPropertySectionDetails($propertyId)
+    {
 
-            $property = PropertyMaster::where(
-                'old_propert_id',
+        $property = PropertyMaster::where(
+            'old_propert_id',
+            $propertyId
+        )->first();
+
+        if (!$property) {
+
+            $splitProperty = SplitedPropertyDetail::where(
+                'old_property_id',
                 $propertyId
             )->first();
 
-            if (!$property) {
+            if ($splitProperty) {
 
-                $splitProperty = SplitedPropertyDetail::where(
-                        'old_property_id',
-                        $propertyId
-                    )->first();
-
-                if ($splitProperty) {
-
-                    $property = PropertyMaster::find(
-                            $splitProperty->property_master_id
-                        );
-                }
+                $property = PropertyMaster::find(
+                    $splitProperty->property_master_id
+                );
             }
-
-            if (!$property || !$property->section_code) {
-
-                return null;
-            }
-
-            $section = Section::where(
-                'section_code',
-                $property->section_code
-            )->first();
-
-            if (!$section) {
-
-                return null;
-            }
-
-            return [
-                'section_id' => $section->id,
-                'section_code' => $section->section_code,
-                'section_name' => $section->name,
-            ];
         }
-    }
 
-    if (!function_exists('getItemsOnlyForDemand')) {
-        function getItemsOnlyForDemand($id)
-        {
-            return Item::where('group_id', $id)->where('item_code', 'PAY_DEMAND')->where('is_active', 1)->orderBy('item_order')->get();
+        if (!$property || !$property->section_code) {
+
+            return null;
         }
-    }
 
-    if (!function_exists('getItemsOnlyForProperty')) {
-        function getItemsOnlyForProperty($id)
-        {
-            return Item::where('group_id', $id)->whereIn('item_code', ['GROUND_RENT', 'PAY_RENT_SUB', 'PAY_TEMP_ALLOT', 'PAY_LAND_ALLOT'])->where('is_active', 1)->orderBy('item_order')->get();
+        $section = Section::where(
+            'section_code',
+            $property->section_code
+        )->first();
+
+        if (!$section) {
+
+            return null;
         }
-    }
 
-    if (!function_exists('isUserCanAcessThisResource')) {
-    function isUserCanAcessThisResource($oldPropertyId){
+        return [
+            'section_id' => $section->id,
+            'section_code' => $section->section_code,
+            'section_name' => $section->name,
+        ];
+    }
+}
+
+if (!function_exists('getItemsOnlyForDemand')) {
+    function getItemsOnlyForDemand($id)
+    {
+        return Item::where('group_id', $id)->where('item_code', 'PAY_DEMAND')->where('is_active', 1)->orderBy('item_order')->get();
+    }
+}
+
+if (!function_exists('getItemsOnlyForProperty')) {
+    function getItemsOnlyForProperty($id)
+    {
+        return Item::where('group_id', $id)->whereIn('item_code', ['GROUND_RENT', 'PAY_RENT_SUB', 'PAY_TEMP_ALLOT', 'PAY_LAND_ALLOT'])->where('is_active', 1)->orderBy('item_order')->get();
+    }
+}
+
+if (!function_exists('isUserCanAcessThisResource')) {
+    function isUserCanAcessThisResource($oldPropertyId)
+    {
         //get property section
         $splittedProperty = DB::table('splited_property_details')->where('old_property_id', $oldPropertyId)->first();
-        if($splittedProperty){
+        if ($splittedProperty) {
             $propertySection = DB::table('property_masters')->where('id', $splittedProperty->property_master_id)->value('section_code');
         } else {
             $propertySection = DB::table('property_masters')->where('old_propert_id', $oldPropertyId)->value('section_code');
         }
-        if($propertySection){
-             $user = Auth::user();
+        if ($propertySection) {
+            $user = Auth::user();
             $loggedinUserSections = $user->sections->where('has_property', 1)->pluck('section_code')->toArray();
             // dd(trim($propertySection), $loggedinUserSections);
             return in_array(trim($propertySection), $loggedinUserSections) ? true : false;
         } else {
-            return false;   
+            return false;
         }
     }
 }
 
-
+/** function added by Nitin to convert area to square meter on 22-10-2026*/
+if (!function_exists('areaInSqMtr')) {
+    function areaInSqMtr($areaValue, $areaUnit)
+    {
+        $multiplier = 1;
+        switch ($areaUnit) {
+            case 27:
+                $multiplier = 4046.8564224;
+                break;
+            case 28:
+                $multiplier = 0.09290304;
+                break;
+            case 30:
+                $multiplier = 0.83612736;
+                break;
+            default:
+                # code...
+                break;
+        }
+        return $multiplier * $areaValue;
+    }
+}
