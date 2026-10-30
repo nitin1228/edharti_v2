@@ -684,8 +684,13 @@
                             @role('super-admin')
                                 <li> <a href="{{ route('payment.livestatus.search') }}"><i
                                                 class="bx bx-right-arrow-alt"></i>Payment Live Status Search</a>
-                                </li>
+                                </li>l
                             @endhasrole
+                            @if(auth()->user()->hasRole('it-cell'))
+                                <li> <a href="{{ route('oldNocReport') }}"><i
+                                                class="bx bx-right-arrow-alt"></i>Old NOC Report</a>
+                                </li>
+                            @endif
                         </ul>
                     </li>
                 @endcan

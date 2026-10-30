@@ -1995,6 +1995,17 @@ class ReportController extends Controller
         return view('report.lease-hold-demand-report', $data);
     } */
 
+
+    public function oldNocReport(ColonyService $colonyService){
+        if(auth()->user()->hasRole('it-cell')){
+            $user = Auth::user();
+            $colonyList = $colonyService->misDoneForColonies();
+            return view('dashboard.sub-registrar', compact('colonyList'));
+        } else {
+            return redirect()->back()->with('failure', 'You are not authorized to access this page.');
+        }
+    }
+
     public function leaseHoldDemands()
     {
         return view('report.lease-hold-demand-report');

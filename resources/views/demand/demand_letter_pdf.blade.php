@@ -270,12 +270,17 @@
                             case 'DEM_ENCH_CHG':
                                 $dateFromKey = 'ench_from_date';
                                 $dateToKey = 'ench_to_date';
-                            case 'DEM_UNAUTHCONS_CHG':
-                                $dateFromKey = 'unauthorized_from_date';
-                                $dateToKey = 'unauthorized_to_date';
+                                break;
                             case 'DEM_MISUSE_CHG':
                                 $dateFromKey = 'misuse_from_date';
                                 $dateToKey = 'misuse_to_date';
+                                break;
+                            case 'DEM_UNAUTHCONS_CHG':
+                                $dateFromKey = 'unauthorized_from_date';
+                                $dateToKey = 'unauthorized_to_date';
+                                break;
+                            case 'DEM_SETTLED_AMOUNT':
+                                $dateFromKey = 'settled_date_from';
                             default:
                                 # code...
                                 break;
@@ -285,7 +290,7 @@
                     <td>  {{ isset($dateFromKey) && isset($dd->subhead_keys[$dateFromKey])
                             ? date('d-m-Y', strtotime($dd->subhead_keys[$dateFromKey]))
                             : '' }}
-                        - <br>
+                        {{getServiceCodeById($dd->subhead_id) != 'DEM_SETTLED_AMOUNT' ? '' : '-'}} <br>
                         {{ isset($dateToKey) && isset($dd->subhead_keys[$dateToKey])
                             ? date('d-m-Y', strtotime($dd->subhead_keys[$dateToKey]))
                             : '' }}</td>

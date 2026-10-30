@@ -341,7 +341,7 @@ class GroupItemSeeder extends Seeder
             [
                 'group_id' => 7003,
                 'item_code' => 'DEM_SETTLED_AMOUNT',
-                'item_name' => 'Offline settled amount',
+                'item_name' => 'Previously settled amount',
                 'item_order' => 1,
                 'is_active' => 1,
                 //'additional_data' => ['remarks' => true],

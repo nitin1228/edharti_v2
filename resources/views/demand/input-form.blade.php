@@ -2775,7 +2775,7 @@ $isPartiallyPaid = isset($demand) && getServiceCodeById($demand->status) == "DEM
           case "DEM_UNAUTHCONS_CHG":
           appendUnauthorizedConstructionInput(targetElement);
           break;
-           case "DEM_MISUSE_CHG":
+          case "DEM_MISUSE_CHG":
           appendMisuseChargesInput(targetElement);
           break;
         case "DEM_PENAL_STANDARD":

@@ -166,6 +166,8 @@ Route::prefix('edharti')->group(function () {
         // Routes for showing unalloted recores By Lalit Tiwari (10/Jan/2025)
         Route::get('/reports/detailed-report', [ReportController::class, 'detailedReport'])->name('detailedReport');
         Route::get('/reports/detailed-report/export-data', [ReportController::class, 'detailedReportExport'])->name('detailedReportExport');
+        Route::get('/reports/old-noc', [ReportController::class, 'oldNocReport'])->name('oldNocReport');
+
 
         Route::post('create-payment-receipt', [ApplicantController::class, 'createPaymentReceipt'])->name('createPaymentReceipt');
 
